@@ -141,5 +141,6 @@ Pending:
 - ✅ GitHub Pages continuous publication
 - ✅ v0.5.1 basic pawn-state hardening: hunger/eating deadlock fixed, zero-provision fallback meals, no-Tavern foraging, no-Inn camping, KO self-recovery, stale target repair, unreachable rescue/building fallbacks, v3→v4 save repair
 - ✅ state regression harness covering Eat, Rest, Train, Pray, Study, Farm, Patrol/Fight, Rescue, KO, stale targets and old-save reloads
+- ✅ v0.5.2 combat feedback: compact pixel resource icons, melee lunges/slashes, arrows, magic/holy projectiles, hit bursts, healing effects and floating combat numbers in town and dungeons
 
 When an item becomes real work, give it an issue. When an issue is finished, update this file.
