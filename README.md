@@ -1,18 +1,29 @@
 # Wayfarer Guild
 
-Personal autonomous management RPG / roguelite prototype.
+Personal autonomous management RPG / roguelite prototype inspired by the management loops of Dungeon Village and Kingdom Adventurers, with original code, naming and visuals.
 
-Live path: https://karmiphuc.github.io/wayfarer-guild/
+Live: https://karmiphuc.github.io/wayfarer-guild/
+
+## v0.2
+
+- Autonomous residents and visitors
+- Satisfaction / work / move-in housing loop
+- Utility-driven eating, resting, training, shopping, farming and wandering
+- Field monsters with autonomous combat
+- KO and rescue-to-inn behavior
+- Jobs, job levels, mastery and job changes
+- Equipment, random rarity rolls and auto-equip
+- Quest board: mob, dungeon and boss quests
+- Village popularity, Town Points and star ranks
+- Buildable facilities with quality, appeal, income and upkeep
+- Research unlocks
+- Frontier fog-of-war deployment and resource gathering
+- iPad/mobile responsive layout
+- Local autosave plus JSON export/import for moving saves between devices
 
 ## Deployment
 
-This game is hosted as a static sub-site inside the `karmiphuc.github.io` repository.
-
 - Source: `wayfarer-guild/index.html`
 - Branch: `master`
-- Hosting: GitHub Pages through the existing user-site repository
-- Save data: browser-local `localStorage` (each browser/device has its own save)
-
-Future game revisions only need to update `wayfarer-guild/index.html`. GitHub Pages then serves the new committed version.
-
-The page includes an iPad/mobile responsive layout and iOS web-app metadata.
+- Host: GitHub Pages via `karmiphuc.github.io`
+- Future commits to the same file update the live game URL
