@@ -70,7 +70,9 @@ stand-ins, not final job art.
   equipped base item: sword, bow, staff, axe or hammer.
 - Axe and hammer reuse audited Tiny Dungeon CC0 cells; sword, bow and staff use
   small pixel primitives because the shipped atlas has no readable equivalent.
-- The weapon follows attack anticipation/lunge/recoil and is hidden for KO pawns.
+- Weapons follow travel facing, turn toward attack targets, use attack
+  anticipation/lunge/recoil and remain hidden for KO pawns; offhands occupy the
+  opposite side.
 - Job defaults provide a readable training silhouette when no item is equipped.
 - Auto-equip has a bounded role affinity so an Archer prefers a comparable bow
   over an off-role axe; it remains possible to use unusual builds.

@@ -411,6 +411,13 @@ for (const [base, kind, atlas] of weaponCases) {
 weaponPawn.equipment.weapon = null;
 weaponPawn.job = 'Archer';
 assert.deepEqual({...debug.weaponVisual(weaponPawn)}, {kind: 'arrow', base: 'Training Bow', equipped: false, atlas: null}, 'unarmed jobs should carry a readable training weapon');
+debug.attackAnim().delete(weaponPawn.id);
+weaponPawn.facing = -1;
+assert.equal(debug.weaponPose(weaponPawn, 'town').facing, -1, 'idle carried equipment should follow travel facing');
+debug.attackAnim().set(weaponPawn.id, {scope: 'town', life: .2, max: .34, dx: 2, dy: 0, kind: 'arrow'});
+assert.deepEqual({...debug.weaponPose(weaponPawn, 'town')}.attacking, true, 'carried weapon should enter its attack pose');
+assert.equal(debug.weaponPose(weaponPawn, 'town').facing, 1, 'attack target direction should override stale travel facing');
+debug.attackAnim().delete(weaponPawn.id);
 const plainBow = {base: 'Hunter Bow', name: 'Hunter Bow', slot: 'weapon', atk: 5, def: 0, mag: 0, spd: 1, hp: 0};
 const plainAxe = {base: 'Iron Axe', name: 'Iron Axe', slot: 'weapon', atk: 7, def: 0, mag: 0, spd: -1, hp: 0};
 assert.ok(debug.itemScore(weaponPawn, plainBow) > debug.itemScore(weaponPawn, plainAxe), 'Archer auto-equip should favor a bow over a slightly stronger off-role axe');

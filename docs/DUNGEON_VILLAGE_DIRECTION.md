@@ -57,9 +57,11 @@ party positions, objectives, phase and progress.
 
 Pawns now visibly carry a weapon in both town and dungeon views. The silhouette
 comes from the actual equipped base item: sword, bow, staff, axe or hammer.
-Weapons follow the existing anticipation/lunge/recoil attack motion instead of
-appearing only as detached combat effects. Before acquiring an item, a pawn
-carries a job-readable training weapon so the role remains legible.
+Weapons follow the pawn's travel direction, turn toward attack targets and use
+the existing anticipation/lunge/recoil motion instead of appearing only as
+detached combat effects. Offhands stay on the opposite side. Before acquiring
+an item, a pawn carries a job-readable training weapon so the role remains
+legible.
 
 Auto-equip retains stat comparison but adds a bounded role affinity: Archers
 and Ninjas prefer bows, magic jobs prefer staves, holy jobs accept staves or
