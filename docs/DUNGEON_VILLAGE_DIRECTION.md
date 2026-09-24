@@ -66,10 +66,17 @@ and Ninjas prefer bows, magic jobs prefer staves, holy jobs accept staves or
 hammers, and workers/frontliners prefer appropriate tools. This makes equipment
 changes visible and mechanically coherent without hard-locking any build.
 
+The guild stash now supports direct equipment gifts to the selected available
+pawn. Gifts equip immediately, raise satisfaction based on rarity, and reserve
+that slot from background auto-equip; re-enabling auto-equip releases reserved
+slots. Wood shields, round shields and spellbooks appear as persistent offhand
+equipment in both town and dungeon views. Gifted items and reservations survive
+save/reload.
+
 ## Next slices
 
-1. Verify carried-weapon scale, overlap and attack motion in the rendered town
-   and dungeon, then add visible shields/armor without obscuring pawn identity.
+1. Verify carried weapon, offhand and restrained armor-cue scale, overlap and
+   attack motion in the rendered town and dungeon without obscuring identity.
 2. Convert ordinary frontier exploration gathering from instant global deposits
    to personal cargo and Storehouse/Guild hauling.
 3. Add facility activity feedback using existing licensed sprites and the FX

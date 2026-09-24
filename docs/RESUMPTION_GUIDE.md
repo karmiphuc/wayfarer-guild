@@ -74,6 +74,11 @@ stand-ins, not final job art.
 - Job defaults provide a readable training silhouette when no item is equipped.
 - Auto-equip has a bounded role affinity so an Archer prefers a comparable bow
   over an off-role axe; it remains possible to use unusual builds.
+- Stash items can be gifted to the selected available pawn. The item equips
+  immediately, raises satisfaction according to rarity, and reserves that slot
+  against background auto-equip until auto-equip is re-enabled.
+- Wood/round shields and spellbooks render as persistent offhands in town and
+  dungeons. Gifted item IDs and slot reservations survive save/reload.
 - Automated mapping/affinity checks pass. Actual overlap and scale in a browser
   remain unverified because local file/loopback navigation is blocked here.
 
@@ -131,9 +136,11 @@ Out of scope: bespoke building interiors.
 
 ### P1: complete visible equipment language
 
-Acceptance: verify carried weapons in town/dungeon at desktop and iPad scale;
-add restrained shield/offhand and armor cues; let the player deliberately gift
-or reserve equipment; keep pawn silhouette, cargo and status effects readable.
+Implemented: carried weapons, shield/book offhands, restrained coat/mail/robe/
+cloak cues, direct gifts, role-aware fit scoring and gifted-slot reservations.
+
+Remaining acceptance: verify the combined equipment silhouette in town/dungeon
+at desktop and iPad scale; keep pawn identity, cargo and status effects readable.
 
 Dependency: preserve current item IDs/save shape and the audited CC0 pipeline.
 

@@ -414,6 +414,22 @@ assert.deepEqual({...debug.weaponVisual(weaponPawn)}, {kind: 'arrow', base: 'Tra
 const plainBow = {base: 'Hunter Bow', name: 'Hunter Bow', slot: 'weapon', atk: 5, def: 0, mag: 0, spd: 1, hp: 0};
 const plainAxe = {base: 'Iron Axe', name: 'Iron Axe', slot: 'weapon', atk: 7, def: 0, mag: 0, spd: -1, hp: 0};
 assert.ok(debug.itemScore(weaponPawn, plainBow) > debug.itemScore(weaponPawn, plainAxe), 'Archer auto-equip should favor a bow over a slightly stronger off-role axe');
+const giftShield = {id: 89989, base: 'Wood Shield', name: 'Gifted Wood Shield', slot: 'offhand', rarity: 'rare', atk: 0, def: 4, mag: 0, spd: 0, hp: 0, score: 4};
+const strongerShield = {id: 89988, base: 'Round Shield', name: 'Stronger Round Shield', slot: 'offhand', rarity: 'epic', atk: 0, def: 9, mag: 0, spd: 0, hp: 0, score: 9};
+state.stash.push(giftShield);
+const giftSatisfaction = weaponPawn.satisfaction;
+assert.equal(debug.giveItem(weaponPawn, giftShield.id), true, 'selected pawn should accept available gifted equipment');
+assert.equal(weaponPawn.equipment.offhand.id, giftShield.id);
+assert.equal(weaponPawn.lockedSlots.offhand, true, 'gifted slot should be reserved against auto-equip');
+assert.equal(debug.offhandVisual(weaponPawn).kind, 'woodShield');
+assert.ok(weaponPawn.satisfaction > giftSatisfaction, 'equipment gifts should improve satisfaction');
+for (const [base, kind] of [['Leather Coat', 'coat'], ['Iron Mail', 'mail'], ['Mage Robe', 'robe'], ['Traveler Cloak', 'cloak']]) {
+  weaponPawn.equipment.armor = {base, name: base, slot: 'armor'};
+  assert.equal(debug.armorVisual(weaponPawn).kind, kind, `${base} should select its armor silhouette`);
+}
+state.stash.push(strongerShield);
+debug.equipAll();
+assert.equal(weaponPawn.equipment.offhand.id, giftShield.id, 'auto-equip must preserve deliberately gifted equipment');
 weaponPawn.equipment.weapon = {id: 89990, base: 'War Hammer', name: 'War Hammer', slot: 'weapon', rarity: 'common', atk: 6, def: 2, mag: 0, spd: -1, hp: 0, score: 8};
 debug.save(false);
 const weaponSaveRaw = storage.value;
@@ -425,8 +441,10 @@ vm.runInNewContext(script, weaponSaveContext);
 const restoredWeaponPawn = weaponSaveContext.__WAYFARER_DEBUG__.state().pawns.find(p => p.id === weaponPawn.id);
 assert.equal(restoredWeaponPawn.equipment.weapon.id, 89990, 'equipped weapon identity should survive save/reload');
 assert.deepEqual({...weaponSaveContext.__WAYFARER_DEBUG__.weaponVisual(restoredWeaponPawn)}, {kind: 'hammer', base: 'War Hammer', equipped: true, atlas: 117});
+assert.equal(restoredWeaponPawn.equipment.offhand.id, giftShield.id, 'gifted offhand should survive save/reload');
+assert.equal(restoredWeaponPawn.lockedSlots.offhand, true, 'gift reservation should survive save/reload');
 weaponPawn.equipment.weapon = null;
-console.log('Persistent carried-weapon mapping checks passed');
+console.log('Persistent carried-equipment mapping and gifting checks passed');
 
 const reviewState = debug.state();
 const reviewPawn = reviewState.pawns[0];
