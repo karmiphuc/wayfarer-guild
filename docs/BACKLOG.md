@@ -13,6 +13,10 @@ Legend:
 
 ## Now — v0.4 foundations
 
+### Active bugfix slice — facilities, housing and frontier autonomy
+
+- 🚧 **P0 Restore facility and pawn-state contracts** — research-gated Farm/Forge placement, starting-home assignment, home-based recovery, Forge work, and job-led frontier exploration. Evidence and acceptance checks: [project knowledge base](./PROJECT_KNOWLEDGE_BASE.md). Maps to #22, #23, #24 and #25.
+
 - ⏳ **P0 Modular architecture/data-driven content** — [#19](https://github.com/karmiphuc/karmiphuc.github.io/issues/19)
 - ⏳ **P0 Cohesive licensed pixel-art pipeline** — [#20](https://github.com/karmiphuc/karmiphuc.github.io/issues/20)
 - ⏳ **P0 Music/ambience/SFX foundation** — [#21](https://github.com/karmiphuc/karmiphuc.github.io/issues/21)

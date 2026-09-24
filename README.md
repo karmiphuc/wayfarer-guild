@@ -59,6 +59,7 @@ The repository is now the durable source of truth for the game's direction:
 - [Vision](./docs/VISION.md) — what the game should feel like and what it should never become
 - [Roadmap](./docs/ROADMAP.md) — phased path from the current prototype to a polished personal 1.0
 - [Backlog](./docs/BACKLOG.md) — pending work and ideas, linked to GitHub issues
+- [Project knowledge base](./docs/PROJECT_KNOWLEDGE_BASE.md) — current architecture, evidence ledger, active bug slice and acceptance checks
 - [Asset & audio plan](./docs/ASSETS_AND_AUDIO.md) — pixel-art/music/SFX direction and licensing rules
 - [Asset attribution ledger](./ASSET_ATTRIBUTION.md) — provenance for every third-party file actually used
 - [Agent working agreement](./AGENTS.md) — rules future coding sessions should follow
