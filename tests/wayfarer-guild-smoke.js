@@ -437,6 +437,26 @@ for (const [base, kind] of [['Leather Coat', 'coat'], ['Iron Mail', 'mail'], ['M
 state.stash.push(strongerShield);
 debug.equipAll();
 assert.equal(weaponPawn.equipment.offhand.id, giftShield.id, 'auto-equip must preserve deliberately gifted equipment');
+const shopPawn = state.pawns[1];
+const shopSnapshot = {equipment: shopPawn.equipment, lockedSlots: shopPawn.lockedSlots, coins: shopPawn.coins, satisfaction: shopPawn.satisfaction};
+shopPawn.equipment = {
+  weapon: {id: 91001, base: 'Bronze Sword', slot: 'weapon', atk: 1},
+  armor: {id: 91002, base: 'Leather Coat', slot: 'armor', def: 1},
+  offhand: {id: 91003, base: 'Wood Shield', slot: 'offhand', def: 1},
+  accessory: {id: 91004, base: 'Lucky Ring', slot: 'accessory', atk: 1},
+};
+shopPawn.lockedSlots = {weapon: true, armor: true, offhand: true, accessory: true};
+shopPawn.coins = 100;
+const shop = {type: 'WeaponShop', price: 0, quality: 13, level: 5, uses: 0, income: 0, appeal: 0};
+debug.useBuilding(shopPawn, shop, 100);
+assert.equal(shopPawn.coins, 100, 'autonomous shop visits must not replace or charge for player-reserved equipment');
+assert.deepEqual(Object.values(shopPawn.equipment).map(i => i.id), [91001, 91002, 91003, 91004]);
+shopPawn.equipment = {weapon: null, armor: null, offhand: null, accessory: null};
+shopPawn.lockedSlots = {};
+debug.useBuilding(shopPawn, shop, 100);
+assert.equal(shopPawn.coins, 72, 'an adventurer with an open slot should autonomously buy shop equipment');
+assert.ok(Object.values(shopPawn.equipment).some(Boolean), 'a shop purchase should immediately become carried equipment');
+Object.assign(shopPawn, shopSnapshot);
 weaponPawn.equipment.weapon = {id: 89990, base: 'War Hammer', name: 'War Hammer', slot: 'weapon', rarity: 'common', atk: 6, def: 2, mag: 0, spd: -1, hp: 0, score: 8};
 debug.save(false);
 const weaponSaveRaw = storage.value;

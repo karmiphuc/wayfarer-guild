@@ -75,6 +75,12 @@ slots. Wood shields, round shields and spellbooks appear as persistent offhand
 equipment in both town and dungeon views. Gifted items and reservations survive
 save/reload.
 
+This follows the reference game's two-source equipment loop: adventurers may
+buy upgrades while physically visiting a store, while deliberate player gifts
+raise satisfaction and remain authoritative. A shop purchase cannot overwrite
+or charge for a reserved gift; replacing equipment returns the old item to the
+guild stash.
+
 ## Next slices
 
 1. Verify carried weapon, offhand and restrained armor-cue scale, overlap and

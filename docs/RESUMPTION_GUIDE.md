@@ -79,6 +79,8 @@ stand-ins, not final job art.
 - Stash items can be gifted to the selected available pawn. The item equips
   immediately, raises satisfaction according to rarity, and reserves that slot
   against background auto-equip until auto-equip is re-enabled.
+- Adventurers can still buy open-slot/upgraded gear while physically using the
+  Weapon Shop, but purchases cannot charge for or replace reserved gifts.
 - Wood/round shields and spellbooks render as persistent offhands in town and
   dungeons. Gifted item IDs and slot reservations survive save/reload.
 - Automated mapping/affinity checks pass. Actual overlap and scale in a browser
