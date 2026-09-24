@@ -16,7 +16,7 @@ Legend:
 ### Active bugfix slice — facilities, housing and frontier autonomy
 
 - Pawn recovery follow-up: combined hunger/exhaustion/injury, combat/rescue disengagement, HP-aware Camp, Knight/Paladin eligibility, Researcher Study, explicit Recall recovery and failed-save preservation have deterministic regression coverage. Rendered browser verification remains open.
-- Next planned fix: visible construction preview, rejection reasons and touch confirmation, followed by a save-compatible southern town expansion. See [building placement plan](./BUILDING_PLACEMENT_PLAN.md). Tracks #25 and #26; not implemented yet.
+- ✅ **30-pawn town expansion baseline** — map expanded from 38×23 to 38×33 without moving existing coordinates; a fixed-scale 23-row camera pans to the southern district, v4 saves migrate to v5, construction has a green/red footprint and rejection reason, population cap is 30, and frontier monster density scales with population. Touch confirmation and rendered browser verification remain open. See [building placement plan](./BUILDING_PLACEMENT_PLAN.md). Tracks #25 and #26.
 - 🚧 **Dungeon Village-style visible quest loop** — field quests now spawn visible monster packs; volunteers walk out, fight, gather, carry and return before rewards deposit. Mid-operation save/resume is covered. Direction and research: [Dungeon Village direction](./DUNGEON_VILLAGE_DIRECTION.md). Next: ordinary exploration hauling and facility activity feedback. Maps to #22, #24 and #25.
 
 - 🚧 **P0 Restore facility and pawn-state contracts** — research-gated Farm/Forge placement, starting-home assignment, home-based recovery, Forge work, and job-led frontier exploration. Evidence and acceptance checks: [project knowledge base](./PROJECT_KNOWLEDGE_BASE.md). Maps to #22, #23, #24 and #25.
@@ -54,7 +54,7 @@ Pending ideas:
 - [ ] traveling merchant
 - [ ] seasonal/festival events
 - [ ] retirement into town specialist roles
-- [ ] town land expansion
+- [x] first save-compatible southern town expansion
 
 ## Next — RPG depth
 

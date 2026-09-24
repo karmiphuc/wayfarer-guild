@@ -1,6 +1,22 @@
 # Next fix: town space and building placement
 
-Status: planned, not implemented. Tracking: #25 (town), #26 (touch/save safety).
+Status: southern expansion and desktop placement preview implemented in v0.6.0;
+touch confirmation remains planned. Tracking: #25 (town), #26 (touch/save safety).
+
+## Implemented baseline
+
+- Expanded the world from 38×23 to 38×33 while preserving all old entity and
+  building coordinates and the `x=24` town/frontier boundary.
+- Kept a 23-row viewport at the original visual scale; wheel and visible
+  north/south controls pan across the ten new rows.
+- Added v4→v5 migration: all 23 old fog rows remain byte-for-byte equivalent;
+  appended town cells are revealed and appended frontier cells are fogged.
+- Added a shared placement evaluator, green/red footprint, clearance outline
+  and a specific visible rejection reason.
+- Raised the supported population cap from 18 to 30 and made ambient frontier
+  monster density scale to 23 at a full town.
+- Added deterministic checks for migration, southern placement/reachability,
+  camera clamping and camera-aware pointer conversion.
 
 ## What is wrong now
 
@@ -34,16 +50,16 @@ handlers offer no preview/confirm flow.
 
 ### 2. Add usable land without moving existing towns
 
-Proposed first expansion: six rows to the south (23 -> 29). Keep width 38 and
+Implemented first expansion: ten rows to the south (23 -> 33). Keep width 38 and
 the town/frontier boundary at x=24. Existing buildings, pawns and monsters keep
-their coordinates. This adds six rows of town lots, not merely a larger canvas.
+their coordinates. This adds ten rows of town lots, not merely a larger canvas.
 
 Add a vertically pannable viewport at the existing tile scale rather than
 shrinking the whole town to fit. Ensure both draw and pointer-to-tile conversion
 use the same camera transform. Clamp camera bounds and distinguish pan from
 placement gestures. Desktop and touch must both reach the new lots.
 
-Introduce a v4 -> v5 save migration with the map change. Preserve old fog cells
+The v4 -> v5 save migration preserves old fog cells
 and entity identities, append new town cells revealed and new frontier cells
 fogged. Repeated migration must be harmless. Check all row-based generation,
 frontier targeting, pathing, terrain, boundaries and percentage calculations;

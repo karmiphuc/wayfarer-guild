@@ -116,13 +116,16 @@ Dependency: use licensed assets and the existing FX lifecycle.
 
 Out of scope: bespoke building interiors.
 
-### P1: building placement and town expansion
+### P1: finish building placement interaction
 
-Symptom: placement lacks footprint/rejection cues and the current town is too
-small. Follow `BUILDING_PLACEMENT_PLAN.md`.
+Implemented baseline: the map is now 38×33, old coordinates are preserved by
+v4→v5 migration, the 23-row camera reaches the new southern district, and
+placement shows a green/red footprint plus a rejection reason. Population now
+scales to 30 and ambient frontier density scales with it.
 
-Acceptance: green/red footprint, clear rejection reason, safe touch confirm,
-then save-compatible southern expansion without moving existing coordinates.
+Remaining acceptance: safe first-tap preview/second-tap confirmation on touch,
+cancel controls, rendered desktop/iPad verification, and performance profiling
+with 30 active pawns plus 20+ monsters.
 
 ### P2: cohesive character set
 
@@ -167,5 +170,5 @@ and more compact path-led town composition.
 3. Verify the local and deployed rendered gate still outstanding.
 4. Continue ordinary exploration hauling using the field-operation pattern.
 5. Add facility feedback before decorative density.
-6. Complete placement feedback before expanding the town map.
+6. Finish touch confirmation and profile the expanded map at 30 pawns.
 7. Finish each cohesive slice with scoped verification, commit and push.

@@ -76,6 +76,15 @@ vm.runInNewContext(script, context, {filename: htmlPath});
 const debug = context.__WAYFARER_DEBUG__;
 assert.ok(debug, 'debug surface should be available for the smoke harness');
 const state = debug.state();
+assert.deepEqual({...debug.mapSpec()}, {cols: 38, rows: 33, viewRows: 23, townMaxX: 24, populationCap: 30});
+assert.equal(debug.desiredMonsterCount(30), 23, 'a full town should support a much denser frontier population');
+assert.equal(state.version, 5);
+assert.equal(state.fog.length, 33, 'new games should include the southern district');
+assert.ok(state.fog.slice(23).every(row => row.slice(0, 25).every(v => v === false)), 'new southern town cells should be revealed');
+assert.ok(state.fog.slice(23).every(row => row.slice(25).every(v => v === true)), 'new southern frontier cells should begin fogged');
+for (const monster of state.monsters) monster.dead = true;
+debug.update(1/30);
+assert.ok(state.monsters.some(m => !m.dead), 'ambient monsters should replenish below the population-scaled target');
 const residents = state.pawns.filter(p => p.resident);
 const houses = state.buildings.filter(b => b.type === 'House');
 assert.equal(residents.length, 4, 'new game should have four residents');
@@ -96,6 +105,16 @@ assert.equal(debug.placeBuilding('Farm', 2, 17), false, 'unresearched Farm shoul
 state.unlockedResearch.push('Farm');
 assert.equal(debug.placeBuilding('Farm', 2, 17), true, 'researched Farm should be placeable at rank 1');
 assert.ok(state.gold < oldGold, 'building placement should charge gold');
+
+state.gold = Math.max(state.gold, 500);
+assert.equal(debug.buildCheck('House', 2, 27).ok, true, 'southern district should provide valid building lots');
+assert.equal(debug.placeBuilding('House', 2, 27), true, 'a House should be placeable in the southern district');
+const southHouse = state.buildings.find(b => b.type === 'House' && b.y === 27);
+assert.ok(southHouse, 'southern building should retain its expanded-map coordinates');
+assert.ok(debug.astar(12, 16, southHouse.x + 1, southHouse.y + southHouse.h).length > 0, 'pawns should path to southern building entrances');
+assert.equal(debug.setCamera(999), 10, 'camera should clamp to the final ten-row offset');
+assert.equal(debug.canvasPos({clientX: 80, clientY: 656}).y, 30, 'pointer conversion should include the vertical camera offset');
+assert.equal(debug.setCamera(-5), 0, 'camera should clamp at the north edge');
 
 const forge = debug.building('Forge', 7, 17);
 resident.job = 'Blacksmith';
@@ -285,6 +304,30 @@ assert.ok(campHealed, 'outdoor recovery must restore HP even at full starting en
 state.buildings = existingBuildings;
 console.log('Combat/rescue retreat, Recall, job unlocks, Study and Camp checks passed');
 
+const oldV4 = JSON.parse(storage.value);
+oldV4.version = 4;
+oldV4.fog = oldV4.fog.slice(0, 23);
+const oldFog = oldV4.fog.map(row => row.slice());
+const oldPositions = oldV4.pawns.map(p => [p.id, p.x, p.y]);
+const oldBuildings = oldV4.buildings.map(b => [b.id, b.x, b.y, b.w, b.h]);
+const migrationRaw = JSON.stringify(oldV4);
+const migrationContext = {...context, localStorage: {
+  getItem() { return migrationRaw; }, setItem(_key, value) { this.value = value; }, value: migrationRaw,
+}};
+migrationContext.window = migrationContext;
+vm.runInNewContext(script, migrationContext);
+const migrated = migrationContext.__WAYFARER_DEBUG__.state();
+assert.equal(migrated.version, 5, 'v4 saves should migrate to v5');
+assert.equal(migrated.fog.length, 33);
+assert.deepEqual(Array.from(migrated.fog.slice(0, 23), row => Array.from(row)), oldFog, 'migration must preserve every old fog cell');
+assert.deepEqual(Array.from(migrated.pawns, p => [p.id, p.x, p.y]), oldPositions, 'migration must preserve pawn identities and coordinates');
+assert.deepEqual(Array.from(migrated.buildings, b => [b.id, b.x, b.y, b.w, b.h]), oldBuildings, 'migration must preserve building identities and coordinates');
+assert.ok(migrated.fog.slice(23).every(row => row.slice(0, 25).every(v => v === false)));
+assert.ok(migrated.fog.slice(23).every(row => row.slice(25).every(v => v === true)));
+const migratedOnce = JSON.stringify(migrated);
+assert.equal(JSON.stringify(migrationContext.__WAYFARER_DEBUG__.migrate(migrated)), migratedOnce, 'v5 migration should be idempotent');
+console.log('Expanded-map v4 to v5 migration checks passed');
+
 const missingQuests = JSON.parse(storage.value);
 delete missingQuests.quests;
 const brokenPawn = JSON.parse(storage.value);
@@ -320,7 +363,7 @@ for (const raw of ['{broken', '', JSON.stringify({version: 999}), JSON.stringify
   failedContext.localStorage.setItem = write;
   elements.get('importFile').onchange({target: {files: [storage.value]}});
   assert.ok(reloaded, 'valid backup import must resume via reload');
-  assert.equal(JSON.parse(saved.get('wayfarerGuildV2')).version, 4);
+  assert.equal(JSON.parse(saved.get('wayfarerGuildV2')).version, 5);
   const restoredContext = {...failedContext};
   restoredContext.window = restoredContext;
   vm.runInNewContext(script, restoredContext);
