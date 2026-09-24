@@ -99,6 +99,14 @@ target reservations and a Scout job are not implemented by this patch.
 
 ## Follow-up queue
 
+- Next after pawn-state fixes: [building placement and town space](./BUILDING_PLACEMENT_PLAN.md).
+- Recovery regression coverage now includes simultaneous hunger/exhaustion/injury,
+  combat/rescue disengagement, HP-aware Camp and explicit Recall-to-recovery.
+- Knight becomes eligible after Fighter mastery; Paladin requires Temple research
+  plus Fighter and Cleric mastery. Researcher residents prioritize Library work.
+- Failed-load preservation and backup-import recovery have simulation coverage.
+  This does not constitute exhaustive corrupt-save validation or a backup system.
+
 - Split the single HTML file into simulation, content, rendering, UI and save
   modules under issue #19 after this bug slice is stable.
 - Add explicit role/job data for Scout rather than growing hard-coded job lists.

@@ -15,6 +15,9 @@ Legend:
 
 ### Active bugfix slice — facilities, housing and frontier autonomy
 
+- Pawn recovery follow-up: combined hunger/exhaustion/injury, combat/rescue disengagement, HP-aware Camp, Knight/Paladin eligibility, Researcher Study, explicit Recall recovery and failed-save preservation have deterministic regression coverage. Rendered browser verification remains open.
+- Next planned fix: visible construction preview, rejection reasons and touch confirmation, followed by a save-compatible southern town expansion. See [building placement plan](./BUILDING_PLACEMENT_PLAN.md). Tracks #25 and #26; not implemented yet.
+
 - 🚧 **P0 Restore facility and pawn-state contracts** — research-gated Farm/Forge placement, starting-home assignment, home-based recovery, Forge work, and job-led frontier exploration. Evidence and acceptance checks: [project knowledge base](./PROJECT_KNOWLEDGE_BASE.md). Maps to #22, #23, #24 and #25.
 
 - ⏳ **P0 Modular architecture/data-driven content** — [#19](https://github.com/karmiphuc/karmiphuc.github.io/issues/19)

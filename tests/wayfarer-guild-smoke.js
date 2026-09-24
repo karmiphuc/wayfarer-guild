@@ -186,3 +186,156 @@ for (let i = 0; i < 900; i++) {
 }
 assert.ok(ate, 'low HP must not repeatedly restart eating and prevent travel to food');
 console.log('Wayfarer Guild smoke checks passed, including activity selection, travel, recovery and repair');
+
+resident.x = 12; resident.y = 16;
+resident.energy = 5; resident.hunger = 5; resident.hp = 2;
+debug.chooseTask(resident);
+let recoveredFood = false;
+for (let i = 0; i < 900; i++) {
+  debug.updatePawn(resident, 1/30);
+  if (resident.hunger > 80) recoveredFood = true;
+}
+assert.ok(recoveredFood, 'starving exhausted injured pawn must reach food');
+const patient = residents[1];
+patient.ko = true; patient.x = resident.x; patient.y = resident.y;
+resident.hunger = 5; resident.energy = 80; resident.hp = 2;
+debug.chooseTask(resident);
+assert.equal(resident.task, 'Eat', 'critical rescuer needs must precede rescue');
+patient.ko = false;
+
+const enemy = state.monsters[0];
+enemy.dead = false; enemy.hp = 10000; enemy.x = 27; enemy.y = 11;
+resident.job = 'Adventurer'; resident.x = 26; resident.y = 11;
+resident.energy = resident.hunger = 90; resident.hp = 2;
+resident.task = 'Fight'; resident.targetId = enemy.id; resident.path = [];
+debug.updatePawn(resident, 1/30);
+assert.equal(resident.task, 'Rest', 'injured fighter must disengage to recover');
+assert.equal(enemy.hp, 10000, 'retreat must not attack before leaving');
+const retreatUses = home.uses;
+let reachedHome = false;
+for (let i = 0; i < 900; i++) {
+  debug.updatePawn(resident, 1/30);
+  if (home.uses > retreatUses) reachedHome = true;
+}
+assert.ok(reachedHome, 'retreat must move the pawn back into town');
+resident.x = 26; resident.y = 11;
+resident.energy = resident.hunger = 90; resident.hp = debug.stats(resident).maxHp;
+state.energy = 50;
+assert.ok(debug.deployExplore(resident, [32, 11]));
+elements.get('recallBtn').onclick();
+assert.equal(resident.task, 'Rest', 'Recall must select recovery rather than a nearby fight');
+assert.equal(resident.exploreTarget, null);
+const recallUses = home.uses;
+let recallReturned = false;
+for (let i = 0; i < 600; i++) {
+  debug.updatePawn(resident, 1/30);
+  if (resident.x < 24 && home.uses > recallUses) recallReturned = true;
+}
+assert.ok(recallReturned, 'recalled pawn must return to town');
+for (const [activity, hunger, energy, expected] of [
+  ['Fight', 90, 20, 'Rest'], ['Fight', 20, 90, 'Eat'],
+  ['Rescue', 90, 26, 'Rest'], ['Rescue', 20, 90, 'Eat'],
+]) {
+  patient.ko = true; patient.x = 26; patient.y = 12;
+  resident.x = 26; resident.y = 11;
+  resident.hp = debug.stats(resident).maxHp;
+  resident.hunger = hunger; resident.energy = energy;
+  resident.task = activity; resident.targetId = activity === 'Fight' ? enemy.id : patient.id;
+  debug.updatePawn(resident, 1/30);
+  assert.equal(resident.task, expected, activity + ' must yield to critical needs');
+}
+patient.ko = false;
+enemy.dead = true;
+
+resident.mastered = [];
+assert.ok(!debug.availableJobs(resident).includes('Knight'), 'Knight still requires Fighter mastery');
+resident.mastered = ['Fighter'];
+assert.ok(debug.availableJobs(resident).includes('Knight'), 'Fighter mastery unlocks Knight');
+resident.mastered.push('Cleric');
+assert.ok(!debug.availableJobs(resident).includes('Paladin'), 'Paladin requires Temple research');
+state.townPoints = 100;
+debug.research('Temple');
+assert.ok(debug.availableJobs(resident).includes('Paladin'), 'Temple and both masteries unlock Paladin');
+resident.mastered = ['Cleric'];
+assert.ok(!debug.availableJobs(resident).includes('Paladin'), 'Temple cannot bypass Fighter mastery');
+
+const library = debug.building('Library', 12, 17);
+state.buildings.push(library);
+resident.job = 'Researcher'; resident.work = 100;
+resident.hp = debug.stats(resident).maxHp; resident.energy = resident.hunger = 95;
+resident.x = 12; resident.y = 16;
+debug.chooseTask(resident);
+assert.equal(resident.task, 'Study', 'healthy Researcher must choose Library over Training');
+for (let i = 0; i < 600; i++) debug.updatePawn(resident, 1/30);
+assert.ok(library.uses > 0, 'Researcher must reach and use Library');
+
+const existingBuildings = state.buildings;
+state.buildings = state.buildings.filter(b => !['House', 'Inn'].includes(b.type));
+resident.x = 12; resident.y = 16;
+resident.energy = resident.hunger = 100; resident.hp = 2;
+debug.chooseTask(resident);
+assert.equal(resident.task, 'Camp');
+let campHealed = false;
+for (let i = 0; i < 1800; i++) {
+  debug.updatePawn(resident, 1/30);
+  if (resident.hp >= debug.stats(resident).maxHp * .92) campHealed = true;
+  if (!campHealed) assert.equal(resident.task, 'Camp', 'Camp must not finish on energy alone');
+}
+assert.ok(campHealed, 'outdoor recovery must restore HP even at full starting energy');
+state.buildings = existingBuildings;
+console.log('Combat/rescue retreat, Recall, job unlocks, Study and Camp checks passed');
+
+const missingQuests = JSON.parse(storage.value);
+delete missingQuests.quests;
+const brokenPawn = JSON.parse(storage.value);
+brokenPawn.pawns[0].mastered = null;
+for (const raw of ['{broken', '', JSON.stringify({version: 999}), JSON.stringify({version: 4}), JSON.stringify(missingQuests), JSON.stringify(brokenPawn)]) {
+  const saved = new Map([['wayfarerGuildV2', raw]]);
+  const failedContext = {...context, localStorage: {
+    getItem(key) { return saved.has(key) ? saved.get(key) : null; },
+    setItem(key, value) { saved.set(key, value); },
+  }};
+  failedContext.window = failedContext;
+  vm.runInNewContext(script, failedContext);
+  elements.get('saveBtn').onclick();
+  assert.equal(saved.get('wayfarerGuildV2'), raw, 'failed load must preserve original bytes even after Save');
+  assert.match(elements.get('mapHint').textContent, /Original data is preserved/);
+  let reloaded = false;
+  failedContext.location = {reload() { reloaded = true; }};
+  failedContext.alert = () => {};
+  failedContext.FileReader = class {
+    readAsText(file) { this.result = file; this.onload(); }
+  };
+  elements.get('importFile').onchange({target: {files: ['{"version":4}']}});
+  assert.equal(saved.get('wayfarerGuildV2'), raw, 'invalid import must preserve failed save');
+  assert.equal(reloaded, false);
+  const originalState = failedContext.__WAYFARER_DEBUG__.state();
+  const write = failedContext.localStorage.setItem;
+  failedContext.localStorage.setItem = () => { throw Error('storage full'); };
+  elements.get('importFile').onchange({target: {files: [storage.value]}});
+  assert.equal(failedContext.__WAYFARER_DEBUG__.state(), originalState, 'storage failure must restore in-memory state');
+  assert.equal(saved.get('wayfarerGuildV2'), raw);
+  assert.equal(reloaded, false, 'failed write must not reload');
+  assert.doesNotThrow(() => elements.get('saveBtn').onclick(), 'failed import must retain save guard');
+  failedContext.localStorage.setItem = write;
+  elements.get('importFile').onchange({target: {files: [storage.value]}});
+  assert.ok(reloaded, 'valid backup import must resume via reload');
+  assert.equal(JSON.parse(saved.get('wayfarerGuildV2')).version, 4);
+  const restoredContext = {...failedContext};
+  restoredContext.window = restoredContext;
+  vm.runInNewContext(script, restoredContext);
+  assert.equal(restoredContext.__WAYFARER_DEBUG__.state().pawns.length, 8, 'valid save reload retains pawns');
+  const goodRaw = saved.get('wayfarerGuildV2');
+  const goodState = restoredContext.__WAYFARER_DEBUG__.state();
+  for (const invalid of [missingQuests, brokenPawn]) {
+    elements.get('importFile').onchange({target: {files: [JSON.stringify(invalid)]}});
+    assert.equal(saved.get('wayfarerGuildV2'), goodRaw, 'invalid import must not overwrite good save');
+    assert.equal(restoredContext.__WAYFARER_DEBUG__.state(), goodState, 'invalid import restores running game');
+  }
+  restoredContext.localStorage.setItem = () => { throw Error('storage full'); };
+  elements.get('importFile').onchange({target: {files: [storage.value]}});
+  assert.equal(restoredContext.__WAYFARER_DEBUG__.state(), goodState, 'running import rollback includes write errors');
+  assert.equal(saved.get('wayfarerGuildV2'), goodRaw);
+  restoredContext.localStorage.setItem = write;
+}
+console.log('Critical-needs and failed-save preservation checks passed');
