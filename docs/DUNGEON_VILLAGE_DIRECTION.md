@@ -81,6 +81,11 @@ raise satisfaction and remain authoritative. A shop purchase cannot overwrite
 or charge for a reserved gift; replacing equipment returns the old item to the
 guild stash.
 
+The Gear pane also exposes the selected adventurer's complete loadout. Any
+available pawn can return one equipped item to the stash, preserving its ID and
+releasing only that slot's gift reservation; questing and KO pawns remain
+protected from mid-operation equipment changes.
+
 ## Next slices
 
 1. Verify carried weapon, offhand and restrained armor-cue scale, overlap and

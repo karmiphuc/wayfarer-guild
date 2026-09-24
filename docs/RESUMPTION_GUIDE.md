@@ -81,6 +81,8 @@ stand-ins, not final job art.
   against background auto-equip until auto-equip is re-enabled.
 - Adventurers can still buy open-slot/upgraded gear while physically using the
   Weapon Shop, but purchases cannot charge for or replace reserved gifts.
+- The Gear pane shows the selected loadout and can return one item at a time to
+  the stash, preserving item identity and clearing only that slot reservation.
 - Wood/round shields and spellbooks render as persistent offhands in town and
   dungeons. Gifted item IDs and slot reservations survive save/reload.
 - Automated mapping/affinity checks pass. Actual overlap and scale in a browser
