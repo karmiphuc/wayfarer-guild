@@ -53,17 +53,32 @@ an animated map marker; gathering nodes and carried cargo reuse licensed atlas
 sprites already in the repository. A save made during the operation restores
 party positions, objectives, phase and progress.
 
+## Visible equipment slice
+
+Pawns now visibly carry a weapon in both town and dungeon views. The silhouette
+comes from the actual equipped base item: sword, bow, staff, axe or hammer.
+Weapons follow the existing anticipation/lunge/recoil attack motion instead of
+appearing only as detached combat effects. Before acquiring an item, a pawn
+carries a job-readable training weapon so the role remains legible.
+
+Auto-equip retains stat comparison but adds a bounded role affinity: Archers
+and Ninjas prefer bows, magic jobs prefer staves, holy jobs accept staves or
+hammers, and workers/frontliners prefer appropriate tools. This makes equipment
+changes visible and mechanically coherent without hard-locking any build.
+
 ## Next slices
 
-1. Convert ordinary frontier exploration gathering from instant global deposits
+1. Verify carried-weapon scale, overlap and attack motion in the rendered town
+   and dungeon, then add visible shields/armor without obscuring pawn identity.
+2. Convert ordinary frontier exploration gathering from instant global deposits
    to personal cargo and Storehouse/Guild hauling.
-2. Add facility activity feedback using existing licensed sprites and the FX
+3. Add facility activity feedback using existing licensed sprites and the FX
    lifecycle: Forge work, Farm harvest, Library study, shopping and arrivals.
-3. Add more visible town circulation: merchants/local visitors, event crowds,
+4. Add more visible town circulation: merchants/local visitors, event crowds,
    seasonal decorations and compact speech/reaction moments without pausing play.
-4. Improve map composition with the planned placement preview and southern town
+5. Improve map composition around the expanded southern town, then tune paths
    expansion, then tune paths and decoration density around actual foot traffic.
-5. Add quest variety through escort, rescue, delivery and rematch objectives;
+6. Add quest variety through escort, rescue, delivery and rematch objectives;
    keep all outcomes grounded in visible movement rather than timers.
 
 ## Guardrails

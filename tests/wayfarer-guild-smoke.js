@@ -393,6 +393,41 @@ assert.notEqual(jobSprites.Farmer, 92, 'Farmer must not use the cage/chest sprit
 assert.notEqual(jobSprites.Blacksmith, 90, 'Blacksmith must not use the chest sprite');
 console.log('Job sprite atlas mapping checks passed');
 
+const weaponPawn = state.pawns[0];
+const weaponCases = [
+  ['Bronze Sword', 'melee', null],
+  ['Iron Axe', 'axe', 118],
+  ['Hunter Bow', 'arrow', null],
+  ['Oak Staff', 'magic', null],
+  ['War Hammer', 'hammer', 117],
+];
+for (const [base, kind, atlas] of weaponCases) {
+  weaponPawn.equipment.weapon = {base, name: base, slot: 'weapon'};
+  const visual = debug.weaponVisual(weaponPawn);
+  assert.equal(visual.kind, kind, `${base} should select its carried weapon silhouette`);
+  assert.equal(visual.atlas, atlas);
+  assert.equal(visual.equipped, true);
+}
+weaponPawn.equipment.weapon = null;
+weaponPawn.job = 'Archer';
+assert.deepEqual({...debug.weaponVisual(weaponPawn)}, {kind: 'arrow', base: 'Training Bow', equipped: false, atlas: null}, 'unarmed jobs should carry a readable training weapon');
+const plainBow = {base: 'Hunter Bow', name: 'Hunter Bow', slot: 'weapon', atk: 5, def: 0, mag: 0, spd: 1, hp: 0};
+const plainAxe = {base: 'Iron Axe', name: 'Iron Axe', slot: 'weapon', atk: 7, def: 0, mag: 0, spd: -1, hp: 0};
+assert.ok(debug.itemScore(weaponPawn, plainBow) > debug.itemScore(weaponPawn, plainAxe), 'Archer auto-equip should favor a bow over a slightly stronger off-role axe');
+weaponPawn.equipment.weapon = {id: 89990, base: 'War Hammer', name: 'War Hammer', slot: 'weapon', rarity: 'common', atk: 6, def: 2, mag: 0, spd: -1, hp: 0, score: 8};
+debug.save(false);
+const weaponSaveRaw = storage.value;
+const weaponSaveContext = {...context, localStorage: {
+  getItem() { return weaponSaveRaw; }, setItem(_key, value) { this.value = value; }, value: weaponSaveRaw,
+}};
+weaponSaveContext.window = weaponSaveContext;
+vm.runInNewContext(script, weaponSaveContext);
+const restoredWeaponPawn = weaponSaveContext.__WAYFARER_DEBUG__.state().pawns.find(p => p.id === weaponPawn.id);
+assert.equal(restoredWeaponPawn.equipment.weapon.id, 89990, 'equipped weapon identity should survive save/reload');
+assert.deepEqual({...weaponSaveContext.__WAYFARER_DEBUG__.weaponVisual(restoredWeaponPawn)}, {kind: 'hammer', base: 'War Hammer', equipped: true, atlas: 117});
+weaponPawn.equipment.weapon = null;
+console.log('Persistent carried-weapon mapping checks passed');
+
 const reviewState = debug.state();
 const reviewPawn = reviewState.pawns[0];
 const bossGold = reviewState.gold, bossPoints = reviewState.townPoints, alertBefore = reviewState.bossAlert;

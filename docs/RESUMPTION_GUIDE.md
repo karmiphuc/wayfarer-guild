@@ -64,6 +64,19 @@ Limitation: the atlas has ten humanoids for twelve jobs and lacks unmistakable
 farmer, blacksmith and bow-archer silhouettes. Current mappings are safe human
 stand-ins, not final job art.
 
+## Visible equipment baseline
+
+- Town and dungeon pawns carry a persistent weapon selected from the actual
+  equipped base item: sword, bow, staff, axe or hammer.
+- Axe and hammer reuse audited Tiny Dungeon CC0 cells; sword, bow and staff use
+  small pixel primitives because the shipped atlas has no readable equivalent.
+- The weapon follows attack anticipation/lunge/recoil and is hidden for KO pawns.
+- Job defaults provide a readable training silhouette when no item is equipped.
+- Auto-equip has a bounded role affinity so an Archer prefers a comparable bow
+  over an off-role axe; it remains possible to use unusual builds.
+- Automated mapping/affinity checks pass. Actual overlap and scale in a browser
+  remain unverified because local file/loopback navigation is blocked here.
+
 ## Prioritized next issues
 
 ### P0: rendered sprite and field-quest acceptance
@@ -115,6 +128,16 @@ Acceptance:
 Dependency: use licensed assets and the existing FX lifecycle.
 
 Out of scope: bespoke building interiors.
+
+### P1: complete visible equipment language
+
+Acceptance: verify carried weapons in town/dungeon at desktop and iPad scale;
+add restrained shield/offhand and armor cues; let the player deliberately gift
+or reserve equipment; keep pawn silhouette, cargo and status effects readable.
+
+Dependency: preserve current item IDs/save shape and the audited CC0 pipeline.
+
+Out of scope: copying Dungeon Village sprites or its exact UI.
 
 ### P1: finish building placement interaction
 
