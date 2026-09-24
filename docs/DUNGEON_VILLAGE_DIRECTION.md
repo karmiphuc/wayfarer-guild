@@ -86,6 +86,11 @@ available pawn can return one equipped item to the stash, preserving its ID and
 releasing only that slot's gift reservation; questing and KO pawns remain
 protected from mid-operation equipment changes.
 
+Equipment quality is readable without opening a panel: uncommon through unique
+weapons and offhands receive restrained green/blue/purple/gold pixel glints.
+Gifting also triggers a matching EQUIPPED pop and a short recipient celebration,
+making the satisfaction increase and visible loadout change feel like one event.
+
 ## Next slices
 
 1. Verify carried weapon, offhand and restrained armor-cue scale, overlap and

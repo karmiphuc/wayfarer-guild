@@ -83,6 +83,8 @@ stand-ins, not final job art.
   Weapon Shop, but purchases cannot charge for or replace reserved gifts.
 - The Gear pane shows the selected loadout and can return one item at a time to
   the stash, preserving item identity and clearing only that slot reservation.
+- Carried weapon/offhand rarity is shown with restrained pixel glints; gifts
+  trigger a matching EQUIPPED pop and recipient celebration in town.
 - Wood/round shields and spellbooks render as persistent offhands in town and
   dungeons. Gifted item IDs and slot reservations survive save/reload.
 - Automated mapping/affinity checks pass. Actual overlap and scale in a browser

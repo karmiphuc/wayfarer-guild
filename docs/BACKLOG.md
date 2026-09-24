@@ -22,6 +22,7 @@ Legend:
 - ✅ **Equipment gifting and role fit** — stash gear can be gifted directly to the selected available pawn; gifted slots remain reserved from role-aware auto-equip, improve satisfaction, survive saves, and can be released by re-enabling auto-equip. Next: rendered scale/overlap verification and stronger Forge/shop presentation.
 - ✅ **Gift/shop equipment contract** — adventurers still buy upgrades autonomously while physically using the Weapon Shop, but shop AI cannot charge for or replace player-reserved gifts; an accepted purchase immediately changes the carried equipment.
 - ✅ **Reversible loadouts** — the Gear pane shows the selected adventurer's four equipment slots, marks gifted reservations, and can return individual items to the stash without losing item identity or disturbing other slots.
+- ✅ **Readable equipment payoff** — uncommon/rare/epic/unique carried weapons and offhands show compact rarity glints; gifting produces a rarity-colored EQUIPPED pop and a pawn celebration on the town map.
 
 - 🚧 **P0 Restore facility and pawn-state contracts** — research-gated Farm/Forge placement, starting-home assignment, home-based recovery, Forge work, and job-led frontier exploration. Evidence and acceptance checks: [project knowledge base](./PROJECT_KNOWLEDGE_BASE.md). Maps to #22, #23, #24 and #25.
 

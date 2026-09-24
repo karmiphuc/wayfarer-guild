@@ -429,6 +429,9 @@ assert.equal(debug.giveItem(weaponPawn, giftShield.id), true, 'selected pawn sho
 assert.equal(weaponPawn.equipment.offhand.id, giftShield.id);
 assert.equal(weaponPawn.lockedSlots.offhand, true, 'gifted slot should be reserved against auto-equip');
 assert.equal(debug.offhandVisual(weaponPawn).kind, 'woodShield');
+assert.equal(debug.rarityColor(giftShield), '#69aaff', 'rare carried gear should have a readable blue accent');
+assert.ok(debug.fx().some(f => f.type === 'number' && f.text === 'EQUIPPED' && f.color === '#69aaff'), 'gifting should create a rarity-colored on-map equip reaction');
+assert.ok(debug.celebrate().has(weaponPawn.id), 'the receiving pawn should visibly celebrate a gift');
 assert.ok(weaponPawn.satisfaction > giftSatisfaction, 'equipment gifts should improve satisfaction');
 for (const [base, kind] of [['Leather Coat', 'coat'], ['Iron Mail', 'mail'], ['Mage Robe', 'robe'], ['Traveler Cloak', 'cloak']]) {
   weaponPawn.equipment.armor = {base, name: base, slot: 'armor'};
