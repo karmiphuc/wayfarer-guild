@@ -8,11 +8,12 @@ The project prefers CC0. Attribution is still welcome for CC0 creators, but not 
 
 ## Assets in use
 
-_No third-party production assets have been adopted yet. The live v0.3 build uses programmatic placeholder rendering._
+The v0.5 pixel preview now uses two CC0 Kenney atlases in the live renderer.
 
 | Repo path | Asset / pack | Creator | Source | License | Modified? | Required attribution / notes |
 |---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — |
+| `assets/art/kenney-tiny-town.png` | Tiny Town | Kenney | https://kenney.nl/assets/tiny-town | CC0 1.0 | No source-pixel edits; cropped/scaled at render time | Attribution not required; credit retained here |
+| `assets/art/kenney-tiny-dungeon.png` | Tiny Dungeon | Kenney | https://kenney.nl/assets/tiny-dungeon | CC0 1.0 | No source-pixel edits; cropped/scaled at render time | Attribution not required; credit retained here |
 
 ## Candidate sources under evaluation
 
