@@ -50,3 +50,17 @@ Live: https://karmiphuc.github.io/wayfarer-guild/
 - v0.2 saves migrate to v0.3
 - Responsive iPad/mobile layout
 - Hosted through GitHub Pages from `master/wayfarer-guild/index.html`
+
+
+## Project memory & plan
+
+The repository is now the durable source of truth for the game's direction:
+
+- [Vision](./docs/VISION.md) — what the game should feel like and what it should never become
+- [Roadmap](./docs/ROADMAP.md) — phased path from the current prototype to a polished personal 1.0
+- [Backlog](./docs/BACKLOG.md) — pending work and ideas, linked to GitHub issues
+- [Asset & audio plan](./docs/ASSETS_AND_AUDIO.md) — pixel-art/music/SFX direction and licensing rules
+- [Asset attribution ledger](./ASSET_ATTRIBUTION.md) — provenance for every third-party file actually used
+- [Agent working agreement](./AGENTS.md) — rules future coding sessions should follow
+
+Current priorities are architecture/data-driven content ([#19](https://github.com/karmiphuc/karmiphuc.github.io/issues/19)), the first cohesive pixel-art pass ([#20](https://github.com/karmiphuc/karmiphuc.github.io/issues/20)), and music/SFX ([#21](https://github.com/karmiphuc/karmiphuc.github.io/issues/21)).

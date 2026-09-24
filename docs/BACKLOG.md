@@ -1,0 +1,143 @@
+# Backlog
+
+This is the human-readable tracker. GitHub issues hold implementation details.
+
+Legend:
+- **P0** = do before expanding content heavily
+- **P1** = core game depth
+- **P2** = polish/content after foundations
+- ✅ done
+- 🚧 active
+- ⏳ queued
+- 💡 idea
+
+## Now — v0.4 foundations
+
+- ⏳ **P0 Modular architecture/data-driven content** — [#19](https://github.com/karmiphuc/karmiphuc.github.io/issues/19)
+- ⏳ **P0 Cohesive licensed pixel-art pipeline** — [#20](https://github.com/karmiphuc/karmiphuc.github.io/issues/20)
+- ⏳ **P0 Music/ambience/SFX foundation** — [#21](https://github.com/karmiphuc/karmiphuc.github.io/issues/21)
+
+### Small pending tasks inside v0.4
+- [ ] choose final logical pixel grid (default proposal: 16px)
+- [ ] define Wayfarer palette
+- [ ] choose first terrain/building pack(s)
+- [ ] replace emoji building labels with sprite/icon rendering
+- [ ] animate pawn walk cycles
+- [ ] add hit/heal/loot/KO VFX
+- [ ] add audio manager and volume settings
+- [ ] select first town/dungeon music loops
+- [ ] create deterministic smoke-test harness
+- [ ] split content definitions out of simulation code
+
+## Next — pawn/town life
+
+- ⏳ **P1 Pawn personality/social/autonomy depth** — [#22](https://github.com/karmiphuc/karmiphuc.github.io/issues/22)
+- ⏳ **P1 Town economy/facilities/events/content density** — [#25](https://github.com/karmiphuc/karmiphuc.github.io/issues/25)
+
+Pending ideas:
+- [ ] risk tolerance
+- [ ] facility likes/dislikes
+- [ ] friendships/rivalries
+- [ ] “rescued by” memories
+- [ ] favorite enemy/dungeon
+- [ ] autonomous retreat/extraction
+- [ ] party affinity
+- [ ] day/night routine bias
+- [ ] traveling merchant
+- [ ] seasonal/festival events
+- [ ] retirement into town specialist roles
+- [ ] town land expansion
+
+## Next — RPG depth
+
+- ⏳ **P1 Jobs/mastery/equipment/buildcraft** — [#23](https://github.com/karmiphuc/karmiphuc.github.io/issues/23)
+
+Pending:
+- [ ] full job graph
+- [ ] limited inherited mastery skill slots
+- [ ] weapon family preferences
+- [ ] job-specific AI behavior
+- [ ] item tiers by biome
+- [ ] affix pools
+- [ ] unique items with mechanical hooks
+- [ ] forge crafting and rerolls
+- [ ] loot filters/keep rules
+- [ ] low-micro consumables/gifts
+
+## Next — dungeons/frontier
+
+- ⏳ **P1 Physical dungeon + roguelite depth** — [#24](https://github.com/karmiphuc/karmiphuc.github.io/issues/24)
+
+Pending:
+- [ ] multiple room graphs
+- [ ] crypt biome
+- [ ] forest ruin biome
+- [ ] cave biome
+- [ ] mountain/dragon biome
+- [ ] shrine/event/merchant rooms
+- [ ] run-only blessings
+- [ ] run-only curses
+- [ ] supplies/fatigue
+- [ ] push deeper / extract decision
+- [ ] threat modifiers
+- [ ] biome-specific loot tables
+- [ ] boss mechanics
+- [ ] more egg/companion species
+
+## Platform / robustness
+
+- ⏳ **P1 iPad/mobile/performance/save hardening** — [#26](https://github.com/karmiphuc/karmiphuc.github.io/issues/26)
+
+Pending:
+- [ ] profile 30 active pawns
+- [ ] profile 60 active pawns
+- [ ] path cache/replan rules
+- [ ] background tab pause/resume
+- [ ] save backup slot
+- [ ] corrupted-save fallback
+- [ ] better import/export UX
+- [ ] PWA/home-screen evaluation
+- [ ] optional cross-device sync design
+
+## Content ideas — not scheduled yet
+
+- 💡 named hero backgrounds with small gameplay hooks
+- 💡 rare wandering masters who teach unusual jobs
+- 💡 guild policies (“keep 3 defenders”, “avoid threat > 3”)
+- 💡 rival adventuring guild
+- 💡 town defense waves
+- 💡 caravan routes
+- 💡 crafting commissions
+- 💡 hero retirement statues/legacy bonuses
+- 💡 procedural scars/titles from memorable runs
+- 💡 codex research for monsters/materials
+- 💡 weather influencing activities/biomes
+- 💡 inns/taverns generating rumors that reveal dungeons
+- 💡 dungeon-specific camp dialogue
+- 💡 pet personalities
+- 💡 breeding/evolution only if it adds choices rather than grind
+
+## Completed baseline
+
+- ✅ autonomous utility decisions
+- ✅ A* town pathing
+- ✅ residents/visitors/housing
+- ✅ resident spending
+- ✅ job leveling/mastery
+- ✅ permanent growth
+- ✅ equipment/affixes
+- ✅ equipment discovery → shop stock
+- ✅ field combat
+- ✅ KO/rescue
+- ✅ quests
+- ✅ physical autonomous dungeon traversal
+- ✅ role-aware range/healing basics
+- ✅ frontier fog exploration
+- ✅ roaming bosses
+- ✅ monster eggs/companions/mounts
+- ✅ responsive iPad layout
+- ✅ local saves
+- ✅ export/import
+- ✅ GitHub Pages continuous publication
+
+When an item becomes real work, give it an issue. When an issue is finished, update this file.
