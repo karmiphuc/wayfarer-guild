@@ -3,688 +3,137 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<meta name="theme-color" content="#151715"/>
+<meta name="theme-color" content="#1b2418"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Wayfarer Guild"/>
-<title>Wayfarer Guild — Autonomous Management RPG Prototype</title>
+<title>Wayfarer Guild</title>
 <style>
-  :root{
-    --bg:#151715; --panel:#20241f; --panel2:#292e27; --line:#3a4037;
-    --text:#e8eadf; --muted:#aeb6a7; --accent:#d8b66a; --good:#89b77e;
-    --bad:#cf7d72; --blue:#7ea4b8; --shadow:rgba(0,0,0,.35);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:linear-gradient(#101210,#181b17);color:var(--text);
-       font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
-  button,select{font:inherit}
-  button{
-    background:#343b31;color:var(--text);border:1px solid #4b5546;border-radius:6px;
-    padding:7px 10px;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.04) inset
-  }
-  button:hover{background:#3e4639}
-  button:disabled{opacity:.45;cursor:not-allowed}
-  .primary{background:#6f5c2f;border-color:#9a7a39}
-  .danger{background:#5a302c;border-color:#7c4039}
-  #app{height:100vh;height:100dvh;display:grid;grid-template-rows:50px 1fr 34px}
-  #topbar{
-    display:flex;align-items:center;gap:18px;padding:0 16px;background:#1d211c;
-    border-bottom:1px solid var(--line);box-shadow:0 2px 8px var(--shadow);z-index:2
-  }
-  #title{font-weight:800;letter-spacing:.4px;color:#f0d28d;font-size:16px}
-  .res{display:flex;gap:6px;align-items:center;color:var(--muted)}
-  .res b{color:var(--text)}
-  .spacer{flex:1}
-  #speed button{padding:5px 8px;min-width:34px}
-  #main{display:grid;grid-template-columns:minmax(680px,1fr) 390px;min-height:0}
-  #worldWrap{position:relative;background:#11150f;min-width:0;overflow:hidden}
-  #world{width:100%;height:100%;display:block;image-rendering:pixelated;cursor:crosshair}
-  #hint{
-    position:absolute;left:12px;bottom:12px;background:rgba(20,23,19,.88);
-    border:1px solid #3d4438;border-radius:7px;padding:7px 10px;color:#bdc4b7;
-    pointer-events:none;max-width:560px
-  }
-  #side{
-    border-left:1px solid var(--line);background:#1b1f1a;display:grid;
-    grid-template-rows:auto 1fr;min-height:0
-  }
-  .tabs{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
-  .tab{border:0;border-right:1px solid var(--line);border-radius:0;padding:10px 4px;background:#252a23}
-  .tab.active{background:#343a30;color:#f1d897}
-  .pane{display:none;height:100%;overflow:auto;padding:12px}
-  .pane.active{display:block}
-  .card{
-    background:var(--panel);border:1px solid var(--line);border-radius:8px;
-    padding:10px;margin-bottom:10px;box-shadow:0 2px 7px var(--shadow)
-  }
-  .card h3{margin:0 0 7px;font-size:14px;color:#efd38e}
-  .row{display:flex;align-items:center;gap:8px;margin:5px 0}
-  .row.space{justify-content:space-between}
-  .muted{color:var(--muted)}
-  .tiny{font-size:12px}
-  .pill{display:inline-block;padding:2px 6px;border:1px solid #4a5046;border-radius:999px;color:#cbd0c4;font-size:11px}
-  .bar{height:7px;background:#10130f;border:1px solid #30362d;border-radius:10px;overflow:hidden;min-width:72px}
-  .fill{height:100%;background:#7f9b72}
-  .fill.gold{background:#b79b58}.fill.red{background:#ac6861}.fill.blue{background:#6e95a9}
-  .pawnCard{cursor:pointer}.pawnCard.sel{outline:1px solid #caa656;background:#282c25}
-  .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
-  .item{padding:7px;border:1px solid #3b4237;border-radius:6px;background:#181c17;margin:5px 0}
-  .item.common{border-left:4px solid #8f968c}.item.uncommon{border-left:4px solid #6ea36d}
-  .item.rare{border-left:4px solid #638db6}.item.epic{border-left:4px solid #9a70b1}
-  .item.unique{border-left:4px solid #c69a4c}
-  #log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;white-space:pre-wrap}
-  #footer{display:flex;align-items:center;padding:0 12px;border-top:1px solid var(--line);background:#191c18;color:#899182;font-size:12px}
-  .toggle{display:flex;align-items:center;gap:6px}
-  input[type=checkbox]{accent-color:#b78f45}
-  .node{padding:7px 8px;margin:5px 0;border-radius:6px;border:1px solid #3c4338;background:#191d18}
-  .node.done{opacity:.55}.node.current{border-color:#c4a354;background:#292719}
-  .good{color:#9bc48f}.bad{color:#d48a7e}.accent{color:#e1c178}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  #selectedDetail .portrait{
-    width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-weight:800;background:#394036;border:2px solid #747f6b;font-size:18px
-  }
-  @media (max-width: 1050px){
-    body{overflow:hidden}
-    #topbar{gap:10px;padding:0 10px;overflow-x:auto;white-space:nowrap}
-    #title{position:sticky;left:0;background:#1d211c;padding-right:8px}
-    #main{grid-template-columns:1fr;grid-template-rows:minmax(52vh,1fr) minmax(340px,48vh)}
-    #side{border-left:0;border-top:1px solid var(--line);min-height:0}
-    .pane{padding:9px}
-    #hint{font-size:11px;max-width:70%;padding:5px 7px}
-    #footer{display:none}
-    #app{grid-template-rows:46px 1fr}
-    .tabs{position:sticky;top:0;z-index:5}
-  }
-  @media (max-width: 700px){
-    #main{grid-template-rows:minmax(46vh,1fr) minmax(380px,54vh)}
-    .res{font-size:12px}
-    #title{font-size:14px}
-    #hint{display:none}
-  }
+:root{--bg:#172015;--panel:#f1e7c8;--panel2:#e5d7b2;--ink:#443921;--line:#8b7448;--green:#6d984f;--gold:#c89b3c;--red:#b95e4d;--blue:#5d8ca2;--dark:#262c20;--cream:#fff6d9}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#172015;color:var(--ink);font-family:ui-monospace,"SFMono-Regular",Menlo,monospace;font-size:13px;image-rendering:pixelated}
+button,select,input{font:inherit}button{background:#f4e8c5;border:2px solid #7a6339;box-shadow:inset -2px -2px 0 #c6b083,inset 2px 2px 0 #fff8db;color:#3f331c;padding:6px 9px;cursor:pointer;border-radius:2px}button:hover{filter:brightness(1.04)}button:disabled{opacity:.45;cursor:not-allowed}.goldBtn{background:#f4cf6a}.redBtn{background:#e89a85}.greenBtn{background:#b9d68e}.tiny{font-size:11px}.muted{color:#756a50}.good{color:#477d39}.bad{color:#a64838}.accent{color:#9c6f16}.pill{display:inline-block;padding:1px 5px;background:#fff4ce;border:1px solid #9d8656;border-radius:2px;font-size:11px}
+#app{height:100vh;height:100dvh;display:grid;grid-template-rows:48px 1fr 28px;background:#202a1c}
+#top{display:flex;align-items:center;gap:12px;padding:0 10px;background:#302c20;color:#fff0bf;border-bottom:3px solid #6d5932;white-space:nowrap;overflow-x:auto}#brand{font-weight:900;letter-spacing:1px;color:#ffe08a}.res{display:flex;align-items:center;gap:4px}.res b{color:#fff}.spacer{flex:1}.speed button{padding:4px 7px;background:#584d31;color:#fff3c4;border-color:#9d7a38;box-shadow:none}.speed button.on{background:#b2832d}
+#main{min-height:0;display:grid;grid-template-columns:minmax(620px,1fr) 390px}
+#worldWrap{position:relative;min-width:0;overflow:hidden;background:#0f160e}#world{display:block;width:100%;height:100%;touch-action:none}.floatHint{position:absolute;left:9px;bottom:9px;max-width:500px;background:rgba(35,31,21,.88);color:#fff0c8;border:2px solid #8e7240;padding:6px 8px;pointer-events:none}
+#side{display:grid;grid-template-rows:38px 1fr;min-height:0;background:#d7c79e;border-left:3px solid #6b5735}.tabs{display:grid;grid-template-columns:repeat(5,1fr);background:#4b412c}.tab{border:0;border-right:1px solid #756440;border-radius:0;background:#71603c;color:#f8e9bd;padding:6px 2px;box-shadow:none}.tab.on{background:#d4ad50;color:#3a2e18}.pane{display:none;height:100%;overflow:auto;padding:8px}.pane.on{display:block}
+.card{background:var(--panel);border:2px solid var(--line);box-shadow:inset 0 0 0 2px #fff6d8,2px 2px 0 rgba(0,0,0,.15);padding:8px;margin-bottom:8px}.card h3{margin:0 0 6px;font-size:13px;color:#5a431d}.row{display:flex;gap:7px;align-items:center;margin:4px 0}.space{justify-content:space-between}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.bar{height:8px;min-width:72px;background:#6b5b3c;border:1px solid #493d27;box-shadow:inset 0 0 0 1px #2d281c}.bar>i{display:block;height:100%;background:#7aaa58}.bar.red>i{background:#c96d58}.bar.blue>i{background:#6999af}.bar.gold>i{background:#d3a73d}.pawnCard{cursor:pointer}.pawnCard.sel{outline:3px solid #c39329}.item{border:1px solid #9b8352;background:#fff2cb;padding:6px;margin:4px 0}.rar-common{border-left:5px solid #8a887d}.rar-uncommon{border-left:5px solid #5e9b58}.rar-rare{border-left:5px solid #5685bd}.rar-epic{border-left:5px solid #945db1}.rar-unique{border-left:5px solid #da8c29}.log{font-size:11px;white-space:pre-wrap;line-height:1.45}.quest{border:2px solid #9a8050;background:#fff0c3;padding:7px;margin:5px 0}.quest.active{border-color:#c25d38;background:#ffe0bc}.locked{opacity:.55}.buildChoice{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}.iconBox{width:44px;height:44px;display:grid;place-items:center;background:#c9bd8d;border:2px solid #6f5a35;font-size:23px}.thought{font-size:10px;color:#6c6046}.statline{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.statline span{background:#e7d6a6;border:1px solid #ac9362;padding:3px}.equipSlot{display:flex;justify-content:space-between;gap:6px;border-top:1px dashed #ad9460;padding-top:4px;margin-top:4px}
+#footer{display:flex;align-items:center;padding:0 10px;background:#302c20;color:#c8ba8e;border-top:2px solid #6d5932;font-size:11px}
+.modal{position:fixed;inset:0;background:rgba(10,12,8,.66);display:none;place-items:center;z-index:20}.modal.on{display:grid}.modalBox{width:min(620px,92vw);max-height:84vh;overflow:auto;background:#efe2bc;border:4px solid #715b34;padding:12px;box-shadow:0 8px 30px #000}.modalBox h2{margin:0 0 8px}.choice{width:100%;text-align:left;margin:4px 0}
+@media(max-width:1050px){#app{grid-template-rows:44px 1fr}#footer{display:none}#main{grid-template-columns:1fr;grid-template-rows:minmax(50vh,1fr) minmax(360px,50vh)}#side{border-left:0;border-top:3px solid #6b5735}.floatHint{font-size:10px;max-width:68%}.pane{padding:6px}.res{font-size:11px}}
+@media(max-width:700px){#brand{font-size:12px}#main{grid-template-rows:minmax(44vh,1fr) minmax(410px,56vh)}.floatHint{display:none}.tabs{grid-template-columns:repeat(5,1fr)}.tab{font-size:10px}.grid2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div id="app">
-  <div id="topbar">
-    <div id="title">WAYFARER GUILD</div>
-    <div class="res">Day <b id="day">1</b> · <b id="clock">08:00</b></div>
-    <div class="res">Gold <b id="gold">320</b></div>
-    <div class="res">Food <b id="food">80</b></div>
-    <div class="res">Renown <b id="renown">0</b></div>
-    <div class="spacer"></div>
-    <div id="speed">
-      <button data-speed="0">Ⅱ</button>
-      <button data-speed="1" class="primary">1×</button>
-      <button data-speed="2">2×</button>
-      <button data-speed="5">5×</button>
-    </div>
-  </div>
-
-  <div id="main">
-    <div id="worldWrap">
-      <canvas id="world"></canvas>
-      <div id="hint">Click a pawn to inspect its current utility decision and A* path. Pawns independently eat, rest, train, shop, wander and volunteer for expeditions.</div>
-    </div>
-
-    <aside id="side">
-      <div class="tabs">
-        <button class="tab active" data-tab="guild">Guild</button>
-        <button class="tab" data-tab="expedition">Dungeon</button>
-        <button class="tab" data-tab="loot">Loot</button>
-        <button class="tab" data-tab="town">Town</button>
-      </div>
-      <div style="min-height:0;position:relative">
-        <div id="guild" class="pane active">
-          <div id="selectedDetail" class="card"></div>
-          <div class="card">
-            <div class="row space"><h3>Adventurers</h3><span class="pill" id="rosterCount"></span></div>
-            <div id="roster"></div>
-          </div>
-        </div>
-
-        <div id="expedition" class="pane">
-          <div class="card">
-            <h3>Expedition Board</h3>
-            <div class="row space"><span>Dungeon</span><select id="dungeonSelect"></select></div>
-            <div class="row space"><span>Threat</span><select id="threatSelect">
-              <option value="1">I</option><option value="2">II</option><option value="3">III</option><option value="4">IV</option>
-            </select></div>
-            <div class="tiny muted">Idle heroes volunteer automatically. You can lock a hero out from their detail card.</div>
-            <div class="row"><button id="startExpedition" class="primary">Start with volunteers</button><button id="forceBest">Auto-pick best</button></div>
-          </div>
-          <div class="card">
-            <h3>Current Run</h3>
-            <div id="partyLine" class="muted">No active expedition.</div>
-            <div id="nodes"></div>
-          </div>
-          <div class="card"><h3>Expedition Log</h3><div id="log"></div></div>
-        </div>
-
-        <div id="loot" class="pane">
-          <div class="card">
-            <div class="row space"><h3>Guild Stash</h3><label class="toggle tiny"><input id="autoEquip" type="checkbox" checked> auto-equip upgrades</label></div>
-            <div class="row"><button id="equipBest">Equip best for everyone</button><button id="salvageCommons">Salvage commons</button></div>
-            <div id="stash"></div>
-          </div>
-        </div>
-
-        <div id="town" class="pane">
-          <div class="card"><h3>Buildings</h3><div id="buildings"></div></div>
-          <div class="card">
-            <h3>Simulation</h3>
-            <label class="toggle"><input type="checkbox" id="showPaths" checked> Show selected pawn path</label>
-            <label class="toggle"><input type="checkbox" id="showIntent" checked> Show pawn intentions</label>
-            <div class="row"><button id="saveBtn">Save</button><button id="loadBtn">Load</button><button id="resetBtn" class="danger">Reset</button></div>
-          </div>
-        </div>
-      </div>
-    </aside>
-  </div>
-
-  <div id="footer">Prototype: autonomous utility AI + A* town navigation + persistent RPG jobs/items + roguelite dungeon expeditions. All state is local to your browser.</div>
+<header id="top">
+  <div id="brand">WAYFARER GUILD</div>
+  <div class="res">📅 D<b id="dayV">1</b> <b id="timeV">08:00</b></div>
+  <div class="res">💰 <b id="goldV">0</b></div><div class="res">⭐ <b id="popV">0</b></div><div class="res">🔷 <b id="tpV">0</b></div>
+  <div class="res">🍖 <b id="foodV">0</b></div><div class="res">🪵 <b id="woodV">0</b></div><div class="res">⛏ <b id="oreV">0</b></div>
+  <div class="spacer"></div><div class="speed"><button data-sp="0">Ⅱ</button><button class="on" data-sp="1">1×</button><button data-sp="3">3×</button><button data-sp="8">8×</button></div>
+</header>
+<div id="main">
+  <div id="worldWrap"><canvas id="world"></canvas><div id="mapHint" class="floatHint">Adventurers choose their own work, shops, fights and rest. Tap one to inspect. In Explore mode, tap fog to deploy the selected resident.</div></div>
+  <aside id="side">
+    <nav class="tabs"><button class="tab on" data-tab="people">People</button><button class="tab" data-tab="quests">Quests</button><button class="tab" data-tab="town">Town</button><button class="tab" data-tab="gear">Gear</button><button class="tab" data-tab="worldPane">World</button></nav>
+    <section style="min-height:0;position:relative">
+      <div class="pane on" id="people"><div id="selected" class="card"></div><div class="card"><div class="row space"><h3>Adventurers</h3><span class="pill" id="peopleCount"></span></div><div id="roster"></div></div></div>
+      <div class="pane" id="quests"><div class="card"><div class="row space"><h3>Quest Board</h3><button id="refreshQuest">Refresh 8🔷</button></div><div class="tiny muted">One active quest at a time. Heroes volunteer based on work, morale, health and job fit; you can pay to recruit extras.</div><div id="questList"></div></div><div class="card"><h3>Active Quest</h3><div id="activeQuest"></div></div><div class="card"><h3>Recent News</h3><div class="log" id="log"></div></div></div>
+      <div class="pane" id="town"><div class="card"><div class="row space"><h3>Village</h3><span id="rankV" class="pill"></span></div><div id="rankReq" class="tiny"></div><div class="row"><button id="evalBtn" class="goldBtn">Town Evaluation</button><button id="eventBtn">Hold Event 12🔷</button></div></div><div class="card"><h3>Build</h3><div class="tiny muted">Choose a structure then tap an empty town tile. Upkeep is charged daily.</div><div id="buildMenu"></div></div><div class="card"><h3>Structures</h3><div id="buildingList"></div></div></div>
+      <div class="pane" id="gear"><div class="card"><div class="row space"><h3>Guild Stash</h3><label class="tiny"><input id="autoEquip" type="checkbox" checked> auto-equip upgrades</label></div><div class="row"><button id="equipBest">Equip best</button><button id="salvage">Sell weak gear</button></div><div id="stash"></div></div><div class="card"><h3>Research</h3><div id="research"></div></div></div>
+      <div class="pane" id="worldPane"><div class="card"><h3>Kingdom Frontier</h3><div class="tiny muted">Select a resident, press Explore, then tap a fog tile. They walk there, clear nearby fog and gather materials. Distance costs Energy.</div><div class="row"><button id="exploreMode" class="greenBtn">Explore with selected</button><button id="recallBtn">Recall</button></div><div id="exploreInfo"></div></div><div class="card"><h3>Storage</h3><div id="storage"></div></div><div class="card"><h3>Save / Travel</h3><div class="tiny muted">Autosaves locally. Export a save file to move progress between desktop and iPad browsers.</div><div class="row"><button id="saveBtn">Save now</button><button id="exportBtn">Export save</button><button id="importBtn">Import save</button><input id="importFile" type="file" accept="application/json" hidden></div></div></div>
+    </section>
+  </aside>
 </div>
-
+<footer id="footer">Original homage prototype: autonomous town RPG + frontier management. No copied Kairosoft assets or text.</footer>
+</div>
+<div class="modal" id="jobModal"><div class="modalBox"><h2>Change Job</h2><div id="jobChoices"></div><button onclick="closeModal('jobModal')">Cancel</button></div></div>
+<div class="modal" id="eventModal"><div class="modalBox"><h2>Village Event</h2><div id="eventChoices"></div><button onclick="closeModal('eventModal')">Cancel</button></div></div>
 <script>
-(() => {
-"use strict";
-
-const TILE=32, COLS=30, ROWS=18;
-const canvas=document.getElementById("world"), ctx=canvas.getContext("2d");
-let DPR=1, speed=1, last=0, acc=0, simMinutes=8*60, day=1, nextId=100;
-let selectedPawnId=null, expedition=null, expeditionTimer=0;
-const state={gold:320,food:80,renown:0,stash:[],autoEquip:true,buildingLevels:{Inn:1,Tavern:1,Forge:1,Training:1,Guild:1,Temple:1}};
-
-const jobs={
-  Fighter:{hp:28,atk:7,def:5,spd:2,color:"#aa735e",skill:"Guard Break"},
-  Ranger:{hp:20,atk:6,def:3,spd:5,color:"#6f9a6c",skill:"Marked Shot"},
-  Mage:{hp:16,atk:9,def:2,spd:3,color:"#7977ac",skill:"Arc Burst"},
-  Acolyte:{hp:20,atk:4,def:4,spd:3,color:"#b6a66f",skill:"Mend"},
-  Knight:{hp:34,atk:8,def:8,spd:2,color:"#8b8c87",skill:"Bulwark"},
-  Assassin:{hp:21,atk:10,def:3,spd:8,color:"#7c6c86",skill:"Ambush"},
-  Elementalist:{hp:18,atk:13,def:2,spd:4,color:"#9d6f8b",skill:"Stormcall"},
-  Cleric:{hp:25,atk:5,def:6,spd:3,color:"#c0b479",skill:"Sanctuary"}
-};
-
-const names=["Mira","Brann","Tovin","Sera","Lio","Nessa","Corin","Yara","Fen","Ilya","Dara","Oren"];
-const backgrounds=["Hunter","Farmhand","Scribe","Blacksmith's Child","Pilgrim","Street Urchin","Caravan Guard","Herbalist"];
-const traits=[
-  {name:"Treasure Nose",loot:0.16,desc:"+16% loot quality"},
-  {name:"Restless",spd:1.2,desc:"moves faster, tires faster"},
-  {name:"Stoic",morale:0.7,desc:"morale decays slowly"},
-  {name:"Glutton",hunger:1.35,desc:"gets hungry faster"},
-  {name:"Quick Study",xp:1.25,desc:"+25% job XP"},
-  {name:"Hardy",hp:8,desc:"+8 max HP"},
-  {name:"Cautious",def:2,desc:"+2 DEF"},
-  {name:"Hotblooded",atk:2,desc:"+2 ATK"}
-];
-
-const buildings=[
-  {name:"Inn",x:3,y:3,w:4,h:3,door:[5,6],cost:120,desc:"Rest restores energy faster."},
-  {name:"Tavern",x:10,y:3,w:4,h:3,door:[12,6],cost:140,desc:"Food and morale recovery."},
-  {name:"Forge",x:18,y:3,w:4,h:3,door:[20,6],cost:180,desc:"Better item rolls and shopping."},
-  {name:"Training",x:4,y:11,w:5,h:3,door:[6,10],cost:180,desc:"Faster job XP gain."},
-  {name:"Guild",x:12,y:10,w:5,h:4,door:[14,9],cost:220,desc:"Expedition organisation and renown."},
-  {name:"Temple",x:21,y:11,w:4,h:3,door:[23,10],cost:200,desc:"Recovery and post-run healing."}
-];
-const buildingByName=Object.fromEntries(buildings.map(b=>[b.name,b]));
-
-const grid=Array.from({length:ROWS},()=>Array(COLS).fill(0));
-for(let x=0;x<COLS;x++){grid[0][x]=1;grid[ROWS-1][x]=1}
-for(let y=0;y<ROWS;y++){grid[y][0]=1;grid[y][COLS-1]=1}
-for(const b of buildings){
-  for(let y=b.y;y<b.y+b.h;y++)for(let x=b.x;x<b.x+b.w;x++)grid[y][x]=1;
-  grid[b.door[1]][b.door[0]]=0;
-}
-// decorative pond / obstacles
-for(const [x,y] of [[25,3],[26,3],[25,4],[26,4],[27,4],[26,5]]) grid[y][x]=1;
-
-function rand(a,b){return a+Math.random()*(b-a)}
-function pick(a){return a[Math.floor(Math.random()*a.length)]}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
-function uid(){return nextId++}
-
-function makePawn(i){
-  const job=pick(["Fighter","Ranger","Mage","Acolyte"]), tr=pick(traits);
-  return {
-    id:uid(),name:names[i%names.length],background:pick(backgrounds),trait:tr.name,job,
-    level:1,jobXp:rand(0,25),x:rand(13,16),y:rand(14,16),tx:null,ty:null,path:[],pathIndex:0,
-    hunger:rand(55,90),energy:rand(55,95),morale:rand(55,95),hp:1,
-    task:"Arriving",taskTarget:null,decisionIn:rand(.2,1.5),moveProgress:0,
-    locked:false,equipment:{weapon:null,armor:null,charm:null},
-    masteries:{Fighter:0,Ranger:0,Mage:0,Acolyte:0},runState:null
-  };
-}
-let pawns=Array.from({length:8},(_,i)=>makePawn(i));
-
-function pawnStats(p){
-  const j=jobs[p.job], t=traits.find(x=>x.name===p.trait)||{};
-  let atk=j.atk+p.level*1.3+(t.atk||0), def=j.def+p.level*.8+(t.def||0), maxHp=j.hp+p.level*3+(t.hp||0), spd=j.spd;
-  for(const item of Object.values(p.equipment)){
-    if(!item) continue;
-    atk+=item.atk||0; def+=item.def||0; maxHp+=item.hp||0; spd+=item.spd||0;
-  }
-  return {atk,def,maxHp,spd,move:(t.spd||1)};
-}
-function pawnPower(p){const s=pawnStats(p); return s.atk*1.4+s.def+s.maxHp*.22+s.spd*.6}
-function utility(p){
-  const scores=[];
-  const hungerRate=p.trait==="Glutton"?1.35:1;
-  scores.push({task:"Eat",score:(100-p.hunger)*1.35,target:"Tavern"});
-  scores.push({task:"Rest",score:(100-p.energy)*1.2,target:"Inn"});
-  scores.push({task:"Pray",score:(100-p.morale)*.72+(p.energy<25?5:0),target:"Temple"});
-  scores.push({task:"Train",score:32+p.energy*.18+p.hunger*.10,target:"Training"});
-  scores.push({task:"Shop",score:18+state.gold*.015,target:"Forge"});
-  scores.push({task:"Guild",score:20+state.renown*.02,target:"Guild"});
-  scores.push({task:"Wander",score:12+Math.random()*22,target:null});
-  if(p.hunger<28) scores.find(x=>x.task==="Eat").score+=55;
-  if(p.energy<25) scores.find(x=>x.task==="Rest").score+=60;
-  return scores.sort((a,b)=>b.score-a.score)[0];
-}
-
-function key(x,y){return x+","+y}
-function astar(sx,sy,tx,ty){
-  sx=Math.round(sx);sy=Math.round(sy);tx=Math.round(tx);ty=Math.round(ty);
-  if(grid[ty]?.[tx]!==0) return [];
-  const open=[{x:sx,y:sy,g:0,f:Math.abs(tx-sx)+Math.abs(ty-sy)}], came=new Map(), g=new Map([[key(sx,sy),0]]);
-  const seen=new Set();
-  while(open.length){
-    open.sort((a,b)=>a.f-b.f);
-    const cur=open.shift(), ck=key(cur.x,cur.y);
-    if(seen.has(ck))continue; seen.add(ck);
-    if(cur.x===tx&&cur.y===ty){
-      const path=[]; let k=ck, c=cur;
-      path.push([c.x,c.y]);
-      while(came.has(k)){c=came.get(k); k=key(c.x,c.y); path.push([c.x,c.y]);}
-      return path.reverse();
-    }
-    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-      const nx=cur.x+dx, ny=cur.y+dy;
-      if(nx<0||ny<0||nx>=COLS||ny>=ROWS||grid[ny][nx])continue;
-      const ng=cur.g+1, nk=key(nx,ny);
-      if(ng<(g.get(nk)??Infinity)){
-        g.set(nk,ng); came.set(nk,{x:cur.x,y:cur.y});
-        open.push({x:nx,y:ny,g:ng,f:ng+Math.abs(tx-nx)+Math.abs(ty-ny)});
-      }
-    }
-  }
-  return [];
-}
-function randomWalkable(){
-  for(let i=0;i<100;i++){
-    const x=Math.floor(rand(2,COLS-2)),y=Math.floor(rand(2,ROWS-2));
-    if(!grid[y][x]) return [x,y];
-  }
-  return [14,15];
-}
-function setTask(p,decision){
-  p.task=decision.task;p.taskTarget=decision.target;
-  let dest;
-  if(decision.target) dest=buildingByName[decision.target].door;
-  else dest=randomWalkable();
-  p.tx=dest[0];p.ty=dest[1];p.path=astar(p.x,p.y,p.tx,p.ty);p.pathIndex=1;p.moveProgress=0;
-}
-function atTarget(p){return p.path.length && p.pathIndex>=p.path.length}
-function performTask(p,dt){
-  const lv=state.buildingLevels[p.taskTarget]||1;
-  switch(p.task){
-    case "Eat":
-      p.hunger=clamp(p.hunger+24*dt*lv,0,100); p.morale=clamp(p.morale+4*dt,0,100);
-      state.food=Math.max(0,state.food-1.0*dt); state.gold+=.35*dt; break;
-    case "Rest":
-      p.energy=clamp(p.energy+20*dt*lv,0,100); p.morale=clamp(p.morale+3*dt,0,100); break;
-    case "Pray":
-      p.morale=clamp(p.morale+15*dt*lv,0,100); p.energy=clamp(p.energy+4*dt,0,100); break;
-    case "Train":
-      gainXp(p,7.2*dt*lv); p.energy-=3.3*dt; p.hunger-=2.2*dt; state.gold=Math.max(0,state.gold-.45*dt); break;
-    case "Shop":
-      if(state.gold>8 && Math.random()<.08*dt*lv){state.gold-=8; p.morale=clamp(p.morale+8,0,100)}
-      break;
-    case "Guild": p.morale=clamp(p.morale+5*dt,0,100); break;
-    case "Wander": p.morale=clamp(p.morale+2.5*dt,0,100); break;
-  }
-}
-function gainXp(p,amt){
-  if(p.trait==="Quick Study") amt*=1.25;
-  p.jobXp+=amt;
-  const need=55+p.level*28;
-  if(p.jobXp>=need){p.jobXp-=need;p.level++;addLog(`${p.name} reached ${p.job} Lv.${p.level}.`); if(p.level===5) tryAdvanceJob(p);}
-}
-function tryAdvanceJob(p){
-  const map={Fighter:"Knight",Ranger:"Assassin",Mage:"Elementalist",Acolyte:"Cleric"};
-  if(map[p.job] && Math.random()<.55){
-    p.masteries[p.job]=(p.masteries[p.job]||0)+1;
-    const old=p.job;p.job=map[p.job];addLog(`${p.name} mastered ${old} fundamentals and advanced to ${p.job}.`);
-  }
-}
-function updatePawn(p,dt){
-  if(p.runState) return;
-  const tr=traits.find(x=>x.name===p.trait)||{};
-  p.hunger=clamp(p.hunger-.42*dt*(tr.hunger||1),0,100);
-  p.energy=clamp(p.energy-.23*dt*(tr.name==="Restless"?1.18:1),0,100);
-  p.morale=clamp(p.morale-.12*dt*(tr.morale||1),0,100);
-  p.decisionIn-=dt;
-  if(p.pathIndex<p.path.length){
-    const target=p.path[p.pathIndex], dx=target[0]-p.x,dy=target[1]-p.y,dist=Math.hypot(dx,dy);
-    const step=2.05*pawnStats(p).move*dt;
-    if(dist<=step){p.x=target[0];p.y=target[1];p.pathIndex++}
-    else{p.x+=dx/dist*step;p.y+=dy/dist*step}
-  } else if(p.path.length){
-    performTask(p,dt);
-    if(p.decisionIn<=0){p.decisionIn=rand(2.5,5.5);setTask(p,utility(p))}
-  } else if(p.decisionIn<=0){
-    p.decisionIn=rand(2.5,5.5);setTask(p,utility(p));
-  }
-}
-
-const dungeonDefs=[
- {name:"Mosswood Ruins",req:0,enemy:"Beasts",base:18,loot:1,desc:"Old roads, beasts and forgotten shrines."},
- {name:"Ashen Crypt",req:18,enemy:"Undead",base:28,loot:1.25,desc:"Curses, armored dead and relics."},
- {name:"Glass Cavern",req:45,enemy:"Elementals",base:40,loot:1.55,desc:"Dangerous crystals and high-tier arcane loot."}
-];
-function availableDungeons(){return dungeonDefs.filter(d=>state.renown>=d.req)}
-function volunteers(forceBest=false){
-  const eligible=pawns.filter(p=>!p.runState&&!p.locked&&p.energy>45&&p.hunger>35);
-  return eligible.sort((a,b)=>forceBest?pawnPower(b)-pawnPower(a):(b.morale+b.energy)-(a.morale+a.energy)).slice(0,4);
-}
-function startRun(forceBest=false){
-  if(expedition) return;
-  const ds=document.getElementById("dungeonSelect"), dungeon=dungeonDefs.find(d=>d.name===ds.value)||availableDungeons()[0];
-  const threat=+document.getElementById("threatSelect").value, party=volunteers(forceBest);
-  if(party.length<2){addLog("Not enough willing, rested heroes. Need at least 2.");render();return}
-  const types=["Combat","Event","Treasure","Combat","Shrine","Elite","Camp","Combat","Boss"];
-  const count=6+threat;
-  const nodes=Array.from({length:count},(_,i)=>({type:i===count-1?"Boss":pick(types.slice(0,-1)),done:false}));
-  expedition={dungeon,threat,partyIds:party.map(p=>p.id),nodes,index:0,loot:[],hp:{}};
-  for(const p of party){p.runState="expedition";expedition.hp[p.id]=pawnStats(p).maxHp}
-  addLog(`Departed for ${dungeon.name} (Threat ${roman(threat)}): ${party.map(p=>p.name).join(", ")}.`);
-  expeditionTimer=1.2;switchTab("expedition");render();
-}
-function roman(n){return ["","I","II","III","IV","V"][n]||n}
-function partyAlive(){
-  return expedition.partyIds.map(id=>pawns.find(p=>p.id===id)).filter(p=>p&&expedition.hp[p.id]>0);
-}
-function processNode(){
-  if(!expedition) return;
-  const node=expedition.nodes[expedition.index], party=partyAlive();
-  if(!party.length){finishRun(false);return}
-  const d=expedition.dungeon, threat=expedition.threat;
-  let danger=d.base*(1+.42*(threat-1))*(node.type==="Elite"?1.55:node.type==="Boss"?2.15:1);
-  const partyPower=party.reduce((s,p)=>s+pawnPower(p)*(0.72+p.energy/330),0);
-  if(node.type==="Combat"||node.type==="Elite"||node.type==="Boss"){
-    const ratio=danger/Math.max(1,partyPower);
-    const dmgTotal=rand(5,13)*danger/25*(.7+ratio*.45);
-    for(const p of party){
-      const s=pawnStats(p), mitigation=1-(s.def/(s.def+35));
-      const hit=dmgTotal*rand(.55,1.25)*mitigation;
-      expedition.hp[p.id]=Math.max(0,expedition.hp[p.id]-hit);
-      p.energy=clamp(p.energy-rand(4,9),0,100);p.hunger=clamp(p.hunger-rand(2,5),0,100);
-      gainXp(p,8*threat*(node.type==="Boss"?2.5:node.type==="Elite"?1.6:1));
-    }
-    const dead=party.filter(p=>expedition.hp[p.id]<=0);
-    if(dead.length) addLog(`Downed: ${dead.map(p=>p.name).join(", ")}.`);
-    const successRoll=partyPower*rand(.82,1.18);
-    if(successRoll < danger*.62){ addLog(`${node.type}: the party is forced to retreat.`); finishRun(false); return; }
-    addLog(`${node.type} cleared. Party power ${Math.round(partyPower)} vs danger ${Math.round(danger)}.`);
-    if(Math.random()<.62 || node.type!=="Combat"){const it=makeItem(d.loot*threat+(node.type==="Boss"?1.8:node.type==="Elite"?.7:0),party); expedition.loot.push(it);addLog(`Found ${it.name}.`)}
-    if(node.type==="Boss") state.renown+=8*threat;
-  } else if(node.type==="Treasure"){
-    const it=makeItem(d.loot*threat+.55,party);expedition.loot.push(it);addLog(`Treasure room: ${it.name}.`);
-  } else if(node.type==="Shrine"){
-    for(const p of party) expedition.hp[p.id]=Math.min(pawnStats(p).maxHp,expedition.hp[p.id]+rand(4,10));
-    addLog("Shrine blessing restores the party.");
-  } else if(node.type==="Camp"){
-    for(const p of party){expedition.hp[p.id]=Math.min(pawnStats(p).maxHp,expedition.hp[p.id]+rand(7,15));p.energy=clamp(p.energy+12,0,100)}
-    addLog("The party camps and recovers.");
-  } else {
-    if(Math.random()<.58){state.gold+=Math.round(rand(12,28)*threat);addLog("Event: the party helps a caravan and earns gold.");}
-    else {for(const p of party) expedition.hp[p.id]=Math.max(1,expedition.hp[p.id]-rand(1,7));addLog("Event: an old bridge collapses. Minor injuries.");}
-  }
-  node.done=true;expedition.index++;
-  if(expedition.index>=expedition.nodes.length){finishRun(true);return}
-  expeditionTimer=1.8;
-}
-function finishRun(success){
-  const party=expedition.partyIds.map(id=>pawns.find(p=>p.id===id)).filter(Boolean);
-  const recovered=success?expedition.loot:expedition.loot.filter(()=>Math.random()<.45);
-  state.stash.push(...recovered);
-  if(success){state.gold+=25*expedition.threat;state.renown+=5*expedition.threat;addLog(`Expedition completed. Extracted ${recovered.length} items.`)}
-  else addLog(`Expedition failed. Recovered ${recovered.length}/${expedition.loot.length} items.`);
-  for(const p of party){p.runState=null;p.energy=clamp(p.energy-(success?5:14),5,100);p.morale=clamp(p.morale+(success?8:-10),0,100);p.decisionIn=.2;p.path=[]}
-  if(state.autoEquip) equipBestAll();
-  expedition=null;expeditionTimer=0;render();
-}
-
-const itemBases=[
- {name:"Longsword",slot:"weapon",atk:6},{name:"Hunting Bow",slot:"weapon",atk:5,spd:1},
- {name:"Ash Staff",slot:"weapon",atk:7},{name:"Warhammer",slot:"weapon",atk:5,def:2},
- {name:"Brigandine",slot:"armor",def:6,hp:6},{name:"Ranger Coat",slot:"armor",def:3,spd:1,hp:3},
- {name:"Runed Robe",slot:"armor",def:2,hp:5,atk:2},{name:"Iron Charm",slot:"charm",hp:8},
- {name:"Fox Charm",slot:"charm",spd:2},{name:"Ember Sigil",slot:"charm",atk:3}
-];
-const prefixes=["Veteran's","Keen","Stout","Wayfarer's","Runed","Vicious","Warding","Lucky"];
-const suffixes=["of Embers","of the Fox","of Stone","of the Hunt","of Echoes","of Dawn","of Thorns"];
-function makeItem(power,party){
-  const b={...pick(itemBases)}, q=Math.max(.7,power+rand(-.4,.7));
-  const lucky=party.some(p=>p.trait==="Treasure Nose")?.18:0;
-  const r=Math.random()+lucky;
-  let rarity=r>.97?"unique":r>.82?"epic":r>.57?"rare":r>.30?"uncommon":"common";
-  const mult={common:1,uncommon:1.18,rare:1.42,epic:1.72,unique:2.12}[rarity];
-  const item={id:uid(),slot:b.slot,rarity,atk:Math.round((b.atk||0)*q*mult),def:Math.round((b.def||0)*q*mult),hp:Math.round((b.hp||0)*q*mult),spd:Math.round((b.spd||0)*Math.max(1,q*.7)*mult)};
-  const affixes=rarity==="common"?0:rarity==="uncommon"?1:rarity==="rare"?2:rarity==="epic"?3:4;
-  item.name=(affixes?pick(prefixes)+" ":"")+b.name+(affixes>1?" "+pick(suffixes):"");
-  item.score=item.atk*1.5+item.def+item.hp*.2+item.spd*.8;
-  return item;
-}
-function itemScoreFor(p,it){
-  const bias=p.job==="Knight"?it.def*1.5+it.hp*.28:p.job==="Assassin"?it.atk*1.7+it.spd*1.5:
-             p.job==="Elementalist"?it.atk*1.8+it.hp*.1:p.job==="Cleric"?it.def*1.1+it.hp*.35:it.score;
-  return bias;
-}
-function equipBestAll(){
-  for(const p of pawns){
-    for(const slot of ["weapon","armor","charm"]){
-      const candidates=state.stash.filter(i=>i.slot===slot).sort((a,b)=>itemScoreFor(p,b)-itemScoreFor(p,a));
-      const cur=p.equipment[slot];
-      if(candidates[0] && (!cur || itemScoreFor(p,candidates[0])>itemScoreFor(p,cur)*1.04)){
-        const next=candidates[0]; state.stash=state.stash.filter(i=>i.id!==next.id);
-        if(cur) state.stash.push(cur); p.equipment[slot]=next;
-      }
-    }
-  }
-  render();
-}
-
-function addLog(msg){
-  const t=`D${day} ${fmtTime(simMinutes)}  ${msg}`;
-  logLines.unshift(t);logLines=logLines.slice(0,80);
-}
-let logLines=["D1 08:00  The Wayfarer Guild opens its doors."];
-
-function update(dt){
-  if(speed===0)return;
-  const sdt=dt*speed;
-  simMinutes+=sdt*4.2;
-  if(simMinutes>=24*60){simMinutes-=24*60;day++;state.food+=18+state.buildingLevels.Tavern*3;state.gold+=10;}
-  for(const p of pawns)updatePawn(p,sdt);
-  if(expedition){expeditionTimer-=sdt;if(expeditionTimer<=0)processNode()}
-}
-function fmtTime(m){const h=Math.floor(m/60)%24, mm=Math.floor(m%60);return String(h).padStart(2,"0")+":"+String(mm).padStart(2,"0")}
-
-function resize(){
-  const rect=canvas.parentElement.getBoundingClientRect();DPR=Math.min(2,window.devicePixelRatio||1);
-  canvas.width=Math.floor(rect.width*DPR);canvas.height=Math.floor(rect.height*DPR);
-  canvas.style.width=rect.width+"px";canvas.style.height=rect.height+"px";ctx.setTransform(DPR,0,0,DPR,0,0);
-}
-window.addEventListener("resize",resize);resize();
-
-function worldTransform(){
-  const w=canvas.clientWidth,h=canvas.clientHeight,scale=Math.min(w/(COLS*TILE),h/(ROWS*TILE));
-  return {scale,ox:(w-COLS*TILE*scale)/2,oy:(h-ROWS*TILE*scale)/2};
-}
-function draw(){
-  const {scale,ox,oy}=worldTransform();ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
-  ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
-  ctx.fillStyle="#273321";ctx.fillRect(0,0,COLS*TILE,ROWS*TILE);
-  // roads
-  ctx.fillStyle="#5b5644";
-  ctx.fillRect(1*TILE,7*TILE,28*TILE,3*TILE);
-  ctx.fillRect(13*TILE,1*TILE,3*TILE,16*TILE);
-  ctx.fillRect(1*TILE,15*TILE,28*TILE,2*TILE);
-  // subtle tiles
-  ctx.strokeStyle="rgba(255,255,255,.025)";ctx.lineWidth=1;
-  for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*TILE,0);ctx.lineTo(x*TILE,ROWS*TILE);ctx.stroke()}
-  for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*TILE);ctx.lineTo(COLS*TILE,y*TILE);ctx.stroke()}
-  // pond
-  ctx.fillStyle="#314e50";
-  for(const [x,y] of [[25,3],[26,3],[25,4],[26,4],[27,4],[26,5]]) ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
-  // buildings
-  for(const b of buildings){
-    const lv=state.buildingLevels[b.name];
-    ctx.fillStyle="#413f32";ctx.fillRect(b.x*TILE,b.y*TILE,b.w*TILE,b.h*TILE);
-    ctx.fillStyle="#6e654a";ctx.fillRect((b.x+.15)*TILE,(b.y+.15)*TILE,(b.w-.3)*TILE,(b.h-.3)*TILE);
-    ctx.fillStyle="#26271f";ctx.fillRect((b.door[0]+.28)*TILE,(b.door[1]-.05)*TILE,.44*TILE,.65*TILE);
-    ctx.fillStyle="#ead28d";ctx.font="bold 12px system-ui";ctx.textAlign="center";
-    ctx.fillText(`${b.name} ${roman(lv)}`, (b.x+b.w/2)*TILE,(b.y+b.h/2)*TILE);
-  }
-  // portal
-  ctx.strokeStyle="#9a70b1";ctx.lineWidth=4;ctx.beginPath();ctx.arc(28*TILE,8.5*TILE,16,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle="#c8a4d8";ctx.font="10px system-ui";ctx.fillText("DUNGEON",28*TILE,9.35*TILE);
-  // selected path
-  const sel=pawns.find(p=>p.id===selectedPawnId);
-  if(sel && document.getElementById("showPaths").checked && sel.path.length){
-    ctx.strokeStyle="rgba(238,203,112,.85)";ctx.lineWidth=2;ctx.setLineDash([6,4]);ctx.beginPath();
-    sel.path.slice(Math.max(0,sel.pathIndex-1)).forEach((pt,i)=>{const x=(pt[0]+.5)*TILE,y=(pt[1]+.5)*TILE;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.setLineDash([]);
-  }
-  // pawns
-  for(const p of pawns){
-    if(p.runState)continue;
-    const sx=(p.x+.5)*TILE,sy=(p.y+.5)*TILE,j=jobs[p.job];
-    ctx.beginPath();ctx.arc(sx,sy,10,0,Math.PI*2);ctx.fillStyle=j.color;ctx.fill();
-    ctx.strokeStyle=p.id===selectedPawnId?"#f3d274":"#171914";ctx.lineWidth=p.id===selectedPawnId?3:2;ctx.stroke();
-    ctx.fillStyle="#111";ctx.font="bold 9px system-ui";ctx.textAlign="center";ctx.fillText(p.name[0],sx,sy+3);
-    if(document.getElementById("showIntent").checked){
-      ctx.fillStyle="rgba(20,22,18,.88)";const label=p.task;ctx.font="10px system-ui";const tw=ctx.measureText(label).width+8;
-      ctx.fillRect(sx-tw/2,sy-26,tw,14);ctx.fillStyle="#e6e8df";ctx.fillText(label,sx,sy-16);
-    }
-  }
-  ctx.restore();
-}
-function nearestPawnAt(mx,my){
-  const {scale,ox,oy}=worldTransform(), x=(mx-ox)/scale/TILE-.5,y=(my-oy)/scale/TILE-.5;
-  let best=null,bd=999;
-  for(const p of pawns){if(p.runState)continue;const d=Math.hypot(p.x-x,p.y-y);if(d<.65&&d<bd){best=p;bd=d}}
-  return best;
-}
-canvas.addEventListener("click",e=>{
-  const r=canvas.getBoundingClientRect(),p=nearestPawnAt(e.clientX-r.left,e.clientY-r.top);
-  if(p){selectedPawnId=p.id;render()}
-});
-
-function render(){
-  document.getElementById("day").textContent=day;document.getElementById("clock").textContent=fmtTime(simMinutes);
-  document.getElementById("gold").textContent=Math.floor(state.gold);document.getElementById("food").textContent=Math.floor(state.food);
-  document.getElementById("renown").textContent=Math.floor(state.renown);document.getElementById("rosterCount").textContent=`${pawns.length} heroes`;
-  renderRoster();renderSelected();renderDungeon();renderStash();renderBuildings();
-}
-function miniBar(v,cls=""){return `<div class="bar"><div class="fill ${cls}" style="width:${clamp(v,0,100)}%"></div></div>`}
-function renderRoster(){
-  const el=document.getElementById("roster");el.innerHTML=pawns.map(p=>{
-    const s=pawnStats(p);
-    return `<div class="card pawnCard ${p.id===selectedPawnId?"sel":""}" data-id="${p.id}">
-      <div class="row space"><b>${p.name}</b><span class="pill">${p.job} ${p.level}</span></div>
-      <div class="tiny muted">${p.background} · ${p.trait}</div>
-      <div class="row tiny"><span style="width:48px">Energy</span>${miniBar(p.energy,"blue")}<span>${Math.round(p.energy)}</span></div>
-      <div class="row tiny"><span style="width:48px">Hunger</span>${miniBar(p.hunger,"gold")}<span>${Math.round(p.hunger)}</span></div>
-      <div class="row tiny"><span style="width:48px">Morale</span>${miniBar(p.morale)}<span>${Math.round(p.morale)}</span></div>
-      <div class="row space tiny"><span>${p.runState?"On expedition":p.task}</span><span>Power ${Math.round(pawnPower(p))}</span></div>
-    </div>`;
-  }).join("");
-  el.querySelectorAll(".pawnCard").forEach(n=>n.onclick=()=>{selectedPawnId=+n.dataset.id;render()});
-}
-function renderSelected(){
-  const el=document.getElementById("selectedDetail"),p=pawns.find(x=>x.id===selectedPawnId);
-  if(!p){el.innerHTML=`<h3>Selected Adventurer</h3><div class="muted">Click a pawn on the map or in the roster.</div>`;return}
-  const s=pawnStats(p),tr=traits.find(x=>x.name===p.trait),xpNeed=55+p.level*28;
-  el.innerHTML=`<div class="row"><div class="portrait">${p.name[0]}</div><div><b>${p.name}</b><div class="muted tiny">${p.background}</div><span class="pill">${p.job} Lv.${p.level}</span></div></div>
-    <div class="statgrid tiny"><span>ATK <b>${Math.round(s.atk)}</b></span><span>DEF <b>${Math.round(s.def)}</b></span><span>HP <b>${Math.round(s.maxHp)}</b></span><span>SPD <b>${Math.round(s.spd)}</b></span></div>
-    <div class="row tiny"><span style="width:58px">Job XP</span>${miniBar(p.jobXp/xpNeed*100,"gold")}<span>${Math.round(p.jobXp)}/${xpNeed}</span></div>
-    <div class="item"><b>${p.trait}</b><div class="tiny muted">${tr?.desc||""}</div></div>
-    <div class="tiny"><b>Current decision:</b> ${p.runState?"Exploring dungeon":p.task}${p.taskTarget?` → ${p.taskTarget}`:""}</div>
-    <div class="tiny muted">Route: ${p.path.length?Math.max(0,p.path.length-p.pathIndex)+" tiles remaining":"—"}</div>
-    <div class="tiny muted">Gear: ${["weapon","armor","charm"].map(k=>p.equipment[k]?.name||"—").join(" · ")}</div>
-    <label class="toggle tiny"><input id="lockSelected" type="checkbox" ${p.locked?"checked":""}> Do not volunteer for expeditions</label>`;
-  document.getElementById("lockSelected").onchange=e=>{p.locked=e.target.checked};
-}
-function renderDungeon(){
-  const ds=document.getElementById("dungeonSelect"),prev=ds.value;
-  ds.innerHTML=availableDungeons().map(d=>`<option>${d.name}</option>`).join("");if([...ds.options].some(o=>o.value===prev))ds.value=prev;
-  const pLine=document.getElementById("partyLine"),nodes=document.getElementById("nodes");
-  if(!expedition){pLine.textContent=`Likely volunteers: ${volunteers().map(p=>p.name).join(", ")||"none"}`;nodes.innerHTML="";document.getElementById("startExpedition").disabled=false;document.getElementById("forceBest").disabled=false}
-  else{
-    const party=expedition.partyIds.map(id=>pawns.find(p=>p.id===id));
-    pLine.innerHTML=`<b>${expedition.dungeon.name}</b> · ${party.map(p=>`${p.name} ${Math.ceil(expedition.hp[p.id])}/${Math.round(pawnStats(p).maxHp)}HP`).join(" · ")}`;
-    nodes.innerHTML=expedition.nodes.map((n,i)=>`<div class="node ${n.done?"done":i===expedition.index?"current":""}">${i+1}. ${n.type}</div>`).join("");
-    document.getElementById("startExpedition").disabled=true;document.getElementById("forceBest").disabled=true;
-  }
-  document.getElementById("log").textContent=logLines.join("\n");
-}
-function renderStash(){
-  document.getElementById("autoEquip").checked=state.autoEquip;
-  const el=document.getElementById("stash");
-  if(!state.stash.length){el.innerHTML=`<div class="muted">No unequipped items yet. Expeditions will fill this quickly.</div>`;return}
-  el.innerHTML=state.stash.slice().sort((a,b)=>b.score-a.score).map(i=>`<div class="item ${i.rarity}">
-    <div class="row space"><b>${i.name}</b><span class="pill">${i.rarity}</span></div>
-    <div class="tiny muted">${i.slot} · ${i.atk?`ATK +${i.atk} `:""}${i.def?`DEF +${i.def} `:""}${i.hp?`HP +${i.hp} `:""}${i.spd?`SPD +${i.spd}`:""}</div>
-  </div>`).join("");
-}
-function renderBuildings(){
-  const el=document.getElementById("buildings");
-  el.innerHTML=buildings.map(b=>{
-    const lv=state.buildingLevels[b.name],cost=Math.round(b.cost*Math.pow(1.6,lv-1));
-    return `<div class="item"><div class="row space"><b>${b.name} ${roman(lv)}</b><button data-upgrade="${b.name}" ${state.gold<cost?"disabled":""}>Upgrade ${cost}g</button></div><div class="tiny muted">${b.desc}</div></div>`;
-  }).join("");
-  el.querySelectorAll("[data-upgrade]").forEach(btn=>btn.onclick=()=>{const n=btn.dataset.upgrade,lv=state.buildingLevels[n],b=buildingByName[n],cost=Math.round(b.cost*Math.pow(1.6,lv-1));if(state.gold>=cost){state.gold-=cost;state.buildingLevels[n]++;addLog(`${n} upgraded to ${roman(state.buildingLevels[n])}.`);render()}});
-}
-function switchTab(name){
-  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
-  document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("active",p.id===name));
-}
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
-document.querySelectorAll("#speed button").forEach(b=>b.onclick=()=>{speed=+b.dataset.speed;document.querySelectorAll("#speed button").forEach(x=>x.classList.toggle("primary",x===b))});
-document.getElementById("startExpedition").onclick=()=>startRun(false);
-document.getElementById("forceBest").onclick=()=>startRun(true);
-document.getElementById("equipBest").onclick=equipBestAll;
-document.getElementById("salvageCommons").onclick=()=>{const n=state.stash.filter(i=>i.rarity==="common").length;state.stash=state.stash.filter(i=>i.rarity!=="common");state.gold+=n*7;addLog(`Salvaged ${n} common items for ${n*7}g.`);render()};
-document.getElementById("autoEquip").onchange=e=>state.autoEquip=e.target.checked;
-
-function serializable(){
-  return {state,pawns,simMinutes,day,nextId,logLines};
-}
-function save(){localStorage.setItem("wayfarerGuildSave",JSON.stringify(serializable()));addLog("Game saved locally.");render()}
-function load(){
-  const raw=localStorage.getItem("wayfarerGuildSave");if(!raw){addLog("No local save found.");render();return}
-  const s=JSON.parse(raw);Object.assign(state,s.state);pawns=s.pawns;simMinutes=s.simMinutes;day=s.day;nextId=s.nextId||nextId;logLines=s.logLines||logLines;expedition=null;
-  for(const p of pawns)p.runState=null;addLog("Save loaded.");render();
-}
-document.getElementById("saveBtn").onclick=save;document.getElementById("loadBtn").onclick=load;
-document.getElementById("resetBtn").onclick=()=>{localStorage.removeItem("wayfarerGuildSave");location.reload()};
-
-for(let i=0;i<7;i++)state.stash.push(makeItem(rand(.8,1.6),pawns));
-equipBestAll();
-selectedPawnId=pawns[0].id;
-for(const p of pawns)setTask(p,utility(p));
-render();
-
-function loop(ts){
-  const dt=Math.min(.05,(ts-last)/1000||0);last=ts;acc+=dt;
-  while(acc>=1/30){update(1/30);acc-=1/30}
-  draw();
-  if(Math.floor(ts/300)!==Math.floor((ts-dt*1000)/300))render();
-  requestAnimationFrame(loop);
-}
-requestAnimationFrame(loop);
+(()=>{'use strict';
+const TILE=28,COLS=38,ROWS=23,TOWN_MAX_X=24;const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');let dpr=1,last=0,acc=0,speed=1,selectedId=null,buildType=null,exploreMode=false,autosaveClock=0;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)],rint=(a,b)=>Math.floor(rnd(a,b+1)),dist=(a,b,c,d)=>Math.hypot(a-c,b-d),key=(x,y)=>x+','+y;
+const names=['Mira','Brann','Tovin','Sera','Lio','Nessa','Corin','Yara','Fen','Ilya','Dara','Oren','Rin','Perrin','Aya','Kellan','Mara','Sol'];const backgrounds=['Hunter','Farmhand','Scribe','Blacksmith Kin','Pilgrim','Street Urchin','Caravan Guard','Herbalist','Fisher','Old Noble'];
+const JOBS={
+Adventurer:{icon:'⚔',hp:28,atk:6,def:4,mag:2,spd:3,color:'#c48a58',work:1,traits:['Flexible']},Fighter:{icon:'🗡',hp:34,atk:8,def:6,mag:1,spd:3,color:'#ba6b54',work:1.05,traits:['Frontline']},Archer:{icon:'🏹',hp:25,atk:7,def:3,mag:2,spd:5,color:'#6e9958',work:1.05,traits:['Ranged']},Mage:{icon:'✦',hp:21,atk:3,def:2,mag:10,spd:3,color:'#7a6cac',work:.95,traits:['Magic']},Cleric:{icon:'✚',hp:27,atk:4,def:5,mag:8,spd:3,color:'#c0aa63',work:1,traits:['Heal']},Knight:{icon:'♜',hp:42,atk:10,def:10,mag:2,spd:2,color:'#7f8785',work:1.15,req:['Fighter'],traits:['Guard']},Ninja:{icon:'✣',hp:27,atk:11,def:4,mag:3,spd:8,color:'#625d72',work:1.1,req:['Archer'],traits:['Ambush']},Wizard:{icon:'☄',hp:23,atk:3,def:3,mag:15,spd:4,color:'#805c9f',work:1,req:['Mage'],traits:['Area']},Paladin:{icon:'☀',hp:39,atk:8,def:9,mag:9,spd:3,color:'#b69b53',work:1.12,req:['Cleric','Fighter'],traits:['Heal','Guard']},Blacksmith:{icon:'🔨',hp:30,atk:6,def:6,mag:2,spd:2,color:'#8b755b',work:1.35,traits:['Craft']},Farmer:{icon:'🌾',hp:29,atk:4,def:4,mag:2,spd:3,color:'#87a952',work:1.35,traits:['Gather']},Researcher:{icon:'📘',hp:22,atk:2,def:3,mag:7,spd:3,color:'#648b9c',work:1.3,traits:['Research']}}
+const BDEFS={
+Inn:{icon:'🛏',w:4,h:3,cost:120,upkeep:3,price:12,quality:18,appeal:14,unlock:1,desc:'Restores HP and receives KO heroes.'},Tavern:{icon:'🍲',w:4,h:3,cost:130,upkeep:4,price:14,quality:16,appeal:20,unlock:1,desc:'Food, morale and socialising.'},Training:{icon:'🏋',w:4,h:3,cost:160,upkeep:4,price:18,quality:15,appeal:12,unlock:1,desc:'Job EXP and physical growth.'},WeaponShop:{icon:'⚒',w:4,h:3,cost:180,upkeep:5,price:22,quality:13,appeal:12,unlock:1,desc:'Residents buy and improve weapons.'},Guild:{icon:'🏰',w:5,h:4,cost:0,upkeep:0,price:0,quality:20,appeal:25,unlock:1,desc:'Quest board and village heart.'},House:{icon:'🏠',w:3,h:2,cost:85,upkeep:1,price:0,quality:12,appeal:10,unlock:1,desc:'Lets a satisfied visitor move in.'},Farm:{icon:'🥕',w:4,h:3,cost:130,upkeep:2,price:0,quality:13,appeal:8,unlock:2,desc:'Produces food from resident work.'},Forge:{icon:'🔥',w:4,h:3,cost:230,upkeep:6,price:0,quality:18,appeal:9,unlock:2,desc:'Raises crafted/drop equipment quality.'},Temple:{icon:'⛩',w:4,h:3,cost:200,upkeep:4,price:15,quality:19,appeal:18,unlock:2,desc:'Healing, spirit and morale.'},Library:{icon:'📚',w:4,h:3,cost:240,upkeep:5,price:16,quality:20,appeal:15,unlock:3,desc:'Research progress and magic growth.'},Market:{icon:'⛺',w:4,h:3,cost:200,upkeep:3,price:20,quality:15,appeal:24,unlock:3,desc:'Income and visitor appeal.'},Storehouse:{icon:'📦',w:3,h:3,cost:140,upkeep:1,price:0,quality:10,appeal:5,unlock:2,desc:'Raises material storage caps.'}}
+const RESEARCH={Farm:{cost:18,rank:1,desc:'Unlock Farm and Farmer job'},Forge:{cost:25,rank:1,desc:'Unlock Forge and better equipment'},Temple:{cost:30,rank:1,desc:'Unlock Temple and Paladin path'},Storehouse:{cost:22,rank:1,desc:'Unlock Storehouse capacity'},Library:{cost:38,rank:2,desc:'Unlock Library and Researcher'},Market:{cost:34,rank:2,desc:'Unlock Market and more visitors'},Ninja:{cost:32,rank:2,desc:'Unlock Ninja job'},Wizard:{cost:32,rank:2,desc:'Unlock Wizard job'}};
+const ITEM_BASES=[['Bronze Sword','weapon',5,0,0,0],['Iron Axe','weapon',7,0,0,-1],['Hunter Bow','weapon',5,0,0,1],['Oak Staff','weapon',2,0,4,0],['War Hammer','weapon',6,2,0,-1],['Leather Coat','armor',0,4,0,1],['Iron Mail','armor',0,7,0,-1],['Mage Robe','armor',0,2,3,0],['Traveler Cloak','armor',0,3,0,1],['Wood Shield','offhand',0,4,0,0],['Round Shield','offhand',0,6,0,-1],['Spellbook','offhand',0,1,4,0],['Lucky Ring','accessory',1,1,1,1],['Vital Charm','accessory',0,2,0,0],['Swift Boots','accessory',0,0,0,2]];
+const PREFIX=['Fine','Sturdy','Keen','Runed','Veteran','Royal','Wild','Blessed'],SUFFIX=['of Dawn','of Thorns','of Embers','of Wind','of Fortune','of Stone'];
+let S={version:2,nextId:100,day:1,minutes:8*60,gold:650,popularity:80,townPoints:22,rank:1,food:90,wood:45,ore:25,herbs:15,energy:40,maxEnergy:50,questsCleared:0,eventsHeld:0,income:0,unlockedResearch:[],unlockedJobs:['Adventurer','Fighter','Archer','Mage','Cleric','Blacksmith'],stash:[],buildings:[],pawns:[],monsters:[],quests:[],activeQuest:null,fog:[],logs:[],autoEquip:true};
+const id=()=>S.nextId++;
+function log(m){S.logs.unshift(`D${S.day} ${fmt(S.minutes)}  ${m}`);S.logs=S.logs.slice(0,90)}function fmt(m){let h=Math.floor(m/60)%24,mm=Math.floor(m%60);return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0')}
+function building(type,x,y){const d=BDEFS[type];return{id:id(),type,x,y,w:d.w,h:d.h,level:1,quality:d.quality,appeal:d.appeal,price:d.price,uses:0,income:0,occupants:[]}}
+function init(){S.buildings=[building('Guild',10,8),building('Inn',3,4),building('Tavern',8,3),building('Training',3,11),building('WeaponShop',16,4),building('House',17,11),building('House',20,14)];S.pawns=Array.from({length:8},(_,i)=>makePawn(i,i<4));S.fog=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>x>=25));for(let y=7;y<=15;y++)for(let x=24;x<=26;x++)S.fog[y][x]=false;for(let i=0;i<7;i++)S.stash.push(makeItem(rnd(.8,1.4)));generateQuests();for(let i=0;i<7;i++)spawnMonster();selectedId=S.pawns[0].id;for(const p of S.pawns)chooseTask(p);log('A new guild town opens on the frontier.');save();}
+function makePawn(i,resident=false){const job=pick(['Adventurer','Fighter','Archer','Mage','Cleric']);const p={id:id(),name:names[i%names.length],background:pick(backgrounds),job,level:rint(1,3),jobLevel:rint(1,3),jobXp:rnd(0,30),mastered:[],x:rnd(11,15),y:rnd(15,18),path:[],pi:0,task:'Arriving',target:null,targetId:null,hp:1,energy:rnd(65,100),hunger:rnd(60,95),morale:rnd(55,90),satisfaction:resident?rnd(55,80):rnd(8,28),work:resident?rnd(35,60):rnd(5,20),resident,homeId:null,coins:rint(35,120),equipment:{weapon:null,armor:null,offhand:null,accessory:null},decision:rnd(.3,2),attackCd:0,ko:false,exploreTarget:null,questing:false,visits:0};p.hp=stats(p).maxHp;return p}
+function stats(p){const j=JOBS[p.job]||JOBS.Adventurer;let st={maxHp:j.hp+p.level*4,atk:j.atk+p.level*1.5,def:j.def+p.level,mag:j.mag+p.level*1.1,spd:j.spd};for(const it of Object.values(p.equipment)){if(!it)continue;st.atk+=it.atk||0;st.def+=it.def||0;st.mag+=it.mag||0;st.spd+=it.spd||0;st.maxHp+=it.hp||0}return st}
+function power(p){const s=stats(p);return s.maxHp*.18+s.atk*1.35+s.def+s.mag*1.15+s.spd*.65+p.jobLevel*.8}
+function itemScore(p,it){let v=(it.atk||0)*1.3+(it.def||0)+(it.mag||0)*1.15+(it.spd||0)*.8+(it.hp||0)*.2;if(['Mage','Wizard','Cleric','Paladin','Researcher'].includes(p.job))v+=(it.mag||0)*.8;if(['Knight','Paladin'].includes(p.job))v+=(it.def||0)*.6;return v}
+function makeItem(q=1){let [base,slot,atk,def,mag,spd]=pick(ITEM_BASES),r=Math.random(),rar=r>.975?'unique':r>.87?'epic':r>.63?'rare':r>.32?'uncommon':'common',mul={common:1,uncommon:1.18,rare:1.42,epic:1.7,unique:2.05}[rar]*q;let aff={common:0,uncommon:1,rare:2,epic:3,unique:4}[rar],it={id:id(),slot,rarity:rar,name:(aff?pick(PREFIX)+' ':'')+base+(aff>1?' '+pick(SUFFIX):''),atk:Math.max(0,Math.round(atk*mul)),def:Math.max(0,Math.round(def*mul)),mag:Math.max(0,Math.round(mag*mul)),spd:Math.round(spd*Math.max(1,mul*.65)),hp:aff?Math.round(rnd(0,4)*q*mul):0};it.score=it.atk*1.3+it.def+it.mag*1.15+it.spd*.8+it.hp*.2;return it}
+function grid(){let g=Array.from({length:ROWS},()=>Array(COLS).fill(0));for(let x=0;x<COLS;x++)g[0][x]=g[ROWS-1][x]=1;for(let y=0;y<ROWS;y++)g[y][0]=g[y][COLS-1]=1;for(const b of S.buildings)for(let y=b.y;y<b.y+b.h;y++)for(let x=b.x;x<b.x+b.w;x++)g[y][x]=1;return g}
+function door(b){let opts=[[b.x+Math.floor(b.w/2),b.y+b.h],[b.x-1,b.y+Math.floor(b.h/2)],[b.x+b.w,b.y+Math.floor(b.h/2)],[b.x+Math.floor(b.w/2),b.y-1]],g=grid();return opts.find(([x,y])=>g[y]?.[x]===0)||[b.x,b.y+b.h]}
+function astar(sx,sy,tx,ty,ignoreFog=false){const g=grid();sx=Math.round(sx);sy=Math.round(sy);tx=Math.round(tx);ty=Math.round(ty);if(g[ty]?.[tx]!==0)return[];let open=[{x:sx,y:sy,g:0,f:Math.abs(tx-sx)+Math.abs(ty-sy)}],came=new Map(),gs=new Map([[key(sx,sy),0]]),closed=new Set();while(open.length){open.sort((a,b)=>a.f-b.f);let c=open.shift(),ck=key(c.x,c.y);if(closed.has(ck))continue;closed.add(ck);if(c.x===tx&&c.y===ty){let path=[[c.x,c.y]],k=ck;while(came.has(k)){let q=came.get(k);path.push([q.x,q.y]);k=key(q.x,q.y)}return path.reverse()}for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){let nx=c.x+dx,ny=c.y+dy;if(nx<1||ny<1||nx>=COLS-1||ny>=ROWS-1||g[ny][nx])continue;if(!ignoreFog&&S.fog[ny]?.[nx])continue;let ng=c.g+1,nk=key(nx,ny);if(ng<(gs.get(nk)??1e9)){gs.set(nk,ng);came.set(nk,{x:c.x,y:c.y});open.push({x:nx,y:ny,g:ng,f:ng+Math.abs(tx-nx)+Math.abs(ty-ny)})}}}return[]}
+function setPath(p,x,y,ignoreFog=false){p.path=astar(p.x,p.y,x,y,ignoreFog);p.pi=1}
+function randWalk(town=true){for(let i=0;i<80;i++){let x=rint(2,town?23:COLS-2),y=rint(2,ROWS-2);if(grid()[y][x]===0&&!S.fog[y][x])return[x,y]}return[12,16]}
+function nearestBuilding(type){return S.buildings.filter(b=>!type||b.type===type).sort((a,b)=>b.appeal-a.appeal)[0]}
+function nearestMonster(p,max=7){return S.monsters.filter(m=>!m.dead&&!S.fog[Math.round(m.y)]?.[Math.round(m.x)]).map(m=>[m,dist(p.x,p.y,m.x,m.y)]).filter(x=>x[1]<max).sort((a,b)=>a[1]-b[1])[0]?.[0]||null}
+function downedPawn(p){return S.pawns.filter(x=>x.ko&&!x.questing).map(x=>[x,dist(p.x,p.y,x.x,x.y)]).filter(x=>x[1]<10).sort((a,b)=>a[1]-b[1])[0]?.[0]||null}
+function chooseTask(p){if(p.ko||p.questing)return;let rescue=downedPawn(p);if(rescue&&p.energy>25){p.task='Rescue';p.targetId=rescue.id;setPath(p,rescue.x,rescue.y);return}let mon=nearestMonster(p,6);if(mon&&p.energy>18){p.task='Fight';p.targetId=mon.id;setPath(p,mon.x,mon.y);return}let options=[];let add=(task,score,type)=>{let b=nearestBuilding(type);if(b)options.push({task,score,b})};add('Eat',(100-p.hunger)*1.45+(p.hunger<30?60:0),'Tavern');add('Rest',(100-p.energy)*1.35+(p.energy<28?60:0),'Inn');add('Train',24+p.energy*.18+p.work*.08,'Training');add('Shop',16+p.coins*.1,'WeaponShop');add('Pray',16+(100-p.morale)*.42,'Temple');add('Study',15+p.energy*.1,'Library');add('Market',12+p.morale*.08,'Market');add('Farm',p.resident?15+JOBS[p.job].work*12:0,'Farm');options.push({task:'Wander',score:18+rnd(0,15),b:null});let c=options.sort((a,b)=>b.score-a.score)[0];p.task=c.task;p.targetId=c.b?.id||null;if(c.b){let[dX,dY]=door(c.b);setPath(p,dX,dY)}else{let[x,y]=randWalk(true);setPath(p,x,y)}p.decision=rnd(2.5,5.5)}
+function gainXp(p,amt){p.jobXp+=amt;let need=40+p.jobLevel*18;if(p.jobXp>=need){p.jobXp-=need;p.jobLevel++;p.level+=p.jobLevel%2===0?1:0;let s=stats(p);p.hp=Math.min(s.maxHp,p.hp+8);if(p.jobLevel===10&&!p.mastered.includes(p.job)){p.mastered.push(p.job);S.townPoints+=5;log(`${p.name} mastered ${p.job}! New career options may open.`)}if(p.jobLevel>10)p.jobXp*=.35}}
+function useBuilding(p,b,dt){let q=1+(b.quality-10)/50,fee=b.price*dt*.22;if(b.price&&p.coins>fee){p.coins-=fee;S.gold+=fee;b.income+=fee;S.income+=fee}b.uses+=dt;switch(b.type){case'Inn':p.energy=clamp(p.energy+23*dt*q,0,100);p.hp=Math.min(stats(p).maxHp,p.hp+14*dt*q);break;case'Tavern':if(S.food>0){p.hunger=clamp(p.hunger+25*dt*q,0,100);p.morale=clamp(p.morale+7*dt,0,100);S.food=Math.max(0,S.food-1.0*dt)}break;case'Training':gainXp(p,7*dt*q);p.energy-=3*dt;p.hunger-=1.8*dt;break;case'WeaponShop':if(Math.random()<.045*dt&&p.coins>28){let it=makeItem(.85+b.level*.12);if(!p.equipment[it.slot]||itemScore(p,it)>itemScore(p,p.equipment[it.slot])*1.05){p.coins-=28;S.gold+=28;let old=p.equipment[it.slot];p.equipment[it.slot]=it;if(old)S.stash.push(old);p.satisfaction+=2;log(`${p.name} bought ${it.name}.`)}}break;case'Temple':p.morale=clamp(p.morale+15*dt*q,0,100);p.hp=Math.min(stats(p).maxHp,p.hp+7*dt);break;case'Library':gainXp(p,3.5*dt*q);p.morale=clamp(p.morale+3*dt,0,100);if(Math.random()<.03*dt)S.townPoints+=1;break;case'Market':p.morale=clamp(p.morale+5*dt,0,100);break;case'Farm':if(p.resident){S.food=Math.min(cap('food'),S.food+2.2*dt*JOBS[p.job].work);p.work+=.2*dt}break}if(b.appeal>10)p.satisfaction=clamp(p.satisfaction+.16*dt*(b.appeal/15),0,100)}
+function updatePawn(p,dt){if(p.questing)return;if(p.ko){p.energy=Math.min(100,p.energy+.25*dt);return}p.energy=clamp(p.energy-.20*dt,0,100);p.hunger=clamp(p.hunger-.34*dt,0,100);p.morale=clamp(p.morale-.08*dt,0,100);p.attackCd-=dt;p.decision-=dt;if(p.task==='Explore'&&p.exploreTarget){exploreTick(p,dt);return}if(p.task==='Fight'){fightTick(p,dt);return}if(p.task==='Rescue'){rescueTick(p,dt);return}if(p.pi<p.path.length){movePath(p,dt);return}let b=S.buildings.find(x=>x.id===p.targetId);if(b)useBuilding(p,b,dt);else if(p.task==='Wander')p.morale=clamp(p.morale+.8*dt,0,100);if(p.decision<=0){tryMoveIn(p);chooseTask(p)}}
+function movePath(p,dt){let [tx,ty]=p.path[p.pi],dx=tx-p.x,dy=ty-p.y,d=Math.hypot(dx,dy),step=(1.9+stats(p).spd*.06)*dt;if(d<=step){p.x=tx;p.y=ty;p.pi++}else{p.x+=dx/d*step;p.y+=dy/d*step}}
+function fightTick(p,dt){let m=S.monsters.find(x=>x.id===p.targetId&&!x.dead);if(!m){chooseTask(p);return}let d=dist(p.x,p.y,m.x,m.y);if(d>1.25){if(!p.path.length||p.pi>=p.path.length)setPath(p,Math.round(m.x),Math.round(m.y));if(p.pi<p.path.length)movePath(p,dt);else chooseTask(p);return}if(p.attackCd<=0){let s=stats(p),dmg=Math.max(1,(s.atk+s.mag*.7)*rnd(.75,1.2)-m.def*.4);m.hp-=dmg;p.attackCd=Math.max(.35,1.25-s.spd*.07);gainXp(p,.45*m.level);if(m.hp<=0){killMonster(m,p);chooseTask(p)}}}
+function updateMonster(m,dt){if(m.dead)return;m.cd-=dt;let prey=S.pawns.filter(p=>!p.ko&&!p.questing).map(p=>[p,dist(m.x,m.y,p.x,p.y)]).filter(x=>x[1]<4.5).sort((a,b)=>a[1]-b[1])[0];if(prey){let p=prey[0],d=prey[1];if(d>1.15){let dx=p.x-m.x,dy=p.y-m.y,st=.65*dt;m.x+=dx/d*st;m.y+=dy/d*st}else if(m.cd<=0){let s=stats(p),dmg=Math.max(1,m.atk*rnd(.7,1.25)-s.def*.3);p.hp-=dmg;m.cd=1.4;if(p.hp<=0){p.hp=0;p.ko=true;p.task='KO';p.path=[];log(`${p.name} was knocked out by ${m.name}.`)}}}else if(Math.random()<.02*dt){let[x,y]=randWalk(false);m.vx=(x-m.x);m.vy=(y-m.y)}}
+function killMonster(m,p){m.dead=true;S.gold+=5+m.level*2;S.townPoints+=.5;S.popularity+=.5;S.quests.forEach(q=>{if(q.type==='Mob'&&!S.activeQuest&&q.target===m.kind)q.fieldProgress=(q.fieldProgress||0)+1});if(Math.random()<.22)S.stash.push(makeItem(.7+m.level*.05));log(`${p.name} defeated ${m.name}.`);setTimeout(()=>{},0)}
+function rescueTick(p,dt){let t=S.pawns.find(x=>x.id===p.targetId&&x.ko);if(!t){chooseTask(p);return}if(dist(p.x,p.y,t.x,t.y)>1.1){if(!p.path.length||p.pi>=p.path.length)setPath(p,t.x,t.y);if(p.pi<p.path.length)movePath(p,dt);return}let inn=nearestBuilding('Inn');if(!inn){t.ko=false;t.hp=1;chooseTask(p);return}let[dX,dY]=door(inn);t.x=p.x;t.y=p.y;t.ko=false;t.hp=Math.max(1,stats(t).maxHp*.22);t.energy=10;t.task='Rest';t.targetId=inn.id;setPath(t,dX,dY);p.satisfaction=clamp(p.satisfaction+2,0,100);log(`${p.name} rescued ${t.name} and sent them to the inn.`);chooseTask(p)}
+function tryMoveIn(p){if(p.resident||p.satisfaction<45)return;let house=S.buildings.find(b=>b.type==='House'&&b.occupants.length<2);if(!house)return;if(S.gold<55)return;S.gold-=55;p.resident=true;p.homeId=house.id;house.occupants.push(p.id);p.work+=15;p.satisfaction+=8;S.popularity+=12;log(`${p.name} liked the village enough to move in!`)}
+function maybeVisitor(){if(S.pawns.length>=18)return;let desired=6+Math.floor(S.popularity/55);if(S.pawns.length<desired&&Math.random()<.015){let p=makePawn(S.pawns.length,false);p.x=2;p.y=18;S.pawns.push(p);chooseTask(p);log(`${p.name} the ${p.job} arrived as a visiting adventurer.`)}}
+function spawnMonster(){let candidates=[];for(let y=2;y<ROWS-2;y++)for(let x=24;x<COLS-2;x++)if(!S.fog[y][x]&&grid()[y][x]===0)candidates.push([x,y]);if(!candidates.length)return;let[x,y]=pick(candidates),lvl=Math.max(1,Math.floor((x-22)/2)+rint(0,2)),defs=[['Slime','Slime',16,4,1],['Batling','Beast',19,5,1],['Goblin','Goblin',26,7,2],['Bonewalker','Undead',31,8,3],['Dire Boar','Beast',38,10,4]],d=defs[Math.min(defs.length-1,Math.floor(lvl/2))];S.monsters.push({id:id(),name:d[0],kind:d[1],x,y,level:lvl,maxHp:d[2]+lvl*4,hp:d[2]+lvl*4,atk:d[3]+lvl*1.3,def:d[4]+lvl*.7,cd:0,dead:false})}
+function exploreTick(p,dt){let t=p.exploreTarget;if(!t){chooseTask(p);return}if(dist(p.x,p.y,t.x,t.y)>.9){if(p.pi>=p.path.length){setPath(p,t.x,t.y,true);if(!p.path.length){log(`${p.name} cannot reach that frontier tile.`);p.exploreTarget=null;chooseTask(p);return}}movePath(p,dt);return}for(let yy=-2;yy<=2;yy++)for(let xx=-2;xx<=2;xx++){let x=t.x+xx,y=t.y+yy;if(S.fog[y]?.[x]&&Math.hypot(xx,yy)<=2.3&&Math.random()<.9*dt){S.fog[y][x]=false;S.townPoints+=.15;if(Math.random()<.17)gather(p)}}if(!S.fog[t.y][t.x]){p.exploreTarget=null;p.task='Wander';p.decision=.1;S.popularity+=2;log(`${p.name} cleared a new stretch of frontier.`);for(let i=0;i<2;i++)spawnMonster()}}
+function gather(p){let r=pick(['wood','ore','herbs','food']);let amt=rint(2,5)*(p.job==='Farmer'?2:1);S[r]=Math.min(cap(r),S[r]+amt);p.work+=.5;log(`${p.name} gathered ${amt} ${r}.`)}
+function cap(r){let stores=S.buildings.filter(b=>b.type==='Storehouse').length;return({food:120,wood:80,ore:60,herbs:50}[r]||60)+stores*60}
+function generateQuests(){S.quests=[];let types=['Mob','Dungeon','Boss'];for(let i=0;i<3;i++){let type=types[i],diff=Math.max(1,S.rank+rint(-1,1));S.quests.push({id:id(),type,diff,name:type==='Mob'?`${pick(['Goblin','Beast','Undead'])} Sweep`:type==='Dungeon'?`${pick(['Mossy','Buried','Moonlit','Old'])} Cave`:`${pick(['Ogre','Wyrm','Warlock','Cyclops'])} Trouble`,cost:18+diff*12,reward:45+diff*45,pop:9+diff*7,tp:4+diff*3,target:pick(['Goblin','Beast','Undead']),duration:13+diff*5})}}
+function volunteers(q,paid=false){let arr=S.pawns.filter(p=>p.resident&&!p.ko&&!p.questing&&p.energy>38&&p.hunger>30).map(p=>({p,score:power(p)+(p.work*.18)+(p.morale*.08)+(p.job==='Cleric'||p.job==='Paladin'?5:0)+rnd(0,8)})).sort((a,b)=>b.score-a.score).slice(0,paid?6:4).map(x=>x.p);return arr}
+function startQuest(q,paid=false){if(S.activeQuest||S.gold<q.cost)return;let party=volunteers(q,paid);if(party.length<2){log('Not enough rested residents volunteered.');return}let extra=paid?party.length*8:0;if(S.gold<q.cost+extra)return;S.gold-=q.cost+extra;party.forEach(p=>{p.questing=true;p.path=[]});S.activeQuest={...q,party:party.map(p=>p.id),remaining:q.duration,max:q.duration,nodes:q.type==='Dungeon'?['Entrance','Fight','Treasure','Camp','Elite','Boss']:[],node:0};log(`${party.map(p=>p.name).join(', ')} departed on ${q.name}.`);render()}
+function questTick(dt){let q=S.activeQuest;if(!q)return;q.remaining-=dt;if(q.type==='Dungeon'&&q.nodes.length){let prog=1-q.remaining/q.max;q.node=Math.min(q.nodes.length-1,Math.floor(prog*q.nodes.length))}if(q.remaining>0)return;let party=q.party.map(i=>S.pawns.find(p=>p.id===i)).filter(Boolean),pp=party.reduce((s,p)=>s+power(p)*(p.energy/150+.55),0),danger=(45+q.diff*37)*(q.type==='Boss'?1.35:q.type==='Dungeon'?1.15:1),success=pp*rnd(.85,1.12)>danger;if(success){S.gold+=q.reward;S.popularity+=q.pop;S.townPoints+=q.tp;S.questsCleared++;party.forEach(p=>{gainXp(p,18*q.diff);p.satisfaction=clamp(p.satisfaction+4,0,100);p.work+=3;p.energy=clamp(p.energy-rnd(8,18),0,100)});let n=q.type==='Dungeon'?rint(2,4):rint(1,2);for(let i=0;i<n;i++)S.stash.push(makeItem(.9+q.diff*.25));log(`${q.name} cleared! The village gains fame and treasure.`)}else{party.forEach(p=>{p.hp=Math.max(1,p.hp-rnd(5,18));p.energy=clamp(p.energy-20,0,100);p.morale=clamp(p.morale-8,0,100)});log(`${q.name} failed. The party limps home.`)}party.forEach(p=>{p.questing=false;p.decision=.1;chooseTask(p)});S.quests=S.quests.filter(x=>x.id!==q.id);while(S.quests.length<3){let type=pick(['Mob','Dungeon','Boss']),diff=Math.max(1,S.rank+rint(0,1));S.quests.push({id:id(),type,diff,name:type==='Dungeon'?'Newfound Cave':type==='Boss'?'Roaming Boss':'Monster Sweep',cost:18+diff*12,reward:45+diff*45,pop:9+diff*7,tp:4+diff*3,duration:13+diff*5,target:pick(['Goblin','Beast','Undead'])})}S.activeQuest=null;if(S.autoEquip)equipAll();render()}
+function availableJobs(p){return Object.keys(JOBS).filter(j=>S.unlockedJobs.includes(j)||S.unlockedResearch.includes(j)).filter(j=>{let req=JOBS[j].req||[];return req.every(r=>p.mastered.includes(r))}).filter(j=>j!==p.job)}
+function changeJob(p,j){if(!availableJobs(p).includes(j)||S.townPoints<8)return;S.townPoints-=8;p.job=j;p.jobLevel=1;p.jobXp=0;p.hp=Math.min(p.hp,stats(p).maxHp);log(`${p.name} changed jobs to ${j}.`);closeModal('jobModal');render()}
+function equipAll(){for(const p of S.pawns){for(const slot of ['weapon','armor','offhand','accessory']){let c=S.stash.filter(i=>i.slot===slot).sort((a,b)=>itemScore(p,b)-itemScore(p,a))[0],cur=p.equipment[slot];if(c&&(!cur||itemScore(p,c)>itemScore(p,cur)*1.05)){S.stash=S.stash.filter(i=>i.id!==c.id);if(cur)S.stash.push(cur);p.equipment[slot]=c}}}render()}
+function daily(){let upkeep=S.buildings.reduce((s,b)=>s+BDEFS[b.type].upkeep*b.level,0);S.gold=Math.max(0,S.gold-upkeep);S.food=Math.min(cap('food'),S.food+S.buildings.filter(b=>b.type==='Farm').length*7);S.energy=Math.min(S.maxEnergy,S.energy+12);if(Math.random()<.65)spawnMonster();rankCheck(false);maybeVisitor();save()}
+function rankCheck(show=true){let next=S.rank+1,req={2:{pop:180,income:250,quests:3,build:8},3:{pop:420,income:800,quests:8,build:11},4:{pop:800,income:1800,quests:18,build:15},5:{pop:1400,income:3500,quests:32,build:18}}[next];if(req&&S.popularity>=req.pop&&S.income>=req.income&&S.questsCleared>=req.quests&&S.buildings.length>=req.build){S.rank++;S.townPoints+=25;S.popularity+=30;log(`Village Rank Up! Wayfarer Guild is now ${'★'.repeat(S.rank)}.`);for(let i=0;i<2;i++)maybeVisitor();if(show)render();return true}if(show)log(req?`Next rank: ${req.pop} popularity, ${req.income}G income, ${req.quests} quests, ${req.build} structures.`:'Maximum village rank reached.');return false}
+function holdEvent(name){if(S.townPoints<12)return;S.townPoints-=12;S.eventsHeld++;let effects={Festival:[22,12],Training:[10,0],Feast:[16,8],Expo:[28,4]}[name];S.popularity+=effects[0];for(const p of S.pawns){p.satisfaction=clamp(p.satisfaction+effects[1],0,100);if(name==='Training')gainXp(p,18)}log(`${name} held successfully.`);closeModal('eventModal');render()}
+function research(k){let r=RESEARCH[k];if(!r||S.unlockedResearch.includes(k)||S.townPoints<r.cost||S.rank<r.rank)return;S.townPoints-=r.cost;S.unlockedResearch.push(k);if(JOBS[k]&&!S.unlockedJobs.includes(k))S.unlockedJobs.push(k);if(k==='Farm'&&!S.unlockedJobs.includes('Farmer'))S.unlockedJobs.push('Farmer');if(k==='Library'&&!S.unlockedJobs.includes('Researcher'))S.unlockedJobs.push('Researcher');log(`Research complete: ${k}.`);render()}
+function canBuild(type,x,y){let d=BDEFS[type],g=grid();if(x<1||y<1||x+d.w>=TOWN_MAX_X||y+d.h>=ROWS-1)return false;for(let yy=y-1;yy<=y+d.h;yy++)for(let xx=x-1;xx<=x+d.w;xx++)if(g[yy]?.[xx])return false;return true}
+function placeBuilding(type,x,y){let d=BDEFS[type];if(!d||S.gold<d.cost||!canBuild(type,x,y))return false;S.gold-=d.cost;S.buildings.push(building(type,x,y));S.popularity+=d.appeal*.4;log(`${type} constructed.`);buildType=null;render();return true}
+function upgradeBuilding(b){let c=Math.round(BDEFS[b.type].cost*.55*Math.pow(1.5,b.level-1));if(S.gold<c)return;S.gold-=c;b.level++;b.quality+=5;b.appeal+=3;b.price=Math.round(b.price*1.08+1);S.popularity+=4;log(`${b.type} improved to Lv.${b.level}.`);render()}
+function update(dt){if(speed===0)return;let sd=dt*speed;S.minutes+=sd*5;autosaveClock+=sd;if(S.minutes>=1440){S.minutes-=1440;S.day++;daily()}for(const p of S.pawns)updatePawn(p,sd);for(const m of S.monsters)updateMonster(m,sd);S.monsters=S.monsters.filter(m=>!m.dead);questTick(sd);maybeVisitor();if(S.monsters.length<5&&Math.random()<.008*sd)spawnMonster();if(autosaveClock>20){autosaveClock=0;save(false)}}
+function resize(){let r=canvas.parentElement.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);canvas.width=r.width*dpr;canvas.height=r.height*dpr;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);
+function tr(){let w=canvas.clientWidth,h=canvas.clientHeight,sc=Math.min(w/(COLS*TILE),h/(ROWS*TILE));return{sc,ox:(w-COLS*TILE*sc)/2,oy:(h-ROWS*TILE*sc)/2}}
+function draw(){let{sc,ox,oy}=tr();ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);ctx.save();ctx.translate(ox,oy);ctx.scale(sc,sc);ctx.fillStyle='#78a85e';ctx.fillRect(0,0,COLS*TILE,ROWS*TILE);drawTerrain();for(const b of S.buildings)drawBuilding(b);for(const m of S.monsters)drawMonster(m);for(const p of S.pawns)drawPawn(p);drawFog();let p=S.pawns.find(x=>x.id===selectedId);if(p&&p.path.length){ctx.strokeStyle='#ffe66e';ctx.lineWidth=2;ctx.setLineDash([5,3]);ctx.beginPath();p.path.slice(Math.max(0,p.pi-1)).forEach((q,i)=>{let x=(q[0]+.5)*TILE,y=(q[1]+.5)*TILE;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.setLineDash([])}if(buildType){ctx.fillStyle='rgba(255,236,115,.25)';ctx.fillRect(1*TILE,1*TILE,(TOWN_MAX_X-2)*TILE,(ROWS-2)*TILE)}ctx.restore()}
+function drawTerrain(){ctx.fillStyle='#cbbd84';for(let x=1;x<24;x++)for(let y=1;y<ROWS-1;y++)if((x===12||x===13||y===9||y===10||y===17)&&!grid()[y][x])ctx.fillRect(x*TILE,y*TILE,TILE,TILE);ctx.fillStyle='#5e8e4f';ctx.fillRect(24*TILE,0,(COLS-24)*TILE,ROWS*TILE);ctx.fillStyle='#497a47';for(let y=2;y<ROWS-2;y+=3)for(let x=26;x<COLS-1;x+=3)if(!S.fog[y][x]){ctx.fillRect((x+.32)*TILE,(y+.2)*TILE,10,15);ctx.fillStyle='#355c38';ctx.fillRect((x+.45)*TILE,(y+.6)*TILE,4,10);ctx.fillStyle='#497a47'}}
+function drawBuilding(b){let d=BDEFS[b.type],x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;ctx.fillStyle='#6b5230';ctx.fillRect(x+2,y+5,w-4,h-5);ctx.fillStyle=b.type==='House'?'#dfc879':b.type==='Guild'?'#d79658':'#d9b86c';ctx.fillRect(x+5,y+12,w-10,h-16);ctx.fillStyle='#8b4d36';ctx.beginPath();ctx.moveTo(x,y+14);ctx.lineTo(x+w/2,y);ctx.lineTo(x+w,y+14);ctx.fill();ctx.fillStyle='#fff0b5';ctx.font='bold 11px ui-monospace';ctx.textAlign='center';ctx.fillText(d.icon+' '+b.type+(b.level>1?' '+b.level:''),x+w/2,y+h/2+7);let[dx,dy]=door(b);ctx.fillStyle='#513b24';ctx.fillRect((dx+.35)*TILE,(dy+.15)*TILE,8,12)}
+function drawPawn(p){if(p.questing)return;let x=(p.x+.5)*TILE,y=(p.y+.5)*TILE,j=JOBS[p.job];ctx.fillStyle=p.ko?'#777':j.color;ctx.fillRect(x-7,y-8,14,14);ctx.fillStyle='#f3d0a7';ctx.fillRect(x-5,y-13,10,7);ctx.fillStyle='#2d2a22';ctx.fillRect(x-5,y-14,10,3);if(p.id===selectedId){ctx.strokeStyle='#fff176';ctx.lineWidth=2;ctx.strokeRect(x-10,y-17,20,25)}ctx.fillStyle='#2e2517';ctx.font='bold 9px ui-monospace';ctx.textAlign='center';ctx.fillText(p.name,x,y+16);if(!p.ko){ctx.fillStyle='#fff6d5';let txt=p.task==='Fight'?'⚔':p.task==='Explore'?'🧭':p.task==='Rescue'?'❤':p.task==='Shop'?'$':p.task==='Eat'?'🍖':p.task==='Rest'?'Z':'•';ctx.fillRect(x+7,y-18,14,12);ctx.fillStyle='#4a3d25';ctx.fillText(txt,x+14,y-9)}else{ctx.fillStyle='#fff';ctx.fillText('KO',x,y-20)}}
+function drawMonster(m){let x=(m.x+.5)*TILE,y=(m.y+.5)*TILE;ctx.fillStyle=m.kind==='Undead'?'#d5d0b9':m.kind==='Goblin'?'#628b47':'#9b6a7a';ctx.fillRect(x-8,y-8,16,16);ctx.fillStyle='#221c17';ctx.fillRect(x-5,y-3,3,3);ctx.fillRect(x+2,y-3,3,3);ctx.fillStyle='#572c21';ctx.fillRect(x-10,y-14,20,3);ctx.fillStyle='#d94d3f';ctx.fillRect(x-10,y-14,20*(m.hp/m.maxHp),3)}
+function drawFog(){ctx.fillStyle='rgba(27,31,29,.88)';for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(S.fog[y]?.[x]){ctx.fillRect(x*TILE,y*TILE,TILE,TILE);if((x+y)%3===0){ctx.fillStyle='rgba(64,70,68,.45)';ctx.fillRect(x*TILE+5,y*TILE+7,16,8);ctx.fillStyle='rgba(27,31,29,.88)'}}}
+function canvasPos(e){let r=canvas.getBoundingClientRect(),{sc,ox,oy}=tr(),clientX=e.touches?.[0]?.clientX??e.clientX,clientY=e.touches?.[0]?.clientY??e.clientY;return{x:Math.floor((clientX-r.left-ox)/sc/TILE),y:Math.floor((clientY-r.top-oy)/sc/TILE),fx:(clientX-r.left-ox)/sc/TILE-.5,fy:(clientY-r.top-oy)/sc/TILE-.5}}
+function mapClick(e){let q=canvasPos(e);if(q.x<0||q.y<0||q.x>=COLS||q.y>=ROWS)return;if(buildType){placeBuilding(buildType,q.x,q.y);return}let p=S.pawns.filter(x=>!x.questing).map(x=>[x,dist(x.x,x.y,q.fx,q.fy)]).sort((a,b)=>a[1]-b[1])[0];if(p&&p[1]<.75){selectedId=p[0].id;render();return}if(exploreMode){let s=S.pawns.find(x=>x.id===selectedId);if(!s||!s.resident||s.ko||s.questing){log('Select an available resident first.');render();return}if(!S.fog[q.y]?.[q.x]){log('Choose an unexplored fog tile.');render();return}let cost=Math.max(3,Math.ceil(dist(s.x,s.y,q.x,q.y)*.8));if(S.energy<cost){log(`Need ${cost} kingdom energy.`);render();return}S.energy-=cost;s.task='Explore';s.exploreTarget={x:q.x,y:q.y};setPath(s,q.x,q.y,true);exploreMode=false;log(`${s.name} deployed to the frontier (${cost} energy).`);render()}}
+canvas.addEventListener('click',mapClick);canvas.addEventListener('touchend',e=>{e.preventDefault();mapClick(e.changedTouches?{touches:[e.changedTouches[0]]}:e)},{passive:false});
+function bar(v,cls=''){return`<div class="bar ${cls}"><i style="width:${clamp(v,0,100)}%"></i></div>`}
+function render(){document.getElementById('dayV').textContent=S.day;document.getElementById('timeV').textContent=fmt(S.minutes);document.getElementById('goldV').textContent=Math.floor(S.gold);document.getElementById('popV').textContent=Math.floor(S.popularity);document.getElementById('tpV').textContent=Math.floor(S.townPoints);document.getElementById('foodV').textContent=Math.floor(S.food);document.getElementById('woodV').textContent=Math.floor(S.wood);document.getElementById('oreV').textContent=Math.floor(S.ore);renderPeople();renderQuests();renderTown();renderGear();renderWorld()}
+function renderPeople(){let p=S.pawns.find(x=>x.id===selectedId),el=document.getElementById('selected');if(!p)el.innerHTML='<h3>Selected Adventurer</h3><div class="muted">Tap someone on the map.</div>';else{let s=stats(p),need=40+p.jobLevel*18,home=S.buildings.find(b=>b.id===p.homeId);el.innerHTML=`<div class="row"><div class="iconBox">${JOBS[p.job].icon}</div><div><b>${p.name}</b> <span class="pill">${p.resident?'Resident':'Visitor'}</span><div class="tiny muted">${p.background} · ${p.job} Lv.${p.jobLevel}</div></div></div><div class="statline tiny"><span>HP ${Math.ceil(p.hp)}/${Math.round(s.maxHp)}</span><span>ATK ${Math.round(s.atk)}</span><span>DEF ${Math.round(s.def)}</span><span>MAG ${Math.round(s.mag)}</span></div><div class="row tiny">Job XP ${bar(p.jobXp/need*100,'gold')}</div><div class="row tiny">Energy ${bar(p.energy,'blue')} ${Math.round(p.energy)}</div><div class="row tiny">Hunger ${bar(p.hunger,'gold')} ${Math.round(p.hunger)}</div><div class="row tiny">Satisfaction ${bar(p.satisfaction)} ${Math.round(p.satisfaction)}</div><div class="tiny"><b>Thinking:</b> ${p.questing?'Away on quest':p.ko?'Knocked out':p.task}${p.exploreTarget?' toward frontier':''}</div><div class="tiny muted">Work ${Math.round(p.work)} · Coins ${Math.round(p.coins)}G · Home ${home?'#'+home.id:'none'} · Mastered ${p.mastered.join(', ')||'none'}</div>${['weapon','armor','offhand','accessory'].map(k=>`<div class="equipSlot tiny"><b>${k}</b><span>${p.equipment[k]?.name||'—'}</span></div>`).join('')}<div class="row"><button id="jobBtn">Change Job</button><button id="giftBtn">Gift 15G</button></div>`;document.getElementById('jobBtn').onclick=()=>openJobs(p);document.getElementById('giftBtn').onclick=()=>{if(S.gold>=15){S.gold-=15;p.satisfaction=clamp(p.satisfaction+7,0,100);p.morale=clamp(p.morale+6,0,100);log(`${p.name} enjoyed your gift.`);render()}}}document.getElementById('peopleCount').textContent=`${S.pawns.filter(p=>p.resident).length} residents / ${S.pawns.length} total`;let r=document.getElementById('roster');r.innerHTML=S.pawns.map(p=>`<div class="card pawnCard ${p.id===selectedId?'sel':''}" data-id="${p.id}"><div class="row space"><b>${JOBS[p.job].icon} ${p.name}</b><span class="pill">${p.job} ${p.jobLevel}</span></div><div class="tiny muted">${p.resident?'🏠 Resident':'🧳 Visitor'} · ${p.task}${p.questing?' · QUEST':''}</div><div class="row tiny">HP ${bar(p.hp/stats(p).maxHp*100,p.ko?'red':'')} <span>${Math.ceil(p.hp)}</span></div><div class="row space tiny"><span>🙂 ${Math.round(p.satisfaction)} · 🔧 ${Math.round(p.work)}</span><span>PWR ${Math.round(power(p))}</span></div></div>`).join('');r.querySelectorAll('.pawnCard').forEach(x=>x.onclick=()=>{selectedId=+x.dataset.id;render()})}
+function renderQuests(){let el=document.getElementById('questList');el.innerHTML=S.quests.map(q=>`<div class="quest ${S.activeQuest?.id===q.id?'active':''}"><div class="row space"><b>${q.type==='Dungeon'?'🕳':q.type==='Boss'?'👹':'⚔'} ${q.name}</b><span class="pill">Lv.${q.diff}</span></div><div class="tiny muted">Start ${q.cost}G · Reward ${q.reward}G · +${q.pop} fame · +${q.tp}🔷</div><div class="row"><button data-q="${q.id}" data-paid="0" ${S.activeQuest?'disabled':''}>Volunteers</button><button data-q="${q.id}" data-paid="1" ${S.activeQuest?'disabled':''}>Recruit extras</button></div></div>`).join('');el.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>startQuest(S.quests.find(q=>q.id===+b.dataset.q),b.dataset.paid==='1'));let a=document.getElementById('activeQuest');if(!S.activeQuest)a.innerHTML='<span class="muted">No quest underway.</span>';else{let q=S.activeQuest,prog=100*(1-q.remaining/q.max),party=q.party.map(i=>S.pawns.find(p=>p.id===i)?.name).join(', ');a.innerHTML=`<b>${q.name}</b><div class="tiny">${party}</div><div class="row">Progress ${bar(prog,'gold')}</div>${q.type==='Dungeon'?`<div class="tiny">Dungeon: ${q.nodes.map((n,i)=>i<q.node?'✓ '+n:i===q.node?'▶ '+n:'· '+n).join(' → ')}</div>`:''}`};document.getElementById('log').textContent=S.logs.join('\n')}
+function renderTown(){document.getElementById('rankV').textContent='★'.repeat(S.rank)+'☆'.repeat(5-S.rank);let nr={2:[180,250,3,8],3:[420,800,8,11],4:[800,1800,18,15],5:[1400,3500,32,18]}[S.rank+1];document.getElementById('rankReq').innerHTML=nr?`Next rank: ⭐${nr[0]} · lifetime income ${nr[1]}G · ${nr[2]} quests · ${nr[3]} structures<br>Current: ⭐${Math.floor(S.popularity)} · ${Math.floor(S.income)}G · ${S.questsCleared} quests · ${S.buildings.length} structures`:'Maximum rank reached.';let bm=document.getElementById('buildMenu');bm.innerHTML=Object.entries(BDEFS).filter(([k,d])=>k!=='Guild'&&d.unlock<=S.rank&&(d.unlock===1||S.unlockedResearch.includes(k)||['Inn','Tavern','Training','WeaponShop','House'].includes(k))).map(([k,d])=>`<div class="item buildChoice"><div><b>${d.icon} ${k}</b><div class="tiny muted">${d.desc}</div></div><button data-build="${k}" ${S.gold<d.cost?'disabled':''}>${d.cost}G</button></div>`).join('');bm.querySelectorAll('[data-build]').forEach(b=>b.onclick=()=>{buildType=b.dataset.build;switchTab('town');document.getElementById('mapHint').textContent=`Build mode: tap an empty town tile to place ${buildType}.`;render()});let bl=document.getElementById('buildingList');bl.innerHTML=S.buildings.map(b=>{let d=BDEFS[b.type],cost=Math.round(d.cost*.55*Math.pow(1.5,b.level-1));return`<div class="item"><div class="row space"><b>${d.icon} ${b.type} Lv.${b.level}</b><button data-up="${b.id}" ${S.gold<cost?'disabled':''}>Improve ${cost}G</button></div><div class="tiny">Quality ${b.quality} · Appeal ${b.appeal} · Price ${b.price}G · Earned ${Math.floor(b.income)}G · Uses ${Math.floor(b.uses)}</div></div>`}).join('');bl.querySelectorAll('[data-up]').forEach(x=>x.onclick=()=>upgradeBuilding(S.buildings.find(b=>b.id===+x.dataset.up)))}
+function renderGear(){document.getElementById('autoEquip').checked=S.autoEquip;let st=document.getElementById('stash');st.innerHTML=S.stash.length?S.stash.slice().sort((a,b)=>b.score-a.score).map(i=>`<div class="item rar-${i.rarity}"><div class="row space"><b>${i.name}</b><span class="pill">${i.rarity}</span></div><div class="tiny">${i.slot} · ${i.atk?'ATK+'+i.atk+' ':''}${i.def?'DEF+'+i.def+' ':''}${i.mag?'MAG+'+i.mag+' ':''}${i.spd?'SPD '+(i.spd>0?'+':'')+i.spd+' ':''}${i.hp?'HP+'+i.hp:''}</div></div>`).join(''):'<span class="muted">No spare gear.</span>';let rr=document.getElementById('research');rr.innerHTML=Object.entries(RESEARCH).map(([k,r])=>`<div class="item ${S.unlockedResearch.includes(k)?'locked':''}"><div class="row space"><div><b>${S.unlockedResearch.includes(k)?'✓ ':''}${k}</b><div class="tiny muted">${r.desc}</div></div><button data-res="${k}" ${S.unlockedResearch.includes(k)||S.rank<r.rank||S.townPoints<r.cost?'disabled':''}>${r.cost}🔷</button></div></div>`).join('');rr.querySelectorAll('[data-res]').forEach(b=>b.onclick=()=>research(b.dataset.res))}
+function renderWorld(){let s=S.pawns.find(p=>p.id===selectedId),un=S.fog.flat().filter(Boolean).length,total=ROWS*COLS;document.getElementById('exploreInfo').innerHTML=`Selected: <b>${s?.name||'none'}</b> · Kingdom Energy ${Math.floor(S.energy)}/${S.maxEnergy}<br>Map explored ${Math.round((1-un/total)*100)}% · Field monsters ${S.monsters.length}`;document.getElementById('storage').innerHTML=`Food ${Math.floor(S.food)}/${cap('food')}<br>Wood ${Math.floor(S.wood)}/${cap('wood')}<br>Ore ${Math.floor(S.ore)}/${cap('ore')}<br>Herbs ${Math.floor(S.herbs)}/${cap('herbs')}`}
+function openJobs(p){let jobs=availableJobs(p),el=document.getElementById('jobChoices');el.innerHTML=jobs.length?jobs.map(j=>`<button class="choice" data-job="${j}">${JOBS[j].icon} <b>${j}</b> — HP ${JOBS[j].hp}, ATK ${JOBS[j].atk}, DEF ${JOBS[j].def}, MAG ${JOBS[j].mag} · cost 8🔷</button>`).join(''):'<div class="muted">No new eligible jobs. Master current/base jobs or research more careers.</div>';el.querySelectorAll('[data-job]').forEach(b=>b.onclick=()=>changeJob(p,b.dataset.job));document.getElementById('jobModal').classList.add('on')}
+window.closeModal=id=>document.getElementById(id).classList.remove('on');function switchTab(id){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab===id));document.querySelectorAll('.pane').forEach(x=>x.classList.toggle('on',x.id===id))}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));document.querySelectorAll('.speed button').forEach(b=>b.onclick=()=>{speed=+b.dataset.sp;document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on',x===b))});document.getElementById('refreshQuest').onclick=()=>{if(S.townPoints>=8&&!S.activeQuest){S.townPoints-=8;generateQuests();log('The guild posted a fresh set of quests.');render()}};document.getElementById('evalBtn').onclick=()=>{rankCheck(true);render()};document.getElementById('eventBtn').onclick=()=>{let el=document.getElementById('eventChoices');el.innerHTML=['Festival','Training','Feast','Expo'].map(n=>`<button class="choice" data-event="${n}"><b>${n}</b> — costs 12🔷</button>`).join('');el.querySelectorAll('[data-event]').forEach(b=>b.onclick=()=>holdEvent(b.dataset.event));document.getElementById('eventModal').classList.add('on')};document.getElementById('equipBest').onclick=equipAll;document.getElementById('salvage').onclick=()=>{let weak=S.stash.filter(i=>['common','uncommon'].includes(i.rarity)),v=weak.reduce((s,i)=>s+6+i.score,0);S.stash=S.stash.filter(i=>!weak.includes(i));S.gold+=v;log(`Sold ${weak.length} pieces of weak gear for ${Math.floor(v)}G.`);render()};document.getElementById('autoEquip').onchange=e=>S.autoEquip=e.target.checked;document.getElementById('exploreMode').onclick=()=>{exploreMode=true;buildType=null;document.getElementById('mapHint').textContent='Explore mode: tap an unexplored fog tile to deploy the selected resident.'};document.getElementById('recallBtn').onclick=()=>{let p=S.pawns.find(x=>x.id===selectedId);if(p&&p.task==='Explore'){p.exploreTarget=null;p.path=[];p.decision=.1;chooseTask(p);log(`${p.name} recalled from exploration.`);render()}};
+function save(note=true){localStorage.setItem('wayfarerGuildV2',JSON.stringify(S));if(note){log('Game saved locally.');render()}}function load(){let raw=localStorage.getItem('wayfarerGuildV2');if(!raw)return false;try{let x=JSON.parse(raw);if(x.version!==2)return false;S=x;return true}catch{return false}}document.getElementById('saveBtn').onclick=()=>save();document.getElementById('exportBtn').onclick=()=>{save(false);let blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`wayfarer-guild-day-${S.day}.json`;a.click();URL.revokeObjectURL(a.href)};document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();document.getElementById('importFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let rd=new FileReader();rd.onload=()=>{try{let x=JSON.parse(rd.result);if(x.version!==2)throw Error('Wrong save version');S=x;save(false);selectedId=S.pawns[0]?.id||null;log('Imported save successfully.');render()}catch(err){alert('Could not import save: '+err.message)}};rd.readAsText(f)};
+if(!load())init();else{selectedId=S.pawns[0]?.id||null;log('Welcome back to Wayfarer Guild.')}resize();render();
+function loop(ts){let dt=Math.min(.06,(ts-last)/1000||0);last=ts;acc+=dt;while(acc>=1/30){update(1/30);acc-=1/30}draw();if(Math.floor(ts/350)!==Math.floor((ts-dt*1000)/350))render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
 })();
 </script>
-</body>
-</html>
+</body></html>
