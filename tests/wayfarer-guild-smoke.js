@@ -339,3 +339,107 @@ for (const raw of ['{broken', '', JSON.stringify({version: 999}), JSON.stringify
   restoredContext.localStorage.setItem = write;
 }
 console.log('Critical-needs and failed-save preservation checks passed');
+
+const humanoidSpriteTiles = new Set([84, 85, 86, 87, 88, 96, 97, 98, 99, 100]);
+const jobSprites = debug.jobSprites();
+for (const [job, tile] of Object.entries(jobSprites)) {
+  assert.ok(humanoidSpriteTiles.has(tile), `${job} must use a humanoid tile, not an atlas prop (${tile})`);
+}
+assert.notEqual(jobSprites.Archer, 87, 'Archer must not use the Viking sprite');
+assert.notEqual(jobSprites.Farmer, 92, 'Farmer must not use the cage/chest sprite');
+assert.notEqual(jobSprites.Blacksmith, 90, 'Blacksmith must not use the chest sprite');
+console.log('Job sprite atlas mapping checks passed');
+
+const reviewState = debug.state();
+const reviewPawn = reviewState.pawns[0];
+const bossGold = reviewState.gold, bossPoints = reviewState.townPoints, alertBefore = reviewState.bossAlert;
+const questBoss = {id: 89991, name: 'Contract Ogre', kind: 'Boss', level: 3, x: 30, y: 10,
+  maxHp: 100, hp: 0, atk: 1, def: 1, dead: false, boss: false, questBoss: true, shining: false};
+reviewState.monsters.push(questBoss);
+debug.killMonster(questBoss, reviewPawn);
+assert.ok(reviewState.gold > bossGold && reviewState.townPoints >= bossPoints + 8, 'quest boss should grant boss-scale rewards');
+assert.equal(reviewState.bossAlert, alertBefore, 'quest boss must not clear an unrelated roaming boss alert');
+
+const dungeonParty = reviewState.pawns.slice(0, 2);
+const dungeonQuest = {id: 89992, type: 'Dungeon', diff: 1, name: 'KO Contract', reward: 1, pop: 1, tp: 1,
+  party: dungeonParty.map(p => p.id), dungeon: {party: {}}};
+for (const [i, p] of dungeonParty.entries()) {
+  p.ko = false; p.questing = true; p.hp = 20;
+  dungeonQuest.dungeon.party[p.id] = {hp: i ? 10 : 0, ko: i === 0};
+}
+reviewState.activeQuest = dungeonQuest;
+debug.finishQuest(false);
+assert.equal(dungeonParty[0].ko, true, 'dungeon KO must propagate back to the town pawn');
+assert.equal(dungeonParty[0].hp, 0, 'dungeon KO must not revive at one HP');
+dungeonParty[0].ko = false; dungeonParty[0].hp = 20; dungeonParty[0].task = 'Idle';
+console.log('Quest-boss rewards and dungeon KO propagation checks passed');
+
+const fieldState = debug.state();
+for (const monster of fieldState.monsters) monster.dead = true;
+for (const p of fieldState.pawns.filter(p => p.resident)) {
+  p.ko = false; p.questing = false; p.energy = p.hunger = p.morale = 100;
+  p.perm.atk = 80; p.perm.def = 30; p.hp = 10000;
+  p.x = 12; p.y = 16;
+}
+fieldState.gold = 1000;
+fieldState.wood = fieldState.ore = fieldState.herbs = fieldState.food = 0;
+const fieldQuest = {id: 90001, type: 'Mob', diff: 1, name: 'Visible Monster Sweep',
+  cost: 1, reward: 10, pop: 1, tp: 1, duration: 10, target: 'Goblin'};
+const fieldStartGold = fieldState.gold;
+debug.startQuest(fieldQuest, false);
+assert.equal(fieldState.gold, fieldStartGold - fieldQuest.cost, 'field quest should charge its advertised cost exactly once');
+assert.ok(fieldState.activeQuest?.field, 'field quest should create a physical operation');
+const questParty = fieldState.activeQuest.party.map(id => fieldState.pawns.find(p => p.id === id));
+const startPositions = questParty.map(p => [p.x, p.y]);
+const objectiveIds = fieldState.activeQuest.field.monsterIds.slice();
+assert.ok(objectiveIds.length >= 6, 'Mob quest should spawn a visible monster pack');
+assert.ok(objectiveIds.every(id => fieldState.monsters.some(m => m.id === id && m.questId === fieldQuest.id)));
+assert.ok(objectiveIds.every(id => {
+  const m = fieldState.monsters.find(m => m.id === id);
+  return fieldState.fog[Math.round(m.y)][Math.round(m.x)] === false;
+}), 'quest objectives should be visible when the operation starts');
+let sawFight = false, sawGather = false, sawReturn = false, sawCargo = false;
+for (let i = 0; i < 12000 && fieldState.activeQuest; i++) {
+  debug.update(1/30);
+  const phase = fieldState.activeQuest?.field?.phase;
+  sawFight ||= phase === 'fight';
+  sawGather ||= phase === 'gather';
+  sawReturn ||= phase === 'return';
+  sawCargo ||= questParty.some(p => p.questCarry);
+}
+assert.ok(questParty.some((p, i) => p.x !== startPositions[i][0] || p.y !== startPositions[i][1]), 'party must travel on the map');
+assert.ok(sawFight && sawGather && sawReturn && sawCargo, `quest must visibly fight, gather, carry and return (${[sawFight,sawGather,sawReturn,sawCargo]})`);
+assert.equal(fieldState.activeQuest, null, 'quest completes only after the party returns');
+assert.ok(fieldState.questsCleared > 0);
+assert.ok(fieldState.wood + fieldState.ore + fieldState.herbs + fieldState.food > 0, 'hauled resources deposit after return');
+assert.ok(questParty.every(p => !p.questing && !p.questCarry), 'party resumes normal town life');
+console.log('Physical field quest travel, monster pack, gathering, hauling and return checks passed');
+
+for (const p of fieldState.pawns.filter(p => p.resident)) {
+  p.ko = false; p.questing = false; p.energy = p.hunger = 100; p.hp = 10000;
+}
+const saveQuest = {id: 90002, type: 'Mob', diff: 1, name: 'Saved Field Sweep',
+  cost: 1, reward: 10, pop: 1, tp: 1, duration: 10, target: 'Beast'};
+debug.startQuest(saveQuest, false);
+for (let i = 0; i < 12000 && fieldState.activeQuest?.field?.phase !== 'return'; i++) debug.update(1/30);
+assert.equal(fieldState.activeQuest?.field?.phase, 'return', 'save fixture should reach the hauling phase');
+debug.save(false);
+const midQuestRaw = storage.value;
+const midSaved = JSON.parse(midQuestRaw);
+assert.ok(midSaved.activeQuest?.field && midSaved.activeQuest.party.length >= 2);
+const midContext = {...context, localStorage: {
+  getItem() { return midQuestRaw; }, setItem(_key, value) { this.value = value; }, value: midQuestRaw,
+}};
+midContext.window = midContext;
+vm.runInNewContext(script, midContext);
+const resumed = midContext.__WAYFARER_DEBUG__;
+const resumedState = resumed.state();
+assert.equal(resumedState.activeQuest.id, saveQuest.id);
+assert.deepEqual(Array.from(resumedState.activeQuest.field.monsterIds), Array.from(midSaved.activeQuest.field.monsterIds));
+for (const id of resumedState.activeQuest.party) {
+  const before = midSaved.pawns.find(p => p.id === id), after = resumedState.pawns.find(p => p.id === id);
+  assert.equal(after.x, before.x); assert.equal(after.y, before.y); assert.equal(after.questing, true);
+}
+for (let i = 0; i < 12000 && resumedState.activeQuest; i++) resumed.update(1/30);
+assert.equal(resumedState.activeQuest, null, 'saved field operation should finish after reload');
+console.log('Mid-quest physical operation save/resume check passed');

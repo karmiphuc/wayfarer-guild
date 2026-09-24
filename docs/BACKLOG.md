@@ -17,6 +17,7 @@ Legend:
 
 - Pawn recovery follow-up: combined hunger/exhaustion/injury, combat/rescue disengagement, HP-aware Camp, Knight/Paladin eligibility, Researcher Study, explicit Recall recovery and failed-save preservation have deterministic regression coverage. Rendered browser verification remains open.
 - Next planned fix: visible construction preview, rejection reasons and touch confirmation, followed by a save-compatible southern town expansion. See [building placement plan](./BUILDING_PLACEMENT_PLAN.md). Tracks #25 and #26; not implemented yet.
+- 🚧 **Dungeon Village-style visible quest loop** — field quests now spawn visible monster packs; volunteers walk out, fight, gather, carry and return before rewards deposit. Mid-operation save/resume is covered. Direction and research: [Dungeon Village direction](./DUNGEON_VILLAGE_DIRECTION.md). Next: ordinary exploration hauling and facility activity feedback. Maps to #22, #24 and #25.
 
 - 🚧 **P0 Restore facility and pawn-state contracts** — research-gated Farm/Forge placement, starting-home assignment, home-based recovery, Forge work, and job-led frontier exploration. Evidence and acceptance checks: [project knowledge base](./PROJECT_KNOWLEDGE_BASE.md). Maps to #22, #23, #24 and #25.
 
