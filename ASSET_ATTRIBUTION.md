@@ -49,3 +49,5 @@ Changes: recolored, cropped, resampled
 Keep this ledger useful even if Wayfarer remains a personal project. Clean provenance means we can safely keep improving and sharing the build later.
 
 | `assets/art/custom-sprites.js` | Wayfarer job + monster sprite set | Original project artwork generated for Wayfarer Guild, then manually mapped/quantized for the game | This project | Original project asset | Yes — reduced to a compact 24×24 indexed-pixel representation | No third-party attribution required |
+
+| `assets/art/readable-sprites.js` | Readability-first job + monster sprite set | Original project pixel artwork drawn in code for Wayfarer Guild | This project | Original project asset | Yes — 24×24 source sprites with nearest-neighbor scaling | No third-party attribution required |
