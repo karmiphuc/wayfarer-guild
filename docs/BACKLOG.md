@@ -184,3 +184,5 @@ When an item becomes real work, give it an issue. When an issue is finished, upd
 - ✅ v0.7.2 retreat safety: an existing retreat cooldown suppresses duplicate memories/log spam but no longer traps critically hungry or exhausted pawns in combat.
 - ✅ v0.7.2 recovery target repair: restored the missing random town destination used by outdoor rest, night camp, KO self-recovery and no-Inn rescue fallbacks.
 - 🎯 **Character art acceptance bar:** at normal gameplay zoom, class/species must be identifiable primarily from silhouette + dominant color + oversized tool/weapon. Do not trade this away for micro-detail or generic RPG-pack prettiness.
+
+- 🚨 **P0 art recovery / external asset migration:** current homemade character sprites are rejected as a final direction. Follow `docs/ASSET_RESEARCH_2026-09-25.md`. First Work-mode evaluation set: Ninja Adventure (CC0), Tiny Creatures (CC0), OGA 32x32 RPG Characters (CC0), Tiny Swords old CC0, Black Coffee Panda isometric buildings (CC-BY 4.0), Artyom Zagorskiy Isometric Medieval Pack (CC0). Do not spend more time polishing `readable-sprites.js` before this comparison.

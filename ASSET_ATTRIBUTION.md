@@ -35,6 +35,17 @@ These are **not** “in use” until copied into the repo and moved to the table
 | JRPG - End Dungeon | music | CC0 | https://opengameart.org/content/jrpg-end-dungeon | Dungeon candidate |
 | Chiptune Battle Music | music | CC0 | https://opengameart.org/content/chiptune-battle-music | Battle candidate |
 | A Small Fire Will Do | music | CC0 | https://opengameart.org/content/a-small-fire-will-do-calming-loop | Camp/home candidate |
+| Ninja Adventure | characters / monsters / tiles / VFX / audio | CC0 1.0 | https://pixel-boy.itch.io/ninja-adventure-asset-pack | **Primary character+monster candidate**; 50+ characters, 30+ monsters, 9 bosses; inspect before import |
+| 32x32 RPG Character Sprites | character classes | CC0 | https://opengameart.org/content/32x32-rpg-character-sprites | 20 distinct RPG characters; strong class-readability comparison |
+| Tiny Creatures | monsters / animals | CC0 1.0 | https://clintbellanger.itch.io/tiny-creatures | 180 sprites; 100+ monsters, 50+ animals; Kenney Tiny-compatible |
+| Tiny Pixel Pack: RPG CHARACTERS | characters | CC0 | https://ypc-studio.itch.io/tiny-pixel-pack-rpg-characters | 16+ recent tiny RPG characters; supplementary candidate |
+| Pixel Monsters & Enemies | monsters | CC0 | https://elesrech.itch.io/pixel-monsters-enemies-asset-pack | 20 animated 16x16–32x32 monsters |
+| Debts in the Depths | monsters / dungeon / VFX | CC0 | https://reaktori.itch.io/debts-in-the-depths-asset-pack | 24 animated creatures plus wizard/dragon/dungeon effects |
+| Pixel Art Isometric Building Assets | buildings | CC BY 4.0 | https://blackcoffeepanda.itch.io/isometric-building-assets | **Primary authored-building candidate**; 28 isometric pixel buildings; attribution required |
+| Isometric Medieval Pack | buildings / roads / terrain | CC0 1.0 | https://artyom-zagorskiy.itch.io/isometric-medieval-pack | 269 isometric tiles incl. houses, blacksmith, mill, crops, castle |
+| Feudal Wars medieval isometric set | buildings | CC0 | https://opengameart.org/content/cc0-isometric | Houses/castle/barracks/stable/guards; structural fallback |
+| Tiny Swords — old version only | characters / buildings / UI | separate download explicitly labeled CC0 | https://pixelfrog-assets.itch.io/tiny-swords | **Only evaluate `TS_old version_CC0 Licensed`**; current Free Pack has no-redistribution terms |
+
 
 ## Attribution template
 
