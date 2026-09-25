@@ -158,3 +158,5 @@ Pending:
 - ✅ v0.5.3 combat juice: anticipation→lunge→recoil motion, enemy attack motion, target knockback, crit bursts, weapon-specific slash/axe/hammer/ranged/magic effects, AoE rings, KO falls, defeat bursts, victory hops and procedural combat SFX
 
 When an item becomes real work, give it an issue. When an issue is finished, update this file.
+
+- ✅ v0.6.4 town-life polish: real-time walking cadence/dust, facility enter/exit puffs and in-door occupancy, facility activity bubbles, XP/coin/loot pops, Kairosoft-style level-up banners, denser deterministic pixel decoration
