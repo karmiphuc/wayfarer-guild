@@ -11,7 +11,7 @@ Legend:
 - ⏳ queued
 - 💡 idea
 
-## Now — v0.4 foundations
+## Now — live prototype priorities
 
 ### Active bugfix slice — facilities, housing and frontier autonomy
 
@@ -27,16 +27,19 @@ Legend:
 - 🚧 **P0 Restore facility and pawn-state contracts** — research-gated Farm/Forge placement, starting-home assignment, home-based recovery, Forge work, and job-led frontier exploration. Evidence and acceptance checks: [project knowledge base](./PROJECT_KNOWLEDGE_BASE.md). Maps to #22, #23, #24 and #25.
 
 - ⏳ **P0 Modular architecture/data-driven content** — [#19](https://github.com/karmiphuc/karmiphuc.github.io/issues/19)
-- ⏳ **P0 Cohesive licensed pixel-art pipeline** — [#20](https://github.com/karmiphuc/karmiphuc.github.io/issues/20)
+- 🚧 **P0 Cohesive pixel-art pipeline** — [#20](https://github.com/karmiphuc/karmiphuc.github.io/issues/20)
+  - Character/monster mapping is now materially better.
+  - **Facility art is NOT complete:** v0.6.9 is only an interim procedural isometric renderer and misses the authored concept-sheet quality bar.
+  - Next serious building-art pass should use authored isometric pixel sprites/atlas with strong silhouettes, roof volume, texture, landscaping and facility-specific composition rather than canvas geometry.
 - ⏳ **P0 Music/ambience/SFX foundation** — [#21](https://github.com/karmiphuc/karmiphuc.github.io/issues/21)
 
 ### Small pending tasks inside v0.4
-- [ ] choose final logical pixel grid (default proposal: 16px)
+- [x] 16px source-pixel art grid with integer/nearest-neighbor scaling
 - [ ] define Wayfarer palette
 - [ ] choose first terrain/building pack(s)
-- [ ] replace emoji building labels with sprite/icon rendering
-- [ ] animate pawn walk cycles
-- [ ] add hit/heal/loot/KO VFX
+- [x] building identity no longer relies on emoji labels; authored building atlas still pending
+- [x] procedural gait/facing/dust pass; authored multi-frame walk cycles remain future art polish
+- [x] hit/heal/loot/KO/crit/victory combat feedback
 - [ ] add audio manager and volume settings
 - [ ] select first town/dungeon music loops
 - [ ] create deterministic smoke-test harness
@@ -44,18 +47,19 @@ Legend:
 
 ## Next — pawn/town life
 
-- ⏳ **P1 Pawn personality/social/autonomy depth** — [#22](https://github.com/karmiphuc/karmiphuc.github.io/issues/22)
+- 🚧 **P1 Pawn personality/social/autonomy depth** — [#22](https://github.com/karmiphuc/karmiphuc.github.io/issues/22) — active in v0.7.0
 - ⏳ **P1 Town economy/facilities/events/content density** — [#25](https://github.com/karmiphuc/karmiphuc.github.io/issues/25)
 
 Pending ideas:
-- [ ] risk tolerance
-- [ ] facility likes/dislikes
+- [x] persistent personality dimensions + readable trait labels
+- [x] risk tolerance and autonomous retreat
+- [x] personality-weighted facility/activity preferences
 - [ ] friendships/rivalries
-- [ ] “rescued by” memories
+- [x] “rescued by” memories
 - [ ] favorite enemy/dungeon
 - [ ] autonomous retreat/extraction
 - [ ] party affinity
-- [ ] day/night routine bias
+- [x] day/night routine bias
 - [ ] traveling merchant
 - [ ] seasonal/festival events
 - [ ] retirement into town specialist roles
@@ -170,3 +174,5 @@ When an item becomes real work, give it an issue. When an issue is finished, upd
 - ✅ v0.6.8 facility art: distinct visual identities for all 13 facility types, unique pixel emblems/exterior props, animated Forge smoke/occupied-building sparkles, automatic door-to-road paths, compact level markers, and full day/night render coverage
 
 - ✅ v0.6.9 isometric facilities: replaced flat tile-box buildings with cached low-resolution 3/4 isometric pixel sprites, nearest-neighbor scaled in-game; all 13 facilities have distinct silhouettes/props, depth-sorted drawing, Forge smoke/activity sparkles, and unchanged logical footprints/pathfinding
+
+- ⚠️ **v0.6.9 quality-bar correction:** the procedural isometric facility renderer is useful as an interim readability pass but does **not** meet the approved building concept art. Do not treat building visuals as complete. Keep the concept sheet as the target for a later authored atlas pass.
