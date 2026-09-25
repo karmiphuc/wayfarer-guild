@@ -167,13 +167,14 @@ with 30 active pawns plus 20+ monsters.
 
 ### P2: finish the cohesive character set
 
-v0.7.2 imports Shade's CC0 Puny Characters sheets for combat jobs and slimes,
-with real idle/walk frames and the game's owned equipment layered on top.
-Farmer, Blacksmith, Researcher and non-slime monsters still use the
-readability-first fallback drawers. Next, evaluate compatible free worker and
-monster sheets, build a labelled contact sheet before changing mappings, and
-record exact source and license before committing any file. Never use extracted
-Dungeon Village or other commercial-game art.
+v0.7.2 imports Shade's CC0 Puny Characters sheets for combat jobs, with real
+idle/walk frames and the game's owned equipment layered on top. v0.7.3 enlarges
+those bodies, fits equipment to the rendered body scale, and maps all twelve
+monster silhouettes to Clint Bellanger's CC0 Tiny Creatures sheet. Farmer,
+Blacksmith and Researcher still use readability-first fallback drawers. Next,
+evaluate compatible free worker sheets, build a labelled contact sheet before
+changing mappings, and record exact source and license before committing any
+file. Never use extracted Dungeon Village or other commercial-game art.
 
 ### P2: town life and content
 

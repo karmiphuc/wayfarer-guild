@@ -47,6 +47,17 @@ Correction in v0.7.2:
   licensed sheet is selected.
 - Slimes use the matching CC0 animated sheet.
 
+Follow-up in v0.7.3:
+
+- Puny combat bodies render 30% larger without changing collision or pathing.
+- Weapon, shield/book and armor placement derives from rendered body size;
+  bows, staves and melee weapons use separate side and height anchors.
+- All twelve monster keys map to distinct species tiles from Clint Bellanger's
+  CC0 Tiny Creatures sheet. Bats alternate the supplied wing-up/wing-down
+  frames; other monsters retain the game's movement bob and combat reactions.
+- A desktop render check confirmed the larger bodies, fitted bow placement and
+  readable frontier monster silhouettes with no browser errors.
+
 ## Findings
 
 ### P1 - non-humanoid job sprites
@@ -120,5 +131,7 @@ Recommendation:
 - Manual gate: the local desktop build renders the new animated combat bodies
   at normal town scale, and a gifted axe is visible on its owning Fighter.
 - Remaining limitation: Farmer, Blacksmith and Researcher are readable
-  project-drawn fallbacks rather than cohesive animated pack sprites. Dungeon
-  and iPad-scale screenshot checks remain follow-up gates.
+  project-drawn fallbacks rather than cohesive animated pack sprites. The Tiny
+  Creatures pack is species-rich but mostly static, so richer monster attack/
+  hurt frames remain a later animation pass. Dungeon and iPad-scale screenshot
+  checks remain follow-up gates.

@@ -403,6 +403,17 @@ assert.equal(punyJobs.mage, 'Mage-Red.png');
 assert.equal(punyJobs.knight, 'Soldier-Blue.png');
 console.log('CC0 Puny Characters asset mapping checks passed');
 
+const tinyMonsters = debug.tinyMonsterTiles();
+assert.deepEqual(Object.keys(tinyMonsters).sort(), ['bat','bee','boar','cyclops','dragon','ghost','goblin','mushroom','orc','skeleton','slime','wolf']);
+assert.equal(new Set(Object.values(tinyMonsters)).size, 12, 'Every monster silhouette must use a distinct species tile');
+assert.equal(tinyMonsters.boar, 140);
+assert.equal(tinyMonsters.bat, 118);
+assert.equal(tinyMonsters.goblin, 10);
+for (const file of ['tilemap.png', 'CC0-LICENSE.txt']) {
+  assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', 'assets', 'art', 'tiny-creatures', file)), `CC0 Tiny Creatures asset ${file} must be shipped`);
+}
+console.log('CC0 Tiny Creatures monster mapping checks passed');
+
 const weaponPawn = state.pawns[0];
 const weaponCases = [
   ['Bronze Sword', 'melee', null],

@@ -1,0 +1,19 @@
+Tiny Creatures (1.0)
+
+Created by Clint Bellanger (clintbellanger.net)
+Creation date: 2024-03-18
+
+License: Creative Commons Zero, CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+This content is free to use in personal, educational and commercial projects.
+Crediting Clint Bellanger is appreciated but not mandatory.
+
+This set is an expansion of Kenney's Tiny Dungeon and Tiny Town:
+https://kenney.nl/assets/tiny-dungeon
+https://kenney.nl/assets/tiny-town
+
+The original archive's sample map and example images contain works by Kenney
+from these sets. Wayfarer Guild imports only the Tiny Creatures tilemap.
+
+Made with Kenney's permission.

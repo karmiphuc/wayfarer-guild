@@ -132,6 +132,11 @@ Risk:
 
 **Action: use as the primary species-coverage library unless Ninja Adventure provides a better animated equivalent.**
 
+**Integrated in v0.7.3:** the checked-in CC0 tilemap now supplies twelve
+distinct runtime monster silhouettes. Keep Ninja Adventure or another coherent
+animated pack as a future comparison for attack/hurt animation, not as a reason
+to return to programmer-drawn species art.
+
 ---
 
 ## 4. Tiny Pixel Pack: RPG CHARACTERS — Y.P.C. Studio
