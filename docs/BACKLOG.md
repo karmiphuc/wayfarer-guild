@@ -168,3 +168,5 @@ When an item becomes real work, give it an issue. When an issue is finished, upd
 - ✅ v0.6.7 sprite alignment: original 12-job sprite set and species-specific monster set; explicit mappings for Slime/Batling/Goblin/Bonewalker/Dire Boar and roaming bosses; corrected Fighter/worker-role visuals; cached compact sprite decoder for runtime performance
 
 - ✅ v0.6.8 facility art: distinct visual identities for all 13 facility types, unique pixel emblems/exterior props, animated Forge smoke/occupied-building sparkles, automatic door-to-road paths, compact level markers, and full day/night render coverage
+
+- ✅ v0.6.9 isometric facilities: replaced flat tile-box buildings with cached low-resolution 3/4 isometric pixel sprites, nearest-neighbor scaled in-game; all 13 facilities have distinct silhouettes/props, depth-sorted drawing, Forge smoke/activity sparkles, and unchanged logical footprints/pathfinding
