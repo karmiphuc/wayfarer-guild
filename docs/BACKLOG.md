@@ -160,3 +160,5 @@ Pending:
 When an item becomes real work, give it an issue. When an issue is finished, update this file.
 
 - ✅ v0.6.4 town-life polish: real-time walking cadence/dust, facility enter/exit puffs and in-door occupancy, facility activity bubbles, XP/coin/loot pops, Kairosoft-style level-up banners, denser deterministic pixel decoration
+
+- ✅ v0.6.5 activity rotation: rotating frontier-duty cohort, quest volunteer fairness/history, all combat jobs eligible for exploration, resident sleep schedule, night lighting, stronger night monster pressure, duty/quest history visible in pawn inspector
