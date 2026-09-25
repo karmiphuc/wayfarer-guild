@@ -1,5 +1,7 @@
 # Asset & Audio Plan
 
+See also: `ASSET_RESEARCH_2026-09-25.md` for the current researched shortlist and Work-mode replacement plan.
+
 The goal is a cohesive, charming pixel game — not a collage of whatever free files happen to exist.
 
 ## License policy
@@ -40,7 +42,19 @@ Why: it gives the dense “tiny people doing lots of things” feel while scalin
 
 ## Preferred free art sources
 
-### Kenney — first stop
+The original "Kenney first" assumption is no longer sufficient for characters. Kenney remains useful for terrain/props, but Wayfarer should prefer a stronger cohesive character/monster pack when available.
+
+Current first tests:
+- **Ninja Adventure (Pixel-boy, CC0):** primary candidate for animated pawns + monsters.
+- **Tiny Creatures (Clint Bellanger, CC0):** primary species-coverage candidate; compatible with Kenney Tiny style.
+- **OpenGameArt 32x32 RPG Character Sprites (Eldiran, CC0):** class-readability comparison set.
+- **Tiny Swords old CC0 version only:** chunky readability comparison.
+- **Black Coffee Panda isometric buildings (CC-BY 4.0):** first authored building candidate.
+- **Artyom Zagorskiy Isometric Medieval Pack (CC0):** broad town/building fallback.
+
+Full licensing notes and execution plan are in `ASSET_RESEARCH_2026-09-25.md`.
+
+### Kenney — terrain/props baseline
 Kenney states that game assets on its asset pages are CC0 and attribution is not required.
 
 Useful starting packs:
