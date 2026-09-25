@@ -1,10 +1,12 @@
 # Roadmap
 
-Status: **v0.3 systems prototype live**
+Status: **v0.6.9 systems/art prototype live**
 
 Live build: https://karmiphuc.github.io/wayfarer-guild/
 
-This roadmap is ordered by leverage rather than novelty. Art/audio and architecture come next because adding lots more content to the current single-file prototype would create avoidable rework.
+This roadmap is ordered by leverage rather than novelty. The live prototype has moved beyond the original phase numbering, so version numbers now reflect shipped slices rather than these historical phase labels.
+
+Current priority: deepen pawn autonomy/personality before adding more content breadth. The v0.6.9 isometric facility renderer is explicitly an interim programmer-art solution; the authored building-art target remains open and should match the stronger isometric concept-sheet quality bar rather than merely use angled procedural geometry.
 
 ## Phase 0 — Current baseline: v0.3 ✅
 
@@ -59,7 +61,7 @@ Goals:
 
 **v0.4 exit test:** one town and one dungeon should feel intentionally art-directed rather than prototyped.
 
-## Phase 2 — v0.5: Make the pawns lovable
+## Phase 2 — Make the pawns lovable — 🚧 current focus
 
 Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/22
 and https://github.com/karmiphuc/karmiphuc.github.io/issues/25
@@ -153,11 +155,11 @@ Minimum 1.0 target:
 
 Unless a bug is blocking the live build:
 
-1. P0 architecture (#19)
-2. P0 art pipeline (#20)
-3. P0 audio (#21)
-4. autonomy/town density (#22, #25)
-5. jobs/items (#23)
+1. autonomy/personality and town-life depth (#22, #25)
+2. P0 architecture cleanup (#19)
+3. authored pixel-art pipeline / building atlas (#20)
+4. audio foundation beyond procedural combat SFX (#21)
+5. jobs/items depth (#23)
 6. dungeons/frontier (#24)
 7. mobile/performance/save (#26)
 
