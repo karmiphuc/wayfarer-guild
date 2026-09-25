@@ -1,6 +1,6 @@
 # Runtime asset audit
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
 ## Scope and evidence
 
@@ -8,15 +8,44 @@ This audit covers every image currently loaded by `index.html`, the runtime tile
 lookups that select art from those images, and the public-repository license
 record. It does not evaluate planned or candidate assets that are not shipped.
 
-The deployed game uses two 192 x 192 Kenney atlases with a 16 x 16 tile grid:
+The game uses two 192 x 192 Kenney atlases with a 16 x 16 tile grid:
 
 - `assets/art/kenney-tiny-town.png` for terrain, vegetation and buildings;
-- `assets/art/kenney-tiny-dungeon.png` for pawns, monsters, props and items.
+- `assets/art/kenney-tiny-dungeon.png` for fallback actors, props and items.
 
-Both files are recorded in `ASSET_ATTRIBUTION.md` as Kenney CC0 assets. The
+The v0.7.2 character pass additionally uses selected sheets from Shade's
+`Puny Characters` pack:
+
+- nine 768 x 256 job sheets built from 32 x 32 animation cells;
+- one 480 x 32 slime animation sheet;
+- CC0 provenance is recorded both beside the files and in
+  `ASSET_ATTRIBUTION.md`.
+
+All imported files are recorded in `ASSET_ATTRIBUTION.md` as CC0 assets. The
 official Tiny Dungeon source pack was used to inspect the corresponding
 individual tiles. It confirms that atlas tiles 84-88 and 96-100 are humanoids,
 while tiles 89-92 are containers or cage props.
+
+## 2026-09-25 rendered audit
+
+The synchronized v0.7.1 GitHub Pages build was captured at desktop scale before
+this import. The new code-drawn characters were recognizably humanoid and fixed
+the moving-container failures, but remained tiny, static-looking, and visually
+separate from the smoother facility art. More importantly, their oversized job
+tools were baked into each silhouette while the actual equipped weapon and
+offhand renderers were no longer called by the pawn renderer.
+
+Correction in v0.7.2:
+
+- Adventurer, Fighter, Archer, Mage, Cleric, Knight, Ninja, Wizard and Paladin
+  prefer cohesive CC0 Puny Characters sheets in town and dungeons.
+- Movement selects real atlas frames with nearest-neighbor scaling.
+- Actual weapon, offhand and armor state is layered around the selected actor
+  body again; KO actors suppress carried gear.
+- Farmer, Blacksmith, Researcher and unsupported monster species keep the
+  readability-first project sprites as explicit fallbacks until a compatible
+  licensed sheet is selected.
+- Slimes use the matching CC0 animated sheet.
 
 ## Findings
 
@@ -85,9 +114,11 @@ Recommendation:
 
 ## Current release gate
 
-- Automated gate: every job maps to a known humanoid tile; the three reported
-  regressions have explicit assertions.
-- Manual gate: render at least one Archer, Farmer and Blacksmith in the town and
-  confirm each is a person at normal game scale.
-- Remaining limitation: the replacements are role-appropriate approximations,
-  not bespoke job art.
+- Automated gate: every supported combat job maps to a checked-in Puny sheet,
+  every imported file and its CC0 notice exist, and all fallback jobs still map
+  to known humanoid tiles.
+- Manual gate: the local desktop build renders the new animated combat bodies
+  at normal town scale, and a gifted axe is visible on its owning Fighter.
+- Remaining limitation: Farmer, Blacksmith and Researcher are readable
+  project-drawn fallbacks rather than cohesive animated pack sprites. Dungeon
+  and iPad-scale screenshot checks remain follow-up gates.

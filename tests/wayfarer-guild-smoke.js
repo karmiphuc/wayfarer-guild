@@ -393,6 +393,16 @@ assert.notEqual(jobSprites.Farmer, 92, 'Farmer must not use the cage/chest sprit
 assert.notEqual(jobSprites.Blacksmith, 90, 'Blacksmith must not use the chest sprite');
 console.log('Job sprite atlas mapping checks passed');
 
+const punyJobs = debug.punyJobFiles();
+assert.deepEqual(Object.keys(punyJobs).sort(), ['adventurer','archer','cleric','fighter','knight','mage','ninja','paladin','wizard']);
+for (const file of [...new Set(Object.values(punyJobs)), 'Slime.png', 'CC0-LICENSE.txt']) {
+  assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', 'assets', 'art', 'puny-characters', file)), `CC0 sprite asset ${file} must be shipped`);
+}
+assert.equal(punyJobs.archer, 'Archer-Green.png');
+assert.equal(punyJobs.mage, 'Mage-Red.png');
+assert.equal(punyJobs.knight, 'Soldier-Blue.png');
+console.log('CC0 Puny Characters asset mapping checks passed');
+
 const weaponPawn = state.pawns[0];
 const weaponCases = [
   ['Bronze Sword', 'melee', null],

@@ -165,12 +165,15 @@ Remaining acceptance: safe first-tap preview/second-tap confirmation on touch,
 cancel controls, rendered desktop/iPad verification, and performance profiling
 with 30 active pawns plus 20+ monsters.
 
-### P2: cohesive character set
+### P2: finish the cohesive character set
 
-Evaluate Kenney Tiny Farm and a compatible CC0 fantasy character source. Build
-a labelled contact sheet before changing mappings. Record exact source and
-license before committing any file. Never use extracted Dungeon Village or
-other commercial-game art.
+v0.7.2 imports Shade's CC0 Puny Characters sheets for combat jobs and slimes,
+with real idle/walk frames and the game's owned equipment layered on top.
+Farmer, Blacksmith, Researcher and non-slime monsters still use the
+readability-first fallback drawers. Next, evaluate compatible free worker and
+monster sheets, build a labelled contact sheet before changing mappings, and
+record exact source and license before committing any file. Never use extracted
+Dungeon Village or other commercial-game art.
 
 ### P2: town life and content
 
@@ -205,7 +208,8 @@ and more compact path-led town composition.
 
 1. Read current status/diff and this guide.
 2. Re-run deterministic checks.
-3. Verify the local and deployed rendered gate still outstanding.
+3. Verify dungeon and iPad rendering for the v0.7.2 Puny sprite import, then
+   verify the deployed Pages build after it updates.
 4. Continue ordinary exploration hauling using the field-operation pattern.
 5. Add facility feedback before decorative density.
 6. Finish touch confirmation and profile the expanded map at 30 pawns.
