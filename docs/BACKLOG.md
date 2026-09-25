@@ -162,3 +162,5 @@ When an item becomes real work, give it an issue. When an issue is finished, upd
 - ✅ v0.6.4 town-life polish: real-time walking cadence/dust, facility enter/exit puffs and in-door occupancy, facility activity bubbles, XP/coin/loot pops, Kairosoft-style level-up banners, denser deterministic pixel decoration
 
 - ✅ v0.6.5 activity rotation: rotating frontier-duty cohort, quest volunteer fairness/history, all combat jobs eligible for exploration, resident sleep schedule, night lighting, stronger night monster pressure, duty/quest history visible in pawn inspector
+
+- ✅ v0.6.6 job identity: every job can fight/explore/quest; worker jobs rotate onto frontier duty while retaining specialty work, exact job effects shown in inspector/job chooser, Farmer/Blacksmith/Researcher bonuses made mechanical, and all Lv.10 mastery skills now have real effects
