@@ -164,3 +164,5 @@ When an item becomes real work, give it an issue. When an issue is finished, upd
 - ✅ v0.6.5 activity rotation: rotating frontier-duty cohort, quest volunteer fairness/history, all combat jobs eligible for exploration, resident sleep schedule, night lighting, stronger night monster pressure, duty/quest history visible in pawn inspector
 
 - ✅ v0.6.6 job identity: every job can fight/explore/quest; worker jobs rotate onto frontier duty while retaining specialty work, exact job effects shown in inspector/job chooser, Farmer/Blacksmith/Researcher bonuses made mechanical, and all Lv.10 mastery skills now have real effects
+
+- ✅ v0.6.7 sprite alignment: original 12-job sprite set and species-specific monster set; explicit mappings for Slime/Batling/Goblin/Bonewalker/Dire Boar and roaming bosses; corrected Fighter/worker-role visuals; cached compact sprite decoder for runtime performance
