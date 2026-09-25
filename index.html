@@ -112,6 +112,24 @@ const RESEARCH={Farm:{cost:18,rank:1,desc:'Unlock Farm and Farmer job'},Forge:{c
 const ITEM_BASES=[['Bronze Sword','weapon',5,0,0,0],['Iron Axe','weapon',7,0,0,-1],['Hunter Bow','weapon',5,0,0,1],['Oak Staff','weapon',2,0,4,0],['War Hammer','weapon',6,2,0,-1],['Leather Coat','armor',0,4,0,1],['Iron Mail','armor',0,7,0,-1],['Mage Robe','armor',0,2,3,0],['Traveler Cloak','armor',0,3,0,1],['Wood Shield','offhand',0,4,0,0],['Round Shield','offhand',0,6,0,-1],['Spellbook','offhand',0,1,4,0],['Lucky Ring','accessory',1,1,1,1],['Vital Charm','accessory',0,2,0,0],['Swift Boots','accessory',0,0,0,2]];
 const PREFIX=['Fine','Sturdy','Keen','Runed','Veteran','Royal','Wild','Blessed'],SUFFIX=['of Dawn','of Thorns','of Embers','of Wind','of Fortune','of Stone'];
 const MASTER_SKILLS={Adventurer:'Adaptable',Fighter:'Power Training',Archer:'Farshot',Mage:'Arcane Memory',Cleric:'Field Medic',Knight:'Iron Guard',Ninja:'Opening Strike',Wizard:'Splash Magic',Paladin:'Guardian Grace',Blacksmith:'Gear Eye',Farmer:'Forager',Researcher:'Quick Study'};
+const JOB_EFFECTS={
+Adventurer:{role:'Balanced adventurer',duty:[2,3],special:'Versatile; no specialty lock.',bias:{Patrol:4,Explore:4}},
+Fighter:{role:'Frontline fighter',duty:[2,3],special:'High HP / ATK / DEF; melee specialist.',bias:{Train:8,Patrol:6}},
+Archer:{role:'Ranged hunter',duty:[2,3],special:'3.5-tile combat range and high speed.',bias:{Patrol:8,Explore:6}},
+Mage:{role:'Arcane attacker',duty:[2,3],special:'3.1-tile range; MAG-focused damage.',bias:{Study:5,Explore:4}},
+Cleric:{role:'Combat healer',duty:[1,2],special:'Heals wounded allies during combat.',bias:{Pray:6,Patrol:2}},
+Knight:{role:'Armoured frontline',duty:[2,3],special:'Highest base HP / DEF; durable melee tank.',bias:{Train:6,Patrol:8}},
+Ninja:{role:'Fast skirmisher',duty:[2,3],special:'3.5-tile range and highest base speed.',bias:{Patrol:9,Explore:7}},
+Wizard:{role:'Area caster',duty:[2,3],special:'3.1-tile range; very high MAG.',bias:{Study:6,Explore:5}},
+Paladin:{role:'Tank healer',duty:[2,3],special:'High DEF plus combat healing.',bias:{Pray:5,Patrol:7}},
+Blacksmith:{role:'Crafter-warrior',duty:[1,3],special:'Forge specialist: +50% craft proc and +20% item quality.',bias:{Forge:28,Train:2}},
+Farmer:{role:'Producer-adventurer',duty:[1,3],special:'Farm output ×1.5; +25% field-gather yield.',bias:{Farm:28,Patrol:1}},
+Researcher:{role:'Scholar-adventurer',duty:[1,3],special:'Library XP ×1.25; town-point discovery ×2.',bias:{Study:28,Explore:1}}
+};
+function jobEffect(j){return JOB_EFFECTS[j]||{role:'Adventurer',duty:[1,2],special:'',bias:{}}}
+function jobBias(p,task,duty=false){let v=jobEffect(p.job).bias?.[task]||0;if(duty&&['Blacksmith','Farmer','Researcher'].includes(p.job)&&['Forge','Farm','Study'].includes(task))v*=.2;return v}
+function dutyLabel(j){let d=jobEffect(j).duty;return d[0]+'/'+d[1]+' days'}
+function jobEffectHtml(j){let d=JOBS[j],e=jobEffect(j),range=['Archer','Ninja'].includes(j)?'3.5':['Mage','Wizard','Cleric'].includes(j)?'3.1':'1.25',heal=['Cleric','Paladin'].includes(j)?' · heals allies':'';return '<b>'+e.role+'</b> · Frontier '+dutyLabel(j)+' · Range '+range+heal+'<br>'+e.special+' · Mastery Lv10: '+MASTER_SKILLS[j]}
 let S={version:5,nextId:100,day:1,minutes:8*60,gold:650,popularity:80,townPoints:22,rank:1,food:90,wood:45,ore:25,herbs:15,energy:40,maxEnergy:50,questsCleared:0,eventsHeld:0,income:0,unlockedResearch:[],unlockedJobs:['Adventurer','Fighter','Archer','Mage','Cleric','Blacksmith'],discoveredGear:['Bronze Sword','Hunter Bow','Oak Staff','Leather Coat','Lucky Ring'],stash:[],buildings:[],pawns:[],monsters:[],quests:[],activeQuest:null,fog:[],logs:[],autoEquip:true,eggs:[],pets:[],bossAlert:null};
 const id=()=>S.nextId++;
 function log(m){S.logs.unshift(`D${S.day} ${fmt(S.minutes)}  ${m}`);S.logs=S.logs.slice(0,90)}function fmt(m){let h=Math.floor(m/60)%24,mm=Math.floor(m%60);return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0')}
@@ -134,14 +152,14 @@ function astar(sx,sy,tx,ty,ignoreFog=false){const g=grid();sx=Math.round(sx);sy=
 function setPath(p,x,y,ignoreFog=false){p.path=astar(p.x,p.y,x,y,ignoreFog);p.pi=1}
 function randWalk(town=true){for(let i=0;i<80;i++){let x=rint(2,town?23:COLS-2),y=rint(2,ROWS-2);if(grid()[y][x]===0&&!S.fog[y][x])return[x,y]}return[12,16]}
  function nearestBuilding(type,p=null){return S.buildings.filter(b=>!type||b.type===type).sort((a,b)=>{if(!p)return b.appeal-a.appeal;let[ax,ay]=door(a),[bx,by]=door(b);return(dist(p.x,p.y,ax,ay)-a.appeal*.03)-(dist(p.x,p.y,bx,by)-b.appeal*.03)})[0]}
- const AUTO_EXPLORE_JOBS=new Set(['Adventurer','Fighter','Archer','Mage','Cleric','Knight','Ninja','Wizard','Paladin']);
-const ADVENTURE_JOBS=new Set(['Adventurer','Fighter','Archer','Mage','Cleric','Knight','Ninja','Wizard','Paladin']);
+ const AUTO_EXPLORE_JOBS=new Set(Object.keys(JOBS));
+const ADVENTURE_JOBS=new Set(Object.keys(JOBS));
 function dayPhase(){let m=S.minutes;if(m<360||m>=1320)return'night';if(m<450)return'dawn';if(m<1080)return'day';return'evening'}
 function sleepWindow(){let m=S.minutes;return m<360||m>=1320}
 function adventureWindow(){let m=S.minutes;return m>=390&&m<1200}
 function nightFactor(){return sleepWindow()?1.35:dayPhase()==='evening'?1.12:1}
 function adventureCandidates(){return S.pawns.filter(p=>p.resident&&!p.ko&&ADVENTURE_JOBS.has(p.job)).sort((a,b)=>a.id-b.id)}
-function frontierDuty(p){let a=adventureCandidates(),n=a.length;if(!n)return false;let idx=a.findIndex(x=>x.id===p.id);if(idx<0)return false;let count=Math.min(n,Math.max(4,Math.ceil(n*.48))),shift=((S.day-1)*Math.max(1,Math.ceil(n*.31)))%n,pos=(idx-shift+n)%n;return pos<count}
+function frontierDuty(p){if(!p?.resident||p.ko||!ADVENTURE_JOBS.has(p.job))return false;let [on,cycle]=jobEffect(p.job).duty,slot=((p.id%cycle)+(S.day*2)%cycle)%cycle;return slot<on}
 function adventureNeed(p){let days=S.day-(Number.isFinite(p.lastAdventureDay)?p.lastAdventureDay:S.day-2),trips=p.adventureCount||0;return Math.min(24,Math.max(0,days)*6)+Math.max(0,5-Math.min(5,trips))*1.5}
 function markAdventure(p){p.lastAdventureDay=S.day;p.adventureCount=(p.adventureCount||0)+1}
 function questFairness(p,eligible){let min=Math.min(...eligible.map(x=>x.questCount||0)),days=S.day-(Number.isFinite(p.lastQuestDay)?p.lastQuestDay:S.day-3),under=(p.questCount||0)-min;return Math.min(24,Math.max(0,days)*4)-under*14}
