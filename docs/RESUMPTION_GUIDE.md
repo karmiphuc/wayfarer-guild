@@ -221,7 +221,6 @@ and more compact path-led town composition.
 9. Confirm remote branch state and then verify the deployed Pages artifact.
 
 ## Safe resumption order
-
 1. Read current status/diff and this guide.
 2. Re-run deterministic checks.
 3. Verify the audio slice in a real browser (loops follow town/dungeon/day-night, sliders persist, no autoplay errors), then verify the deployed Pages build after it updates.
@@ -229,3 +228,23 @@ and more compact path-led town composition.
 5. Add facility feedback before decorative density.
 6. Finish touch confirmation and profile the expanded map at 30 pawns.
 7. Finish each cohesive slice with scoped verification, commit and push.
+
+## Session learnings (2026-09-26, visual passes)
+
+- Never assume sprite-sheet transparency: census pixels first. The Eldiran
+  sheet is fully opaque with a pure-magenta background — key it to transparent
+  once at load via offscreen canvas, and re-verify with a keyed render.
+- Hand/equipment anchors are per art source, not global. Measure hand pixels
+  off the sheet (ruler render), keep one anchor table per source, and cover
+  every table with smoke containment asserts.
+- Eldiran layout: one character per row, front walk = columns 0-2; row 0 is
+  template/icons and must never be sampled.
+- itch.io downloads are session-gated and cannot be pulled headlessly; OGA
+  direct file links and GitHub mirrors can. Keep evaluation packs in a temp
+  dir — never commit unauditioned art.
+- `gh --jq` output redirected in PowerShell 5.1 is UTF-16; parse files with
+  explicit `encoding='utf-16'`.
+- vm-context objects need `{...spread}` into the local realm before
+  `deepEqual`, or the assert fails cross-realm.
+- Issue transfers preserve bodies verbatim, including stale repo links, branch
+  names and old numbers — sweep all transferred bodies and docs after a move.
