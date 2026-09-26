@@ -861,3 +861,61 @@ assert.equal(debug.facilityImg('Forge'), null, 'forge keeps procedural live-fire
 assert.equal(debug.facilityImg('Storehouse'), null, 'storehouse keeps procedural crates');
 assert.equal(debug.facilityImg('Nope'), null, 'unknown facilities must fall back safely');
 console.log('Authored facility-sprite mapping checks passed');
+
+// End-to-end proof of the facility art path with scripted browser stubs:
+// white-keyed sprite loads, poisons nothing, cache rebuilds with art.
+{
+  const W = 128, H = 124;
+  const px = new Uint8ClampedArray(W * H * 4);
+  for (let i = 0; i < W * H; i++) {
+    const x = i % W, y = (i / W) | 0;
+    const inside = x > 20 && x < W - 20 && y > 20 && y < H - 20;
+    px[i * 4] = inside ? 120 : 255; px[i * 4 + 1] = inside ? 80 : 255;
+    px[i * 4 + 2] = inside ? 40 : 255; px[i * 4 + 3] = 255;
+  }
+  const images = [];
+  class FakeImage {
+    constructor() { this._src = ''; this.onload = null; images.push(this); }
+    set src(v) { this._src = v; }
+    get complete() { return true; }
+    get naturalWidth() { return W; }
+    get naturalHeight() { return H; }
+  }
+  const canvases = [];
+  const stubCtx = (cv) => ({
+    imageSmoothingEnabled: false,
+    drawImage(img, ...args) { cv.draws.push({img, args}); },
+    getImageData() { return {width: W, height: H, data: px.slice()}; },
+    putImageData(d) { cv.final = d.data; },
+    fillRect() {}, strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {},
+    stroke() {}, fill() {}, arc() {}, fillText() {}, save() {}, restore() {},
+    translate() {}, scale() {}, rotate() {}, setLineDash() {},
+    set fillStyle(v) {}, set strokeStyle(v) {}, set lineWidth(v) {},
+    set font(v) {}, set textAlign(v) {}, set globalAlpha(v) {},
+  });
+  const isoDoc = {...document, createElement: () => {
+    const cv = {width: 0, height: 0, draws: [], final: null};
+    cv.getContext = () => stubCtx(cv);
+    canvases.push(cv);
+    return cv;
+  }};
+  const isoCtx = {...context, Image: FakeImage, document: isoDoc};
+  isoCtx.window = isoCtx;
+  vm.runInNewContext(script, isoCtx);
+  const isoDebug = isoCtx.__WAYFARER_DEBUG__;
+  assert.equal(isoDebug.facilityImg('Inn'), null, 'art must not exist before its image loads');
+  const inn = images.find(i => i._src.endsWith('inn.png'));
+  assert.ok(inn, 'inn sprite load must start on first use');
+  inn.onload();
+  const keyed = canvases.find(c => c.final);
+  assert.ok(keyed, 'keying must write a final pixel buffer');
+  assert.equal(keyed.final[3], 0, 'edge white must key to transparent');
+  const mid = ((H / 2) * W + W / 2) * 4;
+  assert.ok(keyed.final[mid + 3] !== 0, 'interior pixels must survive keying');
+  const spr = isoDebug.makeIsoFacility('Inn', 1);
+  assert.ok(spr, 'cache must rebuild with art after load');
+  const cacheCv = canvases[canvases.length - 1];
+  const artDraw = cacheCv.draws.find(d => d.img && d.img.width === W && d.args.length === 4);
+  assert.ok(artDraw, 'rebuilt cache must draw the keyed sprite fitted to the cache canvas');
+  console.log('Facility art-path end-to-end checks passed');
+}
