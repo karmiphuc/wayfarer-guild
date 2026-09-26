@@ -130,7 +130,7 @@ Visual target:
 - strong silhouettes;
 - clean pixel UI.
 
-### 9. Fair progression, no retention friction
+### 8. Fair progression, no retention friction
 
 Wayfarer deliberately keeps the autonomous settlement/adventure appeal of mobile management RPGs while rejecting monetization-shaped pacing.
 
@@ -154,7 +154,7 @@ Run-specific dungeon supplies are acceptable only when they create tactical choi
 
 Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/32
 
-### 8. Browser/iPad first
+### 9. Browser/iPad first
 The canonical game lives on GitHub Pages. It should remain convenient to open on desktop or iPad with no install required.
 
 Targets:
