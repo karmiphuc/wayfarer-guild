@@ -124,6 +124,20 @@ Equipment-identity correction in v0.7.9:
 - Automated mapping checks bind every current weapon base to its intended style,
   scale, family and atlas source.
 
+Two-handed carrying correction in v0.7.10:
+
+- During bow attacks, the support forearm and hand now follow the animated
+  string notch through draw and release instead of leaving the pull suspended.
+- Axe and hammer attacks brace the lower handle with a second hand. Staff users
+  add a support grip during focus and casting phases.
+- Support-hand targets pass through the same rotation, mirroring, vertical aim
+  and front/behind depth transforms as the weapon, so they cannot drift away
+  when the pawn changes direction.
+- One-handed swords remain one-handed, and an equipped shield or spellbook
+  suppresses the support arm rather than producing an impossible third hand.
+- Automated checks cover bow-notch following, heavy-handle placement, offhand
+  conflicts, one-handed exclusions and mirrored coordinate transforms.
+
 ## Findings
 
 ### P1 - non-humanoid job sprites
