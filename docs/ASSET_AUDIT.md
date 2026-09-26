@@ -109,6 +109,21 @@ Directional carrying correction in v0.7.8:
 - Automated checks cover north/south angle separation, stable near-vertical
   facing, diagonal aim and foreground/background selection.
 
+Equipment-identity correction in v0.7.9:
+
+- Bronze Sword, Hunter Bow, Oak Staff, Iron Axe and War Hammer retain distinct
+  carried styles and authored size profiles instead of collapsing into one
+  generic weapon per attack family.
+- Bronze blades, hunter-bow wraps, oak-staff crystals and heavy-weapon bindings
+  provide readable material cues at normal gameplay scale.
+- Uncommon through unique rarity colors now accent the carried weapon itself in
+  addition to the existing equipment glint.
+- A small outlined hand cap is drawn over the measured pivot when equipment is
+  in front of the pawn, making the grip connection explicit; north-facing depth
+  ordering naturally lets the body cover it when the weapon passes behind.
+- Automated mapping checks bind every current weapon base to its intended style,
+  scale, family and atlas source.
+
 ## Findings
 
 ### P1 - non-humanoid job sprites

@@ -427,22 +427,24 @@ console.log('CC0 Tiny Creatures monster mapping checks passed');
 
 const weaponPawn = state.pawns[0];
 const weaponCases = [
-  ['Bronze Sword', 'melee', null],
-  ['Iron Axe', 'axe', 118],
-  ['Hunter Bow', 'arrow', null],
-  ['Oak Staff', 'magic', null],
-  ['War Hammer', 'hammer', 117],
+  ['Bronze Sword', 'melee', null, 'bronze', 1],
+  ['Iron Axe', 'axe', 118, 'iron', 1.08],
+  ['Hunter Bow', 'arrow', null, 'hunter', 1.1],
+  ['Oak Staff', 'magic', null, 'oak', 1.08],
+  ['War Hammer', 'hammer', 117, 'war', 1.12],
 ];
-for (const [base, kind, atlas] of weaponCases) {
+for (const [base, kind, atlas, style, scale] of weaponCases) {
   weaponPawn.equipment.weapon = {base, name: base, slot: 'weapon'};
   const visual = debug.weaponVisual(weaponPawn);
   assert.equal(visual.kind, kind, `${base} should select its carried weapon silhouette`);
   assert.equal(visual.atlas, atlas);
+  assert.equal(visual.style, style, `${base} should retain a recognizable carried-gear identity`);
+  assert.equal(visual.scale, scale, `${base} should use its authored carried size`);
   assert.equal(visual.equipped, true);
 }
 weaponPawn.equipment.weapon = null;
 weaponPawn.job = 'Archer';
-assert.deepEqual({...debug.weaponVisual(weaponPawn)}, {kind: 'arrow', base: 'Training Bow', equipped: false, atlas: null}, 'unarmed jobs should carry a readable training weapon');
+assert.deepEqual({...debug.weaponVisual(weaponPawn)}, {kind: 'arrow', base: 'Training Bow', equipped: false, atlas: null, style: 'training', scale: 1}, 'unarmed jobs should carry a readable training weapon');
 debug.attackAnim().delete(weaponPawn.id);
 weaponPawn.facing = -1;
 assert.equal(debug.weaponPose(weaponPawn, 'town').facing, -1, 'idle carried equipment should follow travel facing');
@@ -567,7 +569,7 @@ weaponSaveContext.window = weaponSaveContext;
 vm.runInNewContext(script, weaponSaveContext);
 const restoredWeaponPawn = weaponSaveContext.__WAYFARER_DEBUG__.state().pawns.find(p => p.id === weaponPawn.id);
 assert.equal(restoredWeaponPawn.equipment.weapon.id, 89990, 'equipped weapon identity should survive save/reload');
-assert.deepEqual({...weaponSaveContext.__WAYFARER_DEBUG__.weaponVisual(restoredWeaponPawn)}, {kind: 'hammer', base: 'War Hammer', equipped: true, atlas: 117});
+assert.deepEqual({...weaponSaveContext.__WAYFARER_DEBUG__.weaponVisual(restoredWeaponPawn)}, {kind: 'hammer', base: 'War Hammer', equipped: true, atlas: 117, style: 'war', scale: 1.12});
 assert.equal(restoredWeaponPawn.equipment.offhand.id, giftShield.id, 'gifted offhand should survive save/reload');
 assert.equal(restoredWeaponPawn.lockedSlots.offhand, true, 'gift reservation should survive save/reload');
 weaponPawn.equipment.weapon = null;
