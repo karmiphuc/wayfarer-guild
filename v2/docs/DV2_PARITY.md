@@ -6,6 +6,10 @@ and the Japanese strategy wiki (wikiwiki.jp/kairoparknew/bouken2). Items marked 
 
 Legend: ✅ done · 🟡 partial / different · ❌ missing. Issue numbers link to GitHub (`karmiphuc/wayfarer-guild`, label `dv2-parity`).
 
+**DV2 numbers are reference only.** Prices, thresholds and formulas quoted below and in the issues (Inn 900/100/80, Work
+135/167/200, station prices, Cauldron recipes, score formula, Rearrange 200G…) come from fan wikis and were not verified in a
+playthrough. Never hard-code them as targets: our numbers come from the bot soak and boss probe (`check.mjs --full`).
+
 ## 1. Parity matrix
 
 | DV2 system | DV2 behaviour (short) | v2 today | Status | Issue |
@@ -43,6 +47,15 @@ Legend: ✅ done · 🟡 partial / different · ❌ missing. Issue numbers link 
 | Endgame score | Popularity×5 + Quests×300 + Titles×1000 + total Lv×5 + total Work×10 | — | ❌ | #28 |
 | Premium currency (Diamonds) | exists in DV2 | intentionally excluded (no premium/stamina, repo rule) | — | — |
 
+### Replayability extras (not in DV2 — our own)
+
+| System | What it does | Status | Issue |
+|---|---|---|---|
+| World codes | each village is founded from a seed (shown as a 6-letter code): monster species per zone, cave spot, charter offers | ✅ | #45 |
+| Village charters | pick 1 of 3 at founding; each has an upside, a downside and a starting gift (9 charters) | ✅ | #45 |
+| Weekly happenings | 11 seeded random events: merchant, Golden Slime, rain, clear skies, bard, harvest, stampede, bandits, meteors, fog, legendary wanderer | ✅ | #45 |
+| Raids defend the town | stampedes charge the village edge, bandits camp outside; free adventurers rally (gives towers and the `Safe` trait a job) | 🟡 | #45, #25 |
+
 ## 2. Roadmap (GitHub issues)
 
 Tracking issue: **#44** (order + dependency map). Every issue has **slices** — one slice = one small PR, done in order —
@@ -74,9 +87,11 @@ plus implementation notes, "Done when", and verification commands. Labels: `dv2-
 | 37 | Monster Farm & taming parity | 2 | 25 |
 | 38 | Facility catalogue expansion + Facility Store levels | 2 | 19, 32, 34 |
 | 39 | Dungeons 2.0 | 2 | 23, 20 |
-| 40 | Cauldron: essences, knowledge, recipes, weapon upgrades | 3 | 18, 34 |
-| 41 | Multi-map framework (architecture gate) | 3 | 40 |
+| 40 | Cauldron: essences, knowledge, recipes, weapon upgrades | 3 | 18, 34, 46 |
+| 46 | Multi-map transition contract (doc only) | 3 | — |
+| 41 | Multi-map framework (architecture gate) | 3 | 40, 46 |
 | 42 | Map 2: Forest | 3 | 41 |
-| 43 | Real-device iPad/phone QA | any | — |
+| 43 | Real-device iPad/phone QA | 2 (any time) | — |
+| 45 | Happenings, charters & world codes (replayability) | done | — |
 
 When an issue is finished: tick it in #44, flip its row in the parity matrix above (🟡/❌ → ✅), and close the issue.

@@ -10,7 +10,8 @@ Run from the repository root.
 | `node v2/tests/validate.mjs` | data integrity: sprites exist and have the right sheet size, perk/item keys valid and consumed by the sim, job prerequisites sane, boss frame math, SPR rects inside images, atlas fresh | `0 error(s)` |
 | `node v2/tests/used-assets.mjs` | every file the code loads exists (`missing: 0`); lists unused files | `missing: 0` |
 | `node v2/tests/headless.mjs 6` | a scripted 6-month game; prints one economy line per month | no exception; residents > 0 by month 3 |
-| `node v2/tests/bot.mjs 30 1` | greedy bot plays 30 months (seed 1): builds, develops gear, runs quests, changes jobs | reaches ≥ 4★ (usually 5★ around Y2–Y3); ≤ 400 µs/step |
+| `node v2/tests/bot.mjs 30 1 [charter]` | greedy bot plays 30 months (seed 1): signs the first offered charter (or the one given), builds, develops gear, buys a merchant licence when rich, runs quests, changes jobs; weekly happenings run as in the real game | reaches ≥ 4★ (usually 5★ around Y2–Y3); ≤ 400 µs/step |
+| `node v2/tests/happenings.mjs` | forces every happening once (stars 3) and signs every charter once; checks each ends and cleans up; replays 12 weeks twice from one seed | every line `ok`, last line `deterministic replay … true` |
 | `node v2/tests/bossprobe.mjs` | lowest 4-person party level (mixed classes, best gear) that beats each boss 2 of 3 times | main ladder ≈ 3,5,7,9,11,13,17,17,19,21,21 (±4) |
 | `node v2/tests/dungeon.mjs` | a Lv10 party clears the 4-floor Old Cave and unlocks a treasure | `quest over: true cleared 1` |
 | `node v2/tests/free-sprites.mjs` | sprites on disk not used yet (character sheets with sizes, monsters, in-hand weapons, armor/accessory icons) | informational |
@@ -24,14 +25,20 @@ Run from the repository root.
 4. In-process smoke: new game (seed 4242), builds 5 facilities, simulates 3 in-game months, asserts no NaN/Infinity in gold,
    popularity, adventurer and monster numbers, a non-empty quest board; then JSON round-trip → `migrate()` → new `Sim` →
    200 more steps; save must stay < 1.5 MB.
-5. `tools/bundle.py` into a temp dir + `node --check game.js`.
+5. `tests/happenings.mjs` (every happening and charter runs and ends; same seed + choices = same state).
+6. `tools/bundle.py` into a temp dir + `node --check game.js`.
 
 ## Adding tests
 
 - A new invariant on data (e.g. "every event has a cost > 0") → add a rule in `validate.mjs` (`err(...)` for must, `warn(...)` for should).
 - A new mechanic → extend the smoke step in `check.mjs` or write a focused script like `dungeon.mjs`
   (import `newGame`, `Sim`; set up state directly; step; print/assert). Keep scripts deterministic by passing a seed to `newGame(seed)`.
-- Balance expectations live in `check.mjs` (`expect` table for bosses, `>= 4` stars for the bot). Update them deliberately.
+- Balance expectations live in `check.mjs` (`expect` table for bosses, `>= 4` stars for the bot). Update them deliberately —
+  never loosen them just to make a change pass.
+- A new player action (a new `Sim` method the UI calls) → make `tests/bot.mjs` call it each month (one line), otherwise
+  the `--full` soak never exercises it and the balance gate says nothing about your feature.
+- A save-shape change → also load an old save (export one from the live game first) through `migrate()` and step it
+  (an old-save fixture in `tests/fixtures/` is planned in issue #17).
 
 ## Manual play check (1 minute, every feature)
 

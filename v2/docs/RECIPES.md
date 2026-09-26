@@ -13,7 +13,8 @@ Contents: [Class](#1-add-a-class-job) · [Perk effect](#2-add-a-new-perk-effect-
 [Armor/accessory](#4-add-armor-or-an-accessory) · [Monster](#5-add-a-monster) · [Boss](#6-add-a-boss) ·
 [Facility](#7-add-a-facility-building) · [Decor](#8-add-decor) · [Title](#9-add-a-town-title) · [Event](#10-add-a-town-event) ·
 [Saved field](#11-add-a-field-to-the-save) · [Sound](#12-add-music-or-a-sound-effect) · [UI action](#13-add-a-ui-button--action) ·
-[Balance](#14-balance-change-workflow) · [New art pack](#15-add-art-from-a-new-pack)
+[Balance](#14-balance-change-workflow) · [New art pack](#15-add-art-from-a-new-pack) · [Happening](#16-add-a-happening-weekly-random-event) ·
+[Charter](#17-add-a-village-charter)
 
 ---
 
@@ -90,13 +91,17 @@ Only when no existing key fits.
 
 1. Sheet `assets/monsters/<Spr>.png` must be 64×64 (4 columns = down, up, left, right; 4 rows = frames) plus
    `assets/monsters/<Spr>.face.png`. Ninja Adventure: `Actor/Monsters/<Name>/SpriteSheet.png` (or `<Name>.png`) + `Faceset.png`.
+   Every sheet already in `assets/monsters/` is used (`node v2/tests/free-sprites.mjs` lists spares) — so copy a new one from
+   the Ninja Adventure pack first (see [ASSETS.md](ASSETS.md)). The `Spirit2` in the example below must be copied too.
 2. Add to `MONSTERS` in `js/data.js`:
    ```js
    frostImp: { name: 'Frost Imp', spr: 'Spirit2', hp: 48, atk: 14, def: 5, spd: 1.1, xp: 22, gold: 22, drops: { crystal: 0.2 } },
    ```
    Zone guide: zone 1 hp 11–20 atk 3–6 · zone 2 hp 22–40 atk 7–10 · zone 3 hp 38–62 atk 10–17 · zone 4 hp 50–120 atk 17–27.
    `xp ≈ gold ≈ hp / 2`. `drops` = chance per kill for each material.
-3. Make it spawn: add the id to the right zone in `ZONE_MONS` at the top of `js/sim.js`.
+3. Make it spawn: add the id to the right zone in `ZONE_MONS` in `js/data.js`. Each world keeps only `ROSTER_SIZE[zone]`
+   species per zone (seeded, `js/happenings.js`), so a new monster lives in some worlds, not all. To test it, force it:
+   `__game.sim.spawnMonster(3, 'frostImp')` in the browser console.
 4. Run `pack_atlas.py`, then verify.
 
 ## 6. Add a boss
@@ -156,12 +161,18 @@ A new bonus key must be read somewhere via `this.bonus('<key>')`.
 Timed effect: add `{ id: 'hotpot', name: 'Hot Pot Night', tp: 20, desc: '...', weeks: 1 }` to `EVENTS` in `js/data.js`, then
 use `this.eventOn('hotpot')` where the effect applies in `sim.js` (e.g. in `settleVisit`).
 Instant effect: no `weeks`; add an `else if (id === 'hotpot') { ... }` branch in `runEvent()` in `sim.js`.
+The validator requires the literal `'hotpot'` somewhere in `sim.js` for every instant event (issue #34 replaces this with
+data-driven `effect.type`s — follow that issue if it has landed).
 
 ## 11. Add a field to the save
 
 1. Give it a default where the object is created (`newGame()` or `makeAdventurer()` in `state.js`).
 2. In `migrate()` (state.js) fill it for old saves: `for (const a of s.advs) a.medals = a.medals || 0;`
-3. Test the round trip: `check.mjs` already saves → reloads → migrates → simulates.
+3. `migrate()` runs on EVERY load, including brand-new saves. Any transform must do nothing on a save that is already in
+   the new shape: guard on the OLD field being present, e.g.
+   `if (a.base.hp !== undefined) { a.base.hth = a.base.hp; delete a.base.hp; }` — never on `s.schema` alone.
+4. Test the round trip: `check.mjs` already saves → reloads → migrates → simulates. For a shape change, also load an old save
+   (export one from the live game before your change) through `migrate()` and simulate 200 steps.
 
 ## 12. Add music or a sound effect
 
@@ -190,3 +201,33 @@ Instant effect: no `weeks`; add an `else if (id === 'hotpot') { ... }` branch in
 Read [ASSETS.md](ASSETS.md) first: license rules, style check, naming, atlas, attribution. Short version:
 verify CC0/CC-BY from the primary source → compare side-by-side with a Ninja Adventure sprite → copy with the naming
 convention → reference it in code → `pack_atlas.py` → attribution row → `check.mjs`.
+
+## 16. Add a happening (weekly random event)
+
+Happenings are rolled by the sim each week (not bought with TP like events). Data in `js/happenings.js`, logic in `sim.js`.
+1. Add a row to `HAPPENINGS`:
+   ```js
+   { id: 'festivalFood', icon: 'i_Beaf', short: 'Food Fair', name: 'Food Fair', weight: 6, weeks: 1, minStars: 1,
+     desc: 'Food stalls earn 30% more this week.' },
+   ```
+   `icon` = an image key from `assetList()` (`i_<item icon>`, `e<emote>`, `m_<monster sheet>`, `pt_<particle>`) ·
+   `weight` = relative chance · `minStars` = earliest rank · `desc` must describe exactly what your code does.
+2. In `startHappening(id)` in `sim.js` add a `case 'festivalFood':` — for a passive effect just `break;` (add it to the
+   `case 'rain': case 'sunny': …` line) and read it where it applies: `if (this.happening('festivalFood')) paid *= 1.3;`.
+   Spawns go in `h.data` (`h.data.mobs = [ids]`) so `endHappening` can clean them up.
+3. Rewards, penalties and clean-up go in `endHappening(h)` (`case 'festivalFood':`). Anything you spawned must be removed there.
+4. Run `node v2/tests/happenings.mjs` — every happening is forced once; yours must print `ok` and must not stay active.
+   Then play: `__game.sim.startHappening('festivalFood')` in the browser console.
+
+## 17. Add a village charter
+
+1. Add a row to `CHARTERS` in `js/happenings.js`:
+   ```js
+   { id: 'river', name: 'River Crossing', icon: 'i_TeaLeaf', up: 'Food shops +15% sales · starts with a Bakery',
+     down: 'Monsters +20%', mods: { foodSales: 0.15, monsterPop: 0.2 }, start: { build: ['bakery'] } },
+   ```
+2. `mods` keys must be known (list and where each is read: ARCHITECTURE §4b). A NEW key (like `foodSales` above) needs:
+   read it in `sim.js` with `this.charter('foodSales')` where it applies, and add it to `KNOWN_CHARTER_KEYS` in
+   `tests/validate.mjs`. `start`: `gold` (+/-), `build: [FAC types]`, `decor: [DECOR types]`, `adv: '<job id>'`.
+3. `up`/`down` must describe exactly what the mods and start do. Keep each charter a real trade-off.
+4. `node v2/tests/happenings.mjs` signs every charter once; then `node v2/tests/check.mjs --full` (charters change balance).

@@ -30,7 +30,9 @@ This is how v2 was first deployed (the owner's work machine may not push code).
    `assets/ui/ThemeWood` → `assets/ui` (font) → `assets/ui/emote` → `assets/chars` → `css` → **last** `v2` (`index.html`, `game.js`).
    Code goes last so the live page never references assets that aren't there yet.
 3. For a code-only change you only re-upload `v2/game.js` (and `index.html`/`style.css` if they changed).
-   After adding sprites also re-upload `v2/assets/atlas/*`.
+   After adding sprites also re-upload `v2/assets/atlas/*`. Docs (`v2/AGENTS.md`, `v2/docs/*.md`) go up the same way
+   (`/upload/main/v2` and `/upload/main/v2/docs`). Never upload root files over GitHub's copies — `main` has newer v1 commits.
+4. The GitHub web upload keeps the file name only; `game.js` must be picked from `dist/v2/`, not from `v2/`.
 
 ### Automating Mode B with a browser agent (what worked)
 
