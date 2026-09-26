@@ -803,3 +803,23 @@ for (const legacy of ['x-12,y-23,24', 'x-17,y-20,34,34', 'x+10,y-20,10,10', 'y+1
   assert.ok(!htmlSrc.includes(legacy), `legacy overlay constant must be gone: ${legacy}`);
 }
 console.log('Actor-metrics calibration checks passed');
+
+const bases = debug.itemBases();
+for (const slot of ['weapon', 'armor', 'offhand', 'accessory']) {
+  assert.ok(bases.filter(b => b[1] === slot).length >= 10, `${slot} catalog must hold 10+ pieces`);
+}
+for (const [base, kind] of [['Longbow', 'arrow'], ['Runed Staff', 'magic'], ['Battle Axe', 'axe'], ['Maul', 'hammer'], ['Mace', 'melee'], ['Dagger', 'melee'], ['Hatchet', 'axe']]) {
+  assert.equal(debug.weaponKind({equipment: {weapon: {base}}}), kind, `${base} must map to the ${kind} family`);
+}
+assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Oak Shield'}}}).kind, 'woodShield');
+assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Birch Shield'}}}).kind, 'woodShield');
+assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Warding Lantern'}}}).kind, 'woodShield');
+assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Iron Shield'}}}).kind, 'roundShield');
+assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Tome of Embers'}}}).kind, 'book');
+assert.equal(debug.armorVisual({equipment: {armor: {base: 'Plate Mail'}}}).kind, 'mail');
+assert.equal(debug.armorVisual({equipment: {armor: {base: 'Wizard Robe'}}}).kind, 'robe');
+assert.equal(debug.armorVisual({equipment: {armor: {base: 'Wolf Cloak'}}}).kind, 'cloak');
+assert.equal(debug.armorVisual({equipment: {armor: {base: 'Ranger Coat'}}}).kind, 'coat');
+assert.equal(debug.weaponVisual({equipment: {weapon: {base: 'Runed Staff', name: 'Runed Staff', slot: 'weapon'}}}).style, 'rune', 'runed gear should carry its violet identity');
+assert.equal(debug.weaponVisual({equipment: {weapon: {base: 'Longbow', name: 'Longbow', slot: 'weapon'}}}).scale, 1.15, 'longbows should read larger than short bows');
+console.log('Expanded gear-catalog mapping checks passed');
