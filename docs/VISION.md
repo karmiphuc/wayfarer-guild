@@ -130,6 +130,30 @@ Visual target:
 - strong silhouettes;
 - clean pixel UI.
 
+### 9. Fair progression, no retention friction
+
+Wayfarer deliberately keeps the autonomous settlement/adventure appeal of mobile management RPGs while rejecting monetization-shaped pacing.
+
+Rules:
+- no guild/account-level stamina or energy meter;
+- no real-world refill timers;
+- no premium-like currency required for normal progression;
+- no daily-login-only advancement;
+- no forced low-value farming merely to extend playtime;
+- career experimentation should not be punished by arbitrary fees.
+
+Ordinary progression should use resources earned naturally through play:
+- Gold;
+- provisions and materials when thematically meaningful;
+- fame/rank as non-spendable progression;
+- pawn readiness, danger and equipment as simulation constraints.
+
+Individual pawn fatigue is simulation, not a player stamina system: tired pawns rest while other healthy residents can continue acting.
+
+Run-specific dungeon supplies are acceptable only when they create tactical choices inside an expedition. They must never become a regenerating entry ticket.
+
+Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/32
+
 ### 8. Browser/iPad first
 The canonical game lives on GitHub Pages. It should remain convenient to open on desktop or iPad with no install required.
 
@@ -149,6 +173,7 @@ Wayfarer is not:
 - a clicker/idle game;
 - a gacha game;
 - an ad/energy-timer mobile economy;
+- a premium-currency or daily-login progression economy;
 - a huge inventory micromanagement simulator;
 - an endless stat-inflation treadmill.
 
