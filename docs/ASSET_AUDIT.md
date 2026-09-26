@@ -58,6 +58,19 @@ Follow-up in v0.7.3:
 - A desktop render check confirmed the larger bodies, fitted bow placement and
   readable frontier monster silhouettes with no browser errors.
 
+Attachment correction in v0.7.5:
+
+- The old body-scale offsets still positioned gear beside the pawn, so weapons
+  could visibly float despite scaling correctly.
+- Main-hand and offhand positions now use measured source-pixel anchors for all
+  five idle/walk frames and mirror with the pawn's combat facing.
+- Body and equipment consume the same animation-frame value on each draw.
+- Axe and hammer atlas tiles rotate around their lower handle grip rather than
+  around the center of the tile.
+- Automated checks bound every grip to the body silhouette; live town checks
+  covered an Archer's default bow and an equipped War Hammer with no console
+  errors. Dungeon and touch-scale checks remain separate release gates.
+
 ## Findings
 
 ### P1 - non-humanoid job sprites

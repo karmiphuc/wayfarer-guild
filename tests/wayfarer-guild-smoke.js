@@ -405,6 +405,15 @@ assert.equal(punyJobs.mage, 'Mage-Red.png');
 assert.equal(punyJobs.knight, 'Soldier-Blue.png');
 console.log('CC0 Puny Characters asset mapping checks passed');
 
+const idleHand = debug.punyHandAnchor(0, 48, 1);
+assert.ok(Math.abs(idleHand.x - 5.25) < .001 && Math.abs(idleHand.y - 6) < .001, 'idle weapon grip must use the Puny hand, not a floating side offset');
+const mirroredHand = debug.punyHandAnchor(0, 48, -1);
+assert.equal(mirroredHand.x, -idleHand.x, 'weapon grip must mirror with pawn facing');
+const walkingHands = [1,2,3,4].map(frame => debug.punyHandAnchor(frame, 48, 1));
+assert.ok(new Set(walkingHands.map(hand => `${hand.x},${hand.y}`)).size > 1, 'weapon grip must follow changing walk-frame hands');
+assert.ok(walkingHands.every(hand => Math.hypot(hand.x, hand.y) < 11), 'weapon grips must remain attached to the body silhouette');
+console.log('Frame-attached carried-equipment anchor checks passed');
+
 const tinyMonsters = debug.tinyMonsterTiles();
 assert.deepEqual(Object.keys(tinyMonsters).sort(), ['bat','bee','boar','cyclops','dragon','ghost','goblin','mushroom','orc','skeleton','slime','wolf']);
 assert.equal(new Set(Object.values(tinyMonsters)).size, 12, 'Every monster silhouette must use a distinct species tile');
