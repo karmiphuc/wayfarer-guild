@@ -503,7 +503,7 @@ for (const [base, kind, atlas, style, scale] of weaponCases) {
 }
 weaponPawn.equipment.weapon = null;
 weaponPawn.job = 'Archer';
-assert.deepEqual({...debug.weaponVisual(weaponPawn)}, {kind: 'arrow', base: 'Training Bow', equipped: false, atlas: null, style: 'training', scale: 1}, 'unarmed jobs should carry a readable training weapon');
+assert.deepEqual({...debug.weaponVisual(weaponPawn)}, {kind: 'arrow', base: 'Training Bow', shape: 'arrow', equipped: false, atlas: null, style: 'training', scale: 1}, 'unarmed jobs should carry a readable training weapon');
 debug.attackAnim().delete(weaponPawn.id);
 weaponPawn.facing = -1;
 assert.equal(debug.weaponPose(weaponPawn, 'town').facing, -1, 'idle carried equipment should follow travel facing');
@@ -657,7 +657,7 @@ weaponSaveContext.window = weaponSaveContext;
 vm.runInNewContext(script, weaponSaveContext);
 const restoredWeaponPawn = weaponSaveContext.__WAYFARER_DEBUG__.state().pawns.find(p => p.id === weaponPawn.id);
 assert.equal(restoredWeaponPawn.equipment.weapon.id, 89990, 'equipped weapon identity should survive save/reload');
-assert.deepEqual({...weaponSaveContext.__WAYFARER_DEBUG__.weaponVisual(restoredWeaponPawn)}, {kind: 'hammer', base: 'War Hammer', equipped: true, atlas: 117, style: 'war', scale: 1.12});
+assert.deepEqual({...weaponSaveContext.__WAYFARER_DEBUG__.weaponVisual(restoredWeaponPawn)}, {kind: 'hammer', base: 'War Hammer', shape: 'hammer', equipped: true, atlas: 117, style: 'war', scale: 1.12});
 assert.equal(restoredWeaponPawn.equipment.offhand.id, giftShield.id, 'gifted offhand should survive save/reload');
 assert.equal(restoredWeaponPawn.lockedSlots.offhand, true, 'gift reservation should survive save/reload');
 weaponPawn.equipment.weapon = null;
@@ -813,7 +813,7 @@ for (const [base, kind] of [['Longbow', 'arrow'], ['Runed Staff', 'magic'], ['Ba
 }
 assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Oak Shield'}}}).kind, 'woodShield');
 assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Birch Shield'}}}).kind, 'woodShield');
-assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Warding Lantern'}}}).kind, 'woodShield');
+assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Warding Lantern'}}}).kind, 'lantern', 'lanterns render their own glowing shape');
 assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Iron Shield'}}}).kind, 'roundShield');
 assert.equal(debug.offhandVisual({equipment: {offhand: {base: 'Tome of Embers'}}}).kind, 'book');
 assert.equal(debug.armorVisual({equipment: {armor: {base: 'Plate Mail'}}}).kind, 'mail');
@@ -823,3 +823,22 @@ assert.equal(debug.armorVisual({equipment: {armor: {base: 'Ranger Coat'}}}).kind
 assert.equal(debug.weaponVisual({equipment: {weapon: {base: 'Runed Staff', name: 'Runed Staff', slot: 'weapon'}}}).style, 'rune', 'runed gear should carry its violet identity');
 assert.equal(debug.weaponVisual({equipment: {weapon: {base: 'Longbow', name: 'Longbow', slot: 'weapon'}}}).scale, 1.15, 'longbows should read larger than short bows');
 console.log('Expanded gear-catalog mapping checks passed');
+
+function gearSig(it) {
+  if (it.slot === 'weapon') { const v = debug.weaponVisual({equipment: {weapon: it}, job: 'Adventurer'}); return ['w', v.kind, v.style, v.scale, v.shape].join('|'); }
+  if (it.slot === 'armor') { const v = debug.armorVisual({equipment: {armor: it}}); return ['a', v.kind, v.color, v.trim, v.bulk].join('|'); }
+  if (it.slot === 'offhand') { const v = debug.offhandVisual({equipment: {offhand: it}}); return ['o', v.kind, v.size, v.tint, v.trim].join('|'); }
+  return 'accessory:' + it.base;
+}
+const weaponSigs = new Set(), armorSigs = new Set(), offhandSigs = new Set();
+for (const [base, slot] of debug.itemBases().map(x => [x[0], x[1]])) {
+  const sig = gearSig({base, name: base, slot});
+  if (slot === 'weapon') weaponSigs.add(sig);
+  else if (slot === 'armor') armorSigs.add(sig);
+  else if (slot === 'offhand') offhandSigs.add(sig);
+}
+assert.ok(weaponSigs.size >= 15, `every weapon must render distinctly(${weaponSigs.size} signatures)`);
+assert.equal(armorSigs.size, 12, 'every armor must render distinctly');
+assert.equal(offhandSigs.size, 10, 'every offhand must render distinctly');
+assert.equal(typeof debug.gearIcon, 'function', 'stash/loadout item icons must exist');
+console.log('Gear-visual correspondence checks passed');

@@ -75,8 +75,30 @@ rather than hard-locking builds.
 | Farmer | DV2 Farmer | Spear-sidearm + farm wear | Eldiran r2 plain laborer | Hoe/spear tool layer (Phase 4 tools) |
 | Researcher | DV2 Scholar | Wand + book | Eldiran r12 scholar robe | Book/wand layers (Phase 4 tools) |
 
-## Consequences for the Eldiran census
+## Equipment ladders (DV2 model, adopted v0.7.19-20)
 
+DV2 organizes weapons into type ladders with shared silhouettes and material
+escalation: Dagger→Bandit Knife→Iron Sword→…→Royal Sword (14 swords),
+Woodcutter's Axe→…→Conqueror's Axe (12), Wooden→…→Golden Skull staffs (12),
+Soldier→…→Elemental spears (12), Lover's Foil→…→Estoc (10 sabers),
+Wooden Bow→…→Ancient Bow (12). Armor runs Linen→Leather→Chainmail→Noble→Kimono
+the same way. Slots are fixed at four: Weapon / Armor 1 / Armor 2 /
+Accessories — the same four Wayfarer uses.
+
+Adopted rules:
+
+- New bases extend existing ladders (Iron Sword, Steel Blade; Oak Bow,
+  Longbow; Battle Axe, Hatchet, Maul; Chain/Plate Mail; Tomes; Tower Shield)
+  instead of inventing unrelated shapes.
+- Within a type, escalation reads through material color + size, never a new
+  silhouette (bronze→iron→steel→rune; wood→oak→birch).
+- Every base renders distinctly on pawns AND as an icon in stash/loadout rows
+  (DV2 shows item art in its own UI) — smoke enforces distinct visual
+  signatures per slot.
+- Signature starting gear per job stays a future slice (DV2 adventurers arrive
+  with Daggers, Bows, Staves, Rapiers); no save/economy changes were made.
+
+## Consequences for the Eldiran census
 Judge Eldiran rows against the Cleric/Wizard/Researcher rows above, in this
 order: (1) headgear distinct from Mage-Red/Cyan hats; (2) staff vs wand read;
 (3) holy vs arcane vs scholarly palette accent; (4) weapon-neutral walk
