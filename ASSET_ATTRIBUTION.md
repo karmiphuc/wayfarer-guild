@@ -17,6 +17,7 @@ The v0.5 pixel preview now uses two CC0 Kenney atlases in the live renderer.
 | `assets/art/puny-characters/Slime.png` | Puny Characters | Shade | https://opengameart.org/content/puny-characters | CC0 1.0 | Retained for future animated-slime evaluation; not sampled by the renderer | Attribution not required; credit and local license retained here |
 | `assets/art/tiny-creatures/tilemap.png` | Tiny Creatures | Clint Bellanger | https://opengameart.org/node/160872 | CC0 1.0 | Species tiles cropped and nearest-neighbor scaled at render time | Attribution not required; credit and original license retained here |
 | `assets/art/eldiran/RPGCharacterSprites32x32.png` | 32x32 RPG Character Sprites | Eldiran | https://opengameart.org/content/32x32-rpg-character-sprites | CC0 1.0 | Front walk frames (cols 0-2) of per-job rows sampled at runtime; charge/weapon-icon columns never sampled | All 12 jobs: Adv r9, Fighter r16, Archer r3, Mage r10, Cleric r6, Knight r4, Ninja r8, Wizard r5, Paladin r17, Farmer r2, Blacksmith r18, Researcher r12 |
+| `assets/art/db32/*.png` (26 files) | 16x16 RPG Items DB32 | Ragnar Random | https://opengameart.org/content/16x16-rpg-items-db32 | CC0 1.0 | Individual 16px sprites drawn rotated at weapon hands, shields/books on pawns, all stash/loadout icons | 31 mapped bases, see ITEM_SPRITES |
 
 No third-party audio is shipped yet: all game audio is procedural WebAudio
 (generative loops, ambient beds, oscillator SFX — see issue #3). The audio

@@ -842,3 +842,11 @@ assert.equal(armorSigs.size, 12, 'every armor must render distinctly');
 assert.equal(offhandSigs.size, 10, 'every offhand must render distinctly');
 assert.equal(typeof debug.gearIcon, 'function', 'stash/loadout item icons must exist');
 console.log('Gear-visual correspondence checks passed');
+
+const sprites = debug.itemSprites();
+for (const base of ['Bronze Sword', 'Iron Sword', 'Steel Blade', 'Dagger', 'Oak Bow', 'Hunter Bow', 'Longbow', 'Oak Staff', 'Apprentice Staff', 'Runed Staff', 'Wood Shield', 'Round Shield', 'Iron Shield', 'Tower Shield', 'Oak Shield', 'Birch Shield', 'Spellbook', 'Tome of Embers', 'Prayer Book', 'Leather Coat', 'Iron Mail', 'Chain Mail', 'Plate Mail', 'Lucky Ring', 'Iron Ring', 'Vital Charm', 'Feather Charm', 'Boots of Striding', 'Swift Boots', 'Amulet of Vigor', 'Moonstone']) {
+  assert.ok(sprites[base], `${base} must map to a real sprite file`);
+  assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', 'assets', 'art', 'db32', sprites[base])), `sprite file ${sprites[base]} must be shipped`);
+}
+assert.equal(debug.itemImg('Nope'), null, 'unmapped bases must resolve to no sprite');
+console.log('Real-sprite item mapping checks passed');

@@ -1,0 +1,9 @@
+16x16 RPG Items (DB32) by Ragnar Random
+Source: https://opengameart.org/content/16x16-rpg-items-db32
+License: Creative Commons Zero v1.0 Universal (CC0 1.0)
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+
+DawnBringer32-palette item sprites (weapons, armor pieces, shields, books,
+rings, tools). Imported individual 16x16 files only; see ASSET_ATTRIBUTION.md
+for the per-item mapping. The game rotates/scales frames at runtime. Source
+pixels are otherwise unmodified.
