@@ -1,0 +1,5 @@
+# Static browser game — no build step. Local-only artifacts below.
+node_modules/
+.DS_Store
+Thumbs.db
+*.log

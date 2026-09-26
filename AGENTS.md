@@ -39,7 +39,7 @@ Before making a meaningful game change, read:
 - Do not break existing saves casually.
 - Keep simulation logic separated from rendering/UI as the project is modularized.
 - Validate syntax/content references before publishing.
-- Work on a branch for risky changes; publish to `master` only after validation.
+- Work on a branch for risky changes; publish to `main` only after validation.
 - The public URL must remain: https://karmiphuc.github.io/wayfarer-guild/
 
 ## Project hygiene

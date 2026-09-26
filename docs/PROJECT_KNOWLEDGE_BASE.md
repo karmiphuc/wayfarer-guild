@@ -27,7 +27,7 @@ frontier-capable jobs should sometimes explore without a manual click.
   by `useBuilding()`.
 - Save data is stored in `localStorage` as `wayfarerGuildV2`; current schema is
   version 4 with migration and state repair.
-- GitHub Pages publishes `master/wayfarer-guild/index.html`.
+- GitHub Pages publishes `index.html` from this repo's `main` branch root.
 
 ## Baseline evidence ledger (before this patch)
 

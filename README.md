@@ -49,7 +49,7 @@ Live: https://karmiphuc.github.io/wayfarer-guild/
 - JSON save export/import for device transfer
 - v0.2 saves migrate to v0.3
 - Responsive iPad/mobile layout
-- Hosted through GitHub Pages from `master/wayfarer-guild/index.html`
+- Hosted through GitHub Pages from this repo's `main` branch root (`index.html`)
 
 
 ## Project memory & plan
