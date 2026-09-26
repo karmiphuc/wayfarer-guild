@@ -61,6 +61,20 @@ Goals:
 
 **v0.4 exit test:** one town and one dungeon should feel intentionally art-directed rather than prototyped.
 
+## Cross-cutting P0 — fair anti-grind economy
+
+Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/32
+
+Rules:
+- no global stamina/energy;
+- no premium-like spend currency;
+- Gold/materials/fame/rank are the normal economy;
+- free job experimentation after unlocks;
+- no real-world timers or daily-login gates;
+- pawn fatigue and dungeon risk may constrain individual characters, never the player's ability to continue playing.
+
+**Exit test:** the player can keep playing indefinitely if they have healthy pawns and a functioning town; no account meter says "come back later."
+
 ## Phase 2 — Make the pawns lovable — 🚧 current focus
 
 Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/22
@@ -108,7 +122,7 @@ Goals:
 - several biomes;
 - events, merchants, shrines and camps;
 - temporary run blessings/curses;
-- fatigue/supplies;
+- expedition preparation and optional run supplies (tactical only; never a global entry/stamina gate);
 - push deeper vs extract;
 - biome counters;
 - unique bosses and drops;
@@ -156,9 +170,10 @@ Minimum 1.0 target:
 Unless a bug is blocking the live build:
 
 1. **P0 external-art evaluation + migration** (#20) — characters/monsters first, then authored buildings; see `ASSET_RESEARCH_2026-09-25.md`
-2. autonomy/personality and town-life depth (#22, #25)
-3. P0 architecture cleanup (#19)
-4. audio foundation beyond procedural combat SFX (#21)
+2. **P0 fair anti-grind economy** (#32) — remove monetization-shaped pacing and keep progression on ordinary earned resources
+3. autonomy/personality and town-life depth (#22, #25)
+4. P0 architecture cleanup (#19)
+5. audio foundation beyond procedural combat SFX (#21)
 5. jobs/items depth (#23)
 6. dungeons/frontier (#24)
 7. mobile/performance/save (#26)
