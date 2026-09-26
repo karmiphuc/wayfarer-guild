@@ -14,8 +14,8 @@ The modular source (`v2/js/`, `v2/tests/`, `v2/tools/`) lives in the owner's loc
 (`~/Projects/wayfarer-guild-review/src`, branch `feature/opus-rebuild`). GitHub `main` holds the **deployed bundle**:
 `v2/index.html` + `v2/game.js` (all modules concatenated by `tools/bundle.py`) + `v2/assets/`, plus these docs.
 - Working from GitHub and `v2/js/` is missing? Ask the owner for the source tree before starting feature work.
-- The deployed bundle can lag the local source by a few small commits (e.g. decor image keys are `mf_*` in the
-  2026-09-27 bundle, `deco_*` in the source). The source always wins.
+- The deployed bundle can lag the local source by a few small commits; the source always wins. (The bundle uploaded on
+  2026-09-27 with the replayability layer — happenings, charters, world codes — matches the source at that date.)
 - Never hand-edit `v2/game.js` except for an emergency hotfix — and then port the same fix into `v2/js/` afterwards,
   because the next bundle overwrites `game.js`.
 - Inside `game.js` each module is wrapped as `__m['<name>'] = (() => { ...module code... })();` in dependency order,
@@ -29,7 +29,7 @@ Run them from the **repository root** (the folder that contains `v2/`).
 
 | Goal | Command | Expected result |
 |---|---|---|
-| Check everything (run before EVERY commit) | `node v2/tests/check.mjs` | ends with `all checks passed` (≈2 s) |
+| Check everything (run before EVERY commit) | `node v2/tests/check.mjs` | ends with `all checks passed` (≈3 s) |
 | Check balance too (after touching numbers) | `node v2/tests/check.mjs --full` | ends with `all checks passed (full)` (≈3 min) |
 | Play locally | `python3 v2/tools/serve.py 8766 .` then open `http://localhost:8766/v2/?new` | game loads; `?new` = fresh village |
 | Rebuild sprite atlas (after adding/changing ANY png) | `uv run --with pillow python3 v2/tools/pack_atlas.py` | prints `N sprites -> 2 sheets` |
@@ -46,8 +46,9 @@ v2/
   js/                 SOURCE OF TRUTH — edit these
     jobs.js           29 classes (JOBS), 29 mastery perks (PERKS), job-change costs (TIER_TP), visitor pools
     items.js          70 items: weapons / armor / accessories / consumables (ITEMS), which shop sells what (SHOP_SLOTS)
+    happenings.js     weekly random HAPPENINGS, new-game village CHARTERS, per-world roster sizes (ROSTER_SIZE)
     data.js           everything else static: map size, sprites (SPR), facilities (FAC), decor (DECOR), traits/titles,
-                      events, monsters, bosses, ranks. Re-exports jobs.js and items.js.
+                      events, monsters, zone spawn lists (ZONE_MONS), bosses, ranks. Re-exports jobs.js, items.js, happenings.js.
     state.js          new game + world generation, stat formula, save/load/migrate (plain JSON state)
     sim.js            the simulation: calendar, adventurer AI, economy, combat, monsters, quests, dungeons, perks
     path.js           A* pathfinding (typed arrays)
@@ -74,6 +75,8 @@ v2/
    No functions, classes, Maps, Sets, DOM nodes or circular refs in state. IDs come from `s.nextId++`.
 4. **Changing the shape of saved data needs a migration.** Add the fix-up to `migrate()` in `state.js`
    (give old saves a default for every new field, rename old ids). Never break existing saves.
+   `migrate()` runs on EVERY load (brand-new saves too), so each transform must be a no-op on a current save:
+   guard on the OLD field being present (`if (a.base.hp !== undefined) {…}`), never on `s.schema`.
 5. **The renderer never changes state.** `render.js` and `ui.js` read `s`; all changes go through `Sim` methods
    (`build`, `upgrade`, `startQuest`, `changeJob`, `develop`, `runEvent`, `gift`, ...).
 6. **Pixel art at integer scale only.** Never set `imageSmoothingEnabled = true`; never draw sprites at fractional scale.
@@ -106,7 +109,11 @@ v2/
 | Canvas `filter` / `ctx.filter` for recolours | Not supported on older Safari. Use `tinted(key, deg)` from `assets.js` (pixel hue-rotation). |
 | Weapon sprite floats away from the hand | In-hand sprites must point blade-DOWN with the handle at the TOP of the png; bows are horizontal facing RIGHT. Hands are detected automatically from each frame — don't hard-code offsets. |
 | Uploading via the GitHub web UI | The file picker can't keep folder paths: upload **one folder per commit** (`/upload/main/v2/<folder>`), assets first, code last. See docs/DEPLOY.md. |
-| Monster image keys | `m_<Spr>` = monster sheet, `mf_<Spr>` = monster portrait, `deco_*` = decor images. Don't reuse prefixes. |
+| Monster image keys | `m_<Spr>` = monster sheet, `mf_<Spr>` = monster portrait, `deco_*` = decor images. These are image KEYS in `assetList()`, not file names (decor files are `assets/tiles/mf_*.png`). Don't reuse key prefixes. |
+| Showing or reusing the seed | `s.seed` is the RNG's running state and changes every step. The world code is `s.world.code` (`seedCode()` in state.js). |
+| `s.traits.Food += 5` | Lost on the next build: `recomputeTraits()` rebuilds `s.traits` from buildings + monsters. Persistent trait sources need their own field (issue #32). |
+| New player setting or one-shot flag | Put it in `s.flags.<key>` with a default in `newGame()` AND `migrate()`. |
+| New happening that spawns things | Keep their ids in `h.data` and remove them in `endHappening()`; `tests/happenings.mjs` fails if it never ends. |
 
 ## 6. If you are asked to add a feature
 
@@ -119,7 +126,10 @@ v2/
 ## 7. Project facts you should not re-derive
 
 - Map 76×56 tiles of 16 px. The village is a rectangle in the middle (`s.town`), monsters roam 4 zones around it
-  (zone = distance from the ORIGINAL town rect; south is gentle). The Old Cave dungeon entrance is at tile (36,7).
+  (zone = distance from the ORIGINAL town rect; south is gentle). The Old Cave entrance is random per world (`cavePos(s)`;
+  (36,7) in saves from before world codes).
+- Every village is founded from a world code (the seed): it fixes the monster species per zone (`ROSTER_SIZE`), the cave spot
+  and the 3 charters offered. Weekly happenings are rolled with the same seeded RNG, so code + choices replay identically.
 - 1 in-game week = 30 s at 1× speed (`WEEK_SECONDS`), 4 weeks/month, sim step `DT = 0.1 s`, max 40 steps per frame.
 - Job mastery at job level 10 (`MASTERY`), level caps 99 (`LV_CAP`, `JOB_CAP`). Perks stack and are kept forever.
 - Village stars 0–5 via `RANKS` conditions; ★5 requires beating `cyclop`. Post-game bosses need `star: 5`.
