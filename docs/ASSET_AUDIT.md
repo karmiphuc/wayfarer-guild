@@ -151,6 +151,20 @@ Weapon-bound action emphasis in v0.7.11:
   contact/release and zero again during recovery.
 - Automated checks cover exact family windows and peak/zero boundaries.
 
+Compact combat reactions in v0.7.12:
+
+- Reference combat scenes use tiny exclamations such as “Hah!” to keep each
+  adventurer legible amid monsters and overlapping effects.
+- Family cues now appear above the attacker at weapon release/contact: “Loose!”
+  for bows, “Cast!”/“Shine!” for staves, “Smash!” for hammers and restrained
+  “Hah!” cues for blades and axes. Criticals use a stronger “Hah!!” bubble.
+- Bubbles use a compact pixel speech shape, work in town and dungeon coordinates
+  and wait through anticipation without consuming their visible lifetime.
+- Per-pawn cooldowns plus a three-bubble ordinary cap keep 30-pawn battles from
+  becoming a wall of text; critical cues may bypass the ordinary cooldown.
+- Automated checks cover family text, release delay, lifetime preservation,
+  cooldown suppression and critical override.
+
 ## Findings
 
 ### P1 - non-humanoid job sprites
