@@ -4,7 +4,9 @@ Personal autonomous management RPG / roguelite prototype inspired by the managem
 
 Live: https://karmiphuc.github.io/wayfarer-guild/
 
-## v0.3
+Current: v0.7.18 · save schema v6 (localStorage `wayfarerGuildV2`, migrates older saves) · no stamina meters, no premium currency — progression runs on Gold, materials, fame and rank.
+
+## How it plays
 
 ### Autonomous adventurers
 - Utility-driven eating, resting, training, shopping, farming, wandering and field combat
@@ -31,7 +33,7 @@ Live: https://karmiphuc.github.io/wayfarer-guild/
 - Switch between live town view and live dungeon view
 
 ### Kingdom / town
-- Village popularity, Town Points and 5-star rank progression
+- Village popularity and 5-star rank progression (no Town Points — removed in v0.7.4)
 - Buildable and upgradable facilities with quality, appeal, income and upkeep
 - Research-gated facilities and jobs
 - Fog-of-war frontier deployment and resource gathering
@@ -47,9 +49,13 @@ Live: https://karmiphuc.github.io/wayfarer-guild/
 ### Save / deployment
 - Local autosave
 - JSON save export/import for device transfer
-- v0.2 saves migrate to v0.3
+- Older saves migrate forward (current schema v6)
 - Responsive iPad/mobile layout
 - Hosted through GitHub Pages from this repo's `main` branch root (`index.html`)
+
+### Presentation
+- Twelve jobs, twelve distinct outfits (one CC0 family); layered weapons/gear remain the only wield source
+- Procedural WebAudio: generative town/night/dungeon loops, ambient beds, UI + combat SFX, Music/SFX sliders
 
 
 ## Project memory & plan
