@@ -40,7 +40,7 @@ Legend:
 - [x] building identity no longer relies on emoji labels; authored building atlas still pending
 - [x] procedural gait/facing/dust pass; authored multi-frame walk cycles remain future art polish
 - [x] hit/heal/loot/KO/crit/victory combat feedback
-- [ ] add audio manager and volume settings
+- [x] procedural audio manager + Music/SFX sliders (slice 1 of #3); authored CC0 loop audition still pending
 - [ ] select first town/dungeon music loops
 - [ ] create deterministic smoke-test harness
 - [ ] split content definitions out of simulation code

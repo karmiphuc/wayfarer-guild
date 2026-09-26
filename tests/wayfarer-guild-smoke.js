@@ -743,3 +743,20 @@ for (const id of resumedState.activeQuest.party) {
 for (let i = 0; i < 12000 && resumedState.activeQuest; i++) resumed.update(1/30);
 assert.equal(resumedState.activeQuest, null, 'saved field operation should finish after reload');
 console.log('Mid-quest physical operation save/resume check passed');
+
+assert.ok(['day', 'night', 'dungeon'].includes(debug.audioMode()), 'audio engine should report a valid mode');
+for (const kind of ['select', 'confirm', 'cancel', 'build', 'rankup', 'coin', 'chest', 'swing', 'victory']) {
+  assert.doesNotThrow(() => debug.sfx(kind), `sfx ${kind} must be safe without an audio device`);
+}
+assert.doesNotThrow(() => debug.audioTick(), 'audio scheduler must idle safely without an audio device');
+assert.doesNotThrow(() => debug.duckMusic(), 'ducking must be safe without an audio device');
+assert.equal(debug.audioLevels().on, true, 'sound should default on');
+assert.equal(debug.audioLevels().music, .7, 'music should default to its designed level');
+assert.equal(debug.audioLevels().sfx, .8, 'sfx should default to its designed level');
+assert.equal(debug.audioLevels().amb, .55, 'ambience should default to its designed level');
+assert.equal(debug.setAudioLevel('music', .5), true);
+assert.equal(debug.audioLevels().music, .5, 'music level should persist');
+assert.equal(debug.setAudioLevel('music', 9), true);
+assert.equal(debug.audioLevels().music, 1, 'music level should clamp');
+assert.equal(debug.setAudioLevel('bogus', .5), false, 'unknown buses should be rejected');
+console.log('Procedural audio-manager foundation checks passed');
