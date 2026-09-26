@@ -71,6 +71,20 @@ Attachment correction in v0.7.5:
   covered an Archer's default bow and an equipped War Hammer with no console
   errors. Dungeon and touch-scale checks remain separate release gates.
 
+Combat-pose extension in v0.7.6:
+
+- The measured hand anchor remains the single transform origin throughout an
+  attack; weapon motion rotates around the grip instead of translating the
+  weapon away from the body.
+- Sword, axe and hammer attacks now have separate wind-up, contact and recovery
+  arcs. Hammer timing is deliberately slower and its overhead anticipation is
+  deeper; the axe uses a broader cleave.
+- Bows visibly pull their string and nocked arrow before release. Magic and holy
+  weapons raise into a focus pose and pulse at the casting beat.
+- Deterministic checks cover family timing, attack phases, swing separation and
+  bow-string release. A live dungeon and touch-scale visual check remains a
+  release gate.
+
 ## Findings
 
 ### P1 - non-humanoid job sprites
