@@ -190,3 +190,5 @@ When an item becomes real work, give it an issue. When an issue is finished, upd
 
 - ✅ v0.7.4 anti-grind economy: removed guild-wide Kingdom Energy from frontier deployment, removed Town Points/🔷 as a spend currency, moved research/events/quest refresh to ordinary Gold, made unlocked career changes free, replaced TP rewards with Gold/fame/material rewards, and added v6 save migration that converts legacy Town Points to Gold at 8G each.
 - 🎯 **Permanent economy rule — #32:** no account-level stamina, premium-like progression currency, real-world refill timers, daily-login gates, or low-value repetition whose purpose is to stretch playtime. Individual pawn fatigue remains simulation only; another healthy pawn can always continue the game.
+
+- ✅ v0.7.4 pacing pass: cumulative quest requirements for village ranks reduced from 3/8/18/32 to 2/5/10/16, with lower fame/income/build thresholds, and job-mastery XP requirements reduced from `40 + 18×job level` to `30 + 12×job level`. Pawn Energy is presented as personal **Vigor** so it cannot be confused with a guild-wide stamina meter.
