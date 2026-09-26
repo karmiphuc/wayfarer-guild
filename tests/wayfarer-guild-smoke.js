@@ -850,3 +850,14 @@ for (const base of ['Bronze Sword', 'Iron Sword', 'Steel Blade', 'Dagger', 'Oak 
 }
 assert.equal(debug.itemImg('Nope'), null, 'unmapped bases must resolve to no sprite');
 console.log('Real-sprite item mapping checks passed');
+
+const facSprites = {...debug.facilitySprites()};
+assert.deepEqual(Object.keys(facSprites).sort(), ['Farm','Guild','House','Inn','Library','Market','Stable','Tavern','Temple','Training','WeaponShop']);
+for (const [type, file] of Object.entries(facSprites)) {
+  assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', 'assets', 'art', 'citysim', file)), `facility sprite ${file} must be shipped`);
+}
+assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', 'assets', 'art', 'citysim', 'CC-BY-LICENSE.txt')), 'citysim CC-BY license must be shipped');
+assert.equal(debug.facilityImg('Forge'), null, 'forge keeps procedural live-fire rendering');
+assert.equal(debug.facilityImg('Storehouse'), null, 'storehouse keeps procedural crates');
+assert.equal(debug.facilityImg('Nope'), null, 'unknown facilities must fall back safely');
+console.log('Authored facility-sprite mapping checks passed');

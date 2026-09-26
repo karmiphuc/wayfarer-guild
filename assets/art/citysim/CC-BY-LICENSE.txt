@@ -1,0 +1,9 @@
+Isometric Medieval City Sim Assets by sketchylogic
+Source: https://opengameart.org/content/isometric-medieval-city-sim-assets
+License: Creative Commons Attribution 4.0 International (CC-BY 4.0)
+License URL: https://creativecommons.org/licenses/by/4.0/
+
+Attribution: building sprites by sketchylogic (opengameart.org), used under
+CC-BY 4.0. White edge backgrounds are keyed to transparent at load by the
+game; source pixels are otherwise unmodified. Recorded per-file in
+ASSET_ATTRIBUTION.md as required for CC-BY sources.
