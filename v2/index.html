@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2b1a10">
+<title>Wayfarer Guild</title>
+<link rel="icon" href="assets/items/GoldCup.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="view"></canvas>
+
+  <header id="topbar">
+    <div class="tb-left">
+      <div class="chip date" id="tb-date">Y1 · Apr · W1</div>
+      <div class="chip" title="Gold"><img src="assets/items/GoldCoin.png" class="px ic"><span id="tb-gold">0</span></div>
+      <div class="chip" title="Town Points (earned monthly from monster kills)"><img src="assets/items/SilverCup.png" class="px ic"><span id="tb-tp">0</span><small>TP</small></div>
+      <div class="chip" title="Popularity"><img src="assets/ui/emote/emote27.png" class="px ic"><span id="tb-pop">0</span></div>
+      <div class="chip stars" id="tb-stars" title="Village rank">☆☆☆☆☆</div>
+    </div>
+    <div class="tb-right">
+      <button class="btn sm" id="btn-names" title="Show names">Aa</button>
+      <button class="btn sm" id="btn-sound" title="Sound">♪</button>
+      <div class="speed" id="speed">
+        <button class="btn sm" data-speed="0">❚❚</button>
+        <button class="btn sm on" data-speed="1">1×</button>
+        <button class="btn sm" data-speed="2">2×</button>
+        <button class="btn sm" data-speed="4">4×</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="ticker"></div>
+  <div id="inspector" class="win hidden"></div>
+  <div id="goals" title="Goals for the next village star"></div>
+  <div id="buildbar" class="hidden"></div>
+
+  <nav id="menu">
+    <button class="mbtn" data-panel="build"><img class="px" src="assets/items/w_Hammer.png"><span>Build</span></button>
+    <button class="mbtn" data-panel="people"><img class="px" src="assets/chars/Villager.face.png"><span>Adventurers</span></button>
+    <button class="mbtn" data-panel="quests"><img class="px" src="assets/items/ScrollEmpty.png"><span>Quests</span></button>
+    <button class="mbtn" data-panel="develop"><img class="px" src="assets/items/w_Pickaxe.png"><span>Develop</span></button>
+    <button class="mbtn" data-panel="village"><img class="px" src="assets/items/GoldCup.png"><span>Village</span></button>
+    <button class="mbtn" data-panel="system"><img class="px" src="assets/items/Letter.png"><span>System</span></button>
+  </nav>
+
+  <section id="panel" class="win hidden">
+    <div class="panel-head"><h2 id="panel-title"></h2><button class="btn sm close" id="panel-close">✕</button></div>
+    <div id="panel-body"></div>
+  </section>
+
+  <div id="fanfare" class="hidden"><div class="ff-inner"><div class="ff-title"></div><div class="ff-sub"></div></div></div>
+  <div id="toast"></div>
+  <div id="ask" class="hidden"><div class="win ask-box"><p class="ask-text"></p><div class="row"><button class="btn ask-ok">OK</button><button class="btn ask-no">Cancel</button></div></div></div>
+
+  <div id="loading"><div class="load-box win"><h1>Wayfarer Guild</h1><p>A cosy adventurer-village sim</p><div class="bar"><i id="load-bar"></i></div><button class="btn big hidden" id="start-btn">Start</button></div></div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
