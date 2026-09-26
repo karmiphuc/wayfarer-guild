@@ -78,7 +78,9 @@ assert.ok(debug, 'debug surface should be available for the smoke harness');
 const state = debug.state();
 assert.deepEqual({...debug.mapSpec()}, {cols: 38, rows: 33, viewRows: 23, townMaxX: 24, populationCap: 30});
 assert.equal(debug.desiredMonsterCount(30), 23, 'a full town should support a much denser frontier population');
-assert.equal(state.version, 5);
+assert.equal(state.version, 6);
+assert.equal('energy' in state, false, 'guild-wide stamina must not exist');
+assert.equal('townPoints' in state, false, 'pseudo-premium town-point purse must not exist');
 assert.equal(state.fog.length, 33, 'new games should include the southern district');
 assert.ok(state.fog.slice(23).every(row => row.slice(0, 25).every(v => v === false)), 'new southern town cells should be revealed');
 assert.ok(state.fog.slice(23).every(row => row.slice(25).every(v => v === true)), 'new southern frontier cells should begin fogged');
@@ -173,8 +175,7 @@ resident.job = 'Adventurer';
 resident.hp = debug.stats(resident).maxHp;
 resident.energy = resident.hunger = 95;
 resident.x = 26; resident.y = 11;
-state.energy = 50;
-assert.equal(debug.deployExplore(resident, [32, 11]), true);
+assert.equal(debug.deployExplore(resident, [32, 11]), true, 'healthy residents explore without guild-wide stamina');
 for (let i = 0; i < 100; i++) debug.updatePawn(resident, 1/30);
 resident.energy = 5;
 debug.updatePawn(resident, 1/30);
@@ -239,8 +240,7 @@ for (let i = 0; i < 900; i++) {
 assert.ok(reachedHome, 'retreat must move the pawn back into town');
 resident.x = 26; resident.y = 11;
 resident.energy = resident.hunger = 90; resident.hp = debug.stats(resident).maxHp;
-state.energy = 50;
-assert.ok(debug.deployExplore(resident, [32, 11]));
+assert.ok(debug.deployExplore(resident, [32, 11]), 'Recall test should not require guild-wide stamina');
 elements.get('recallBtn').onclick();
 assert.equal(resident.task, 'Rest', 'Recall must select recovery rather than a nearby fight');
 assert.equal(resident.exploreTarget, null);
@@ -272,8 +272,10 @@ resident.mastered = ['Fighter'];
 assert.ok(debug.availableJobs(resident).includes('Knight'), 'Fighter mastery unlocks Knight');
 resident.mastered.push('Cleric');
 assert.ok(!debug.availableJobs(resident).includes('Paladin'), 'Paladin requires Temple research');
-state.townPoints = 100;
+state.gold = Math.max(state.gold, 500);
+const researchGold = state.gold;
 debug.research('Temple');
+assert.equal(state.gold, researchGold - 200, 'Temple research should use ordinary earned gold');
 assert.ok(debug.availableJobs(resident).includes('Paladin'), 'Temple and both masteries unlock Paladin');
 resident.mastered = ['Cleric'];
 assert.ok(!debug.availableJobs(resident).includes('Paladin'), 'Temple cannot bypass Fighter mastery');
@@ -317,7 +319,7 @@ const migrationContext = {...context, localStorage: {
 migrationContext.window = migrationContext;
 vm.runInNewContext(script, migrationContext);
 const migrated = migrationContext.__WAYFARER_DEBUG__.state();
-assert.equal(migrated.version, 5, 'v4 saves should migrate to v5');
+assert.equal(migrated.version, 6, 'v4 saves should migrate through to v6');
 assert.equal(migrated.fog.length, 33);
 assert.deepEqual(Array.from(migrated.fog.slice(0, 23), row => Array.from(row)), oldFog, 'migration must preserve every old fog cell');
 assert.deepEqual(Array.from(migrated.pawns, p => [p.id, p.x, p.y]), oldPositions, 'migration must preserve pawn identities and coordinates');
@@ -363,7 +365,7 @@ for (const raw of ['{broken', '', JSON.stringify({version: 999}), JSON.stringify
   failedContext.localStorage.setItem = write;
   elements.get('importFile').onchange({target: {files: [storage.value]}});
   assert.ok(reloaded, 'valid backup import must resume via reload');
-  assert.equal(JSON.parse(saved.get('wayfarerGuildV2')).version, 5);
+  assert.equal(JSON.parse(saved.get('wayfarerGuildV2')).version, 6);
   const restoredContext = {...failedContext};
   restoredContext.window = restoredContext;
   vm.runInNewContext(script, restoredContext);
@@ -506,16 +508,16 @@ console.log('Persistent carried-equipment mapping and gifting checks passed');
 
 const reviewState = debug.state();
 const reviewPawn = reviewState.pawns[0];
-const bossGold = reviewState.gold, bossPoints = reviewState.townPoints, alertBefore = reviewState.bossAlert;
+const bossGold = reviewState.gold, alertBefore = reviewState.bossAlert;
 const questBoss = {id: 89991, name: 'Contract Ogre', kind: 'Boss', level: 3, x: 30, y: 10,
   maxHp: 100, hp: 0, atk: 1, def: 1, dead: false, boss: false, questBoss: true, shining: false};
 reviewState.monsters.push(questBoss);
 debug.killMonster(questBoss, reviewPawn);
-assert.ok(reviewState.gold > bossGold && reviewState.townPoints >= bossPoints + 8, 'quest boss should grant boss-scale rewards');
+assert.ok(reviewState.gold > bossGold, 'quest boss should grant boss-scale gold rewards without a token currency');
 assert.equal(reviewState.bossAlert, alertBefore, 'quest boss must not clear an unrelated roaming boss alert');
 
 const dungeonParty = reviewState.pawns.slice(0, 2);
-const dungeonQuest = {id: 89992, type: 'Dungeon', diff: 1, name: 'KO Contract', reward: 1, pop: 1, tp: 1,
+const dungeonQuest = {id: 89992, type: 'Dungeon', diff: 1, name: 'KO Contract', reward: 1, pop: 1,
   party: dungeonParty.map(p => p.id), dungeon: {party: {}}};
 for (const [i, p] of dungeonParty.entries()) {
   p.ko = false; p.questing = true; p.hp = 20;
@@ -538,7 +540,7 @@ for (const p of fieldState.pawns.filter(p => p.resident)) {
 fieldState.gold = 1000;
 fieldState.wood = fieldState.ore = fieldState.herbs = fieldState.food = 0;
 const fieldQuest = {id: 90001, type: 'Mob', diff: 1, name: 'Visible Monster Sweep',
-  cost: 1, reward: 10, pop: 1, tp: 1, duration: 10, target: 'Goblin'};
+  cost: 1, reward: 10, pop: 1, duration: 10, target: 'Goblin'};
 const fieldStartGold = fieldState.gold;
 debug.startQuest(fieldQuest, false);
 assert.equal(fieldState.gold, fieldStartGold - fieldQuest.cost, 'field quest should charge its advertised cost exactly once');
@@ -573,7 +575,7 @@ for (const p of fieldState.pawns.filter(p => p.resident)) {
   p.ko = false; p.questing = false; p.energy = p.hunger = 100; p.hp = 10000;
 }
 const saveQuest = {id: 90002, type: 'Mob', diff: 1, name: 'Saved Field Sweep',
-  cost: 1, reward: 10, pop: 1, tp: 1, duration: 10, target: 'Beast'};
+  cost: 1, reward: 10, pop: 1, duration: 10, target: 'Beast'};
 debug.startQuest(saveQuest, false);
 for (let i = 0; i < 12000 && fieldState.activeQuest?.field?.phase !== 'return'; i++) debug.update(1/30);
 assert.equal(fieldState.activeQuest?.field?.phase, 'return', 'save fixture should reach the hauling phase');
