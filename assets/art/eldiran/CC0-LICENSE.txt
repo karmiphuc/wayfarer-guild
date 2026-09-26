@@ -1,0 +1,14 @@
+32x32 RPG Character Sprites by Eldiran
+Source: https://opengameart.org/content/32x32-rpg-character-sprites
+License: Creative Commons Zero v1.0 Universal (CC0 1.0)
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+
+The source page places the work in the public domain. Wayfarer Guild retains
+this notice for provenance.
+
+Imported files:
+- RPGCharacterSprites32x32.png
+
+The game samples front walk frames (columns 0-2) of per-job rows at runtime.
+Source pixels are otherwise unmodified. Unused rows (template, status icons,
+weapon icons, charge poses) are never sampled.

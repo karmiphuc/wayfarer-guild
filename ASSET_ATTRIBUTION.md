@@ -19,6 +19,7 @@ The v0.5 pixel preview now uses two CC0 Kenney atlases in the live renderer.
 | `assets/art/puny-characters/Archer-Purple.png` | Puny Characters | Shade | https://opengameart.org/content/puny-characters | CC0 1.0 | Hooded ranger sheet; walk frames verified weapon-neutral, baked-weapon rows excluded | Ninja mapping; fixes Warrior-Blue near-collision |
 | `assets/art/puny-characters/Human-Worker-Cyan.png` | Puny Characters | Shade | https://opengameart.org/content/puny-characters | CC0 1.0 | Worker body; walk frames verified weapon-neutral | Farmer mapping |
 | `assets/art/puny-characters/Human-Worker-Red.png` | Puny Characters | Shade | https://opengameart.org/content/puny-characters | CC0 1.0 | Worker body; walk frames verified weapon-neutral | Blacksmith mapping |
+| `assets/art/eldiran/RPGCharacterSprites32x32.png` | 32x32 RPG Character Sprites | Eldiran | https://opengameart.org/content/32x32-rpg-character-sprites | CC0 1.0 | Front walk frames (cols 0-2) of per-job rows sampled at runtime; charge/weapon-icon columns never sampled | Adventurer r9, Fighter r16, Cleric r6, Knight r4, Ninja r8, Wizard r5, Paladin r17, Researcher r10 |
 
 No third-party audio is shipped yet: all game audio is procedural WebAudio
 (generative loops, ambient beds, oscillator SFX — see issue #3). The audio
