@@ -8,7 +8,7 @@ Live source always wins if this document becomes stale.
 
 ## Verified baseline
 
-- Branch: `main` in repo `karmiphuc/wayfarer-guild` (moved from `karmiphuc.github.io/wayfarer-guild`; old issues #19-32 are now #1-14); tip `c2782a8`.
+- Branch: `main` in repo `karmiphuc/wayfarer-guild` (moved from `karmiphuc.github.io/wayfarer-guild`; old issues #19-32 are now #1-14); tip `3311956`.
 - Public build: <https://karmiphuc.github.io/wayfarer-guild/>.
 - Game source: `index.html`.
 - Save key/schema: `wayfarerGuildV2`, version 6.
@@ -16,8 +16,9 @@ Live source always wins if this document becomes stale.
 - The smoke harness covers needs/recovery, combat/rescue, jobs/facilities,
   failed-save preservation, physical field quests, late-phase save/resume,
   quest-boss rewards, dungeon KO propagation, job-atlas mapping guards,
-  and the procedural audio-manager foundation (modes, levels, clamping,
-  no-device safety).
+  the procedural audio-manager foundation (modes, levels, clamping,
+  no-device safety), actor-metrics calibration (enclosure, breathing room,
+  per-source anchors), and the 12-distinct-bodies mapping.
 - This is simulation evidence. Local rendering, mobile interaction and the
   deployed Pages artifact remain separate release gates.
 
