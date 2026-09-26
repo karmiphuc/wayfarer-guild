@@ -64,4 +64,4 @@ The repository is now the durable source of truth for the game's direction:
 - [Asset attribution ledger](./ASSET_ATTRIBUTION.md) — provenance for every third-party file actually used
 - [Agent working agreement](./AGENTS.md) — rules future coding sessions should follow
 
-Current priorities are architecture/data-driven content ([#19](https://github.com/karmiphuc/karmiphuc.github.io/issues/19)), the first cohesive pixel-art pass ([#20](https://github.com/karmiphuc/karmiphuc.github.io/issues/20)), and music/SFX ([#21](https://github.com/karmiphuc/karmiphuc.github.io/issues/21)).
+Current priorities are architecture/data-driven content ([#1](https://github.com/karmiphuc/wayfarer-guild/issues/1)), the first cohesive pixel-art pass ([#2](https://github.com/karmiphuc/wayfarer-guild/issues/2)), and music/SFX ([#3](https://github.com/karmiphuc/wayfarer-guild/issues/3)).

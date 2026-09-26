@@ -26,12 +26,12 @@ Legend:
 
 - 🚧 **P0 Restore facility and pawn-state contracts** — research-gated Farm/Forge placement, starting-home assignment, home-based recovery, Forge work, and job-led frontier exploration. Evidence and acceptance checks: [project knowledge base](./PROJECT_KNOWLEDGE_BASE.md). Maps to #22, #23, #24 and #25.
 
-- ⏳ **P0 Modular architecture/data-driven content** — [#19](https://github.com/karmiphuc/karmiphuc.github.io/issues/19)
-- 🚧 **P0 Cohesive pixel-art pipeline** — [#20](https://github.com/karmiphuc/karmiphuc.github.io/issues/20)
+- ⏳ **P0 Modular architecture/data-driven content** — [#19](https://github.com/karmiphuc/wayfarer-guild/issues/1)
+- 🚧 **P0 Cohesive pixel-art pipeline** — [#20](https://github.com/karmiphuc/wayfarer-guild/issues/2)
   - Character/monster mapping is now materially better.
   - **Facility art is NOT complete:** v0.6.9 is only an interim procedural isometric renderer and misses the authored concept-sheet quality bar.
   - Next serious building-art pass should use authored isometric pixel sprites/atlas with strong silhouettes, roof volume, texture, landscaping and facility-specific composition rather than canvas geometry.
-- ⏳ **P0 Music/ambience/SFX foundation** — [#21](https://github.com/karmiphuc/karmiphuc.github.io/issues/21)
+- ⏳ **P0 Music/ambience/SFX foundation** — [#21](https://github.com/karmiphuc/wayfarer-guild/issues/3)
 
 ### Small pending tasks inside v0.4
 - [x] 16px source-pixel art grid with integer/nearest-neighbor scaling
@@ -47,8 +47,8 @@ Legend:
 
 ## Next — pawn/town life
 
-- 🚧 **P1 Pawn personality/social/autonomy depth** — [#22](https://github.com/karmiphuc/karmiphuc.github.io/issues/22) — active in v0.7.0
-- ⏳ **P1 Town economy/facilities/events/content density** — [#25](https://github.com/karmiphuc/karmiphuc.github.io/issues/25)
+- 🚧 **P1 Pawn personality/social/autonomy depth** — [#22](https://github.com/karmiphuc/wayfarer-guild/issues/4) — active in v0.7.0
+- ⏳ **P1 Town economy/facilities/events/content density** — [#25](https://github.com/karmiphuc/wayfarer-guild/issues/7)
 
 Pending ideas:
 - [x] persistent personality dimensions + readable trait labels
@@ -67,7 +67,7 @@ Pending ideas:
 
 ## Next — RPG depth
 
-- ⏳ **P1 Jobs/mastery/equipment/buildcraft** — [#23](https://github.com/karmiphuc/karmiphuc.github.io/issues/23)
+- ⏳ **P1 Jobs/mastery/equipment/buildcraft** — [#23](https://github.com/karmiphuc/wayfarer-guild/issues/5)
 
 Pending:
 - [ ] full job graph
@@ -83,7 +83,7 @@ Pending:
 
 ## Next — dungeons/frontier
 
-- ⏳ **P1 Physical dungeon + roguelite depth** — [#24](https://github.com/karmiphuc/karmiphuc.github.io/issues/24)
+- ⏳ **P1 Physical dungeon + roguelite depth** — [#24](https://github.com/karmiphuc/wayfarer-guild/issues/6)
 
 Pending:
 - [ ] multiple room graphs
@@ -103,7 +103,7 @@ Pending:
 
 ## Platform / robustness
 
-- ⏳ **P1 iPad/mobile/performance/save hardening** — [#26](https://github.com/karmiphuc/karmiphuc.github.io/issues/26)
+- ⏳ **P1 iPad/mobile/performance/save hardening** — [#26](https://github.com/karmiphuc/wayfarer-guild/issues/8)
 
 Pending:
 - [ ] profile 30 active pawns

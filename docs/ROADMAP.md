@@ -28,7 +28,7 @@ Already present:
 ## Phase 1 — v0.4: Make it look and sound like a real game
 
 ### P0: modularize the prototype
-Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/19
+Tracking: https://github.com/karmiphuc/wayfarer-guild/issues/1
 
 Goals:
 - separate simulation/render/UI/content/save/audio modules;
@@ -37,7 +37,7 @@ Goals:
 - add repeatable validation before deploy.
 
 ### P0: first cohesive pixel-art pass
-Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/20
+Tracking: https://github.com/karmiphuc/wayfarer-guild/issues/2
 
 Goals:
 - remove placeholder geometry/emoji as primary game art;
@@ -50,7 +50,7 @@ Goals:
 - VFX and pixel UI.
 
 ### P0: audio foundation
-Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/21
+Tracking: https://github.com/karmiphuc/wayfarer-guild/issues/3
 
 Goals:
 - audio manager;
@@ -63,7 +63,7 @@ Goals:
 
 ## Cross-cutting P0 — fair anti-grind economy
 
-Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/32
+Tracking: https://github.com/karmiphuc/wayfarer-guild/issues/14
 
 Rules:
 - no global stamina/energy;
@@ -77,8 +77,8 @@ Rules:
 
 ## Phase 2 — Make the pawns lovable — 🚧 current focus
 
-Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/22
-and https://github.com/karmiphuc/karmiphuc.github.io/issues/25
+Tracking: https://github.com/karmiphuc/wayfarer-guild/issues/4
+and https://github.com/karmiphuc/wayfarer-guild/issues/7
 
 Goals:
 - personality-weighted utility AI;
@@ -97,7 +97,7 @@ Goals:
 
 ## Phase 3 — v0.6: RPG/buildcraft depth
 
-Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/23
+Tracking: https://github.com/karmiphuc/wayfarer-guild/issues/5
 
 Goals:
 - full base → advanced → hybrid job tree;
@@ -114,7 +114,7 @@ Goals:
 
 ## Phase 4 — v0.7: Dungeon and frontier depth
 
-Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/24
+Tracking: https://github.com/karmiphuc/wayfarer-guild/issues/6
 
 Goals:
 - multiple physical dungeon layouts;
@@ -133,7 +133,7 @@ Goals:
 
 ## Phase 5 — v0.8/v0.9: Content density, balance and mobile hardening
 
-Tracking: https://github.com/karmiphuc/karmiphuc.github.io/issues/26
+Tracking: https://github.com/karmiphuc/wayfarer-guild/issues/8
 
 Goals:
 - tune economy and pacing;
