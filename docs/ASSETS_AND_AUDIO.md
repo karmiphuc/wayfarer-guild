@@ -156,23 +156,19 @@ Because this project is a **public web repository**, do not use Sonniss as the d
 
 ## Audio architecture
 
-Implement three buses:
-- Music
-- Ambience
-- SFX
+Implemented (issue #3, slice 1 — procedural foundation, no third-party files):
 
-Player settings:
-- master mute;
-- independent sliders;
-- persist in localStorage.
+- Three buses exist as GainNodes: music / ambience / sfx, plus master mute.
+- Player settings: master mute plus Music/SFX sliders, persisted in
+  localStorage (ambience level API exists; slider not yet exposed).
+- Generative town-day loop, town-night variant and dungeon loop with
+  lookahead scheduling; crossfade-by-duck on view switch, no restart on
+  ordinary UI changes.
+- Ambient beds: wind, night crickets, dungeon drone + droplets.
+- Boss/rank-up stingers duck music briefly; combat SFX keep the 25ms throttle.
 
-Behavior:
-- do not restart music on ordinary UI changes;
-- crossfade town ↔ dungeon;
-- duck music slightly for boss/rank-up stingers;
-- spatial/volume limits for repeated pawn actions;
-- throttle repetitive combat sounds;
-- only nearby/selected pawn micro-SFX should be prominent.
+Still open: authored CC0 loop audition (candidates in ASSET_ATTRIBUTION.md),
+ambience slider, spatial pawn micro-SFX (needs #1 modularization first).
 
 ## Proposed asset folder structure
 

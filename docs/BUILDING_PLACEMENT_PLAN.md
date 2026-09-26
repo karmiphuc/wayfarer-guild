@@ -1,7 +1,7 @@
 # Next fix: town space and building placement
 
 Status: southern expansion and desktop placement preview implemented in v0.6.0;
-touch confirmation remains planned. Tracking: #25 (town), #26 (touch/save safety).
+touch confirmation remains planned. Tracking: #7 (town), #8 (touch/save safety).
 
 ## Implemented baseline
 

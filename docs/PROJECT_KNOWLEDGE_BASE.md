@@ -1,9 +1,9 @@
 # Wayfarer Guild Project Knowledge Base
 
-Updated: 2026-09-24  
-Source of truth: `wayfarer-guild/index.html` on `master`  
+Updated: 2026-09-26  
+Source of truth: `index.html` on `main` (repo `karmiphuc/wayfarer-guild`, moved from `karmiphuc.github.io/wayfarer-guild`; old issues #19-32 transferred as #1-14)  
 Observed deployment: https://karmiphuc.github.io/wayfarer-guild/  
-Audited commit: `f61eec9` (`Track v0.5.2 combat feedback pass`)
+Audited commit: `c2782a8` (Issue #3 slice 1: procedural audio-manager foundation)
 
 ## Product north star
 
@@ -26,7 +26,10 @@ frontier-capable jobs should sometimes explore without a manual click.
 - Facilities are data-defined in `BDEFS`, selected by `BUILD_TASK`, and applied
   by `useBuilding()`.
 - Save data is stored in `localStorage` as `wayfarerGuildV2`; current schema is
-  version 4 with migration and state repair.
+  version 6 with migration and state repair.
+- Audio runs on procedural WebAudio buses (music/ambience/sfx) with persisted
+  levels and generative town/night/dungeon loops; no third-party audio shipped
+  yet (issue #3).
 - GitHub Pages publishes `index.html` from this repo's `main` branch root.
 
 ## Baseline evidence ledger (before this patch)
@@ -59,8 +62,8 @@ issues rather than creating a new competing architecture:
    debug surface without requiring a live save or a full browser session. The
    current smoke harness is `tests/wayfarer-guild-smoke.js`.
 
-Related existing planning issues: #22 pawn autonomy, #23 jobs/buildcraft,
-#24 frontier/expeditions, and #25 town facilities/economy.
+Related existing planning issues: #4 pawn autonomy, #5 jobs/buildcraft,
+#6 frontier/expeditions, and #7 town facilities/economy.
 
 ## Acceptance checks
 
@@ -108,12 +111,12 @@ target reservations and a Scout job are not implemented by this patch.
   This does not constitute exhaustive corrupt-save validation or a backup system.
 
 - Split the single HTML file into simulation, content, rendering, UI and save
-  modules under issue #19 after this bug slice is stable.
+   modules under issue #1 after this bug slice is stable.
 - Add explicit role/job data for Scout rather than growing hard-coded job lists.
 - Expand the deterministic simulation harness before expanding facilities,
   dungeons or content density.
 - Re-test at 30 and 60 pawns and verify background-tab/mobile behavior under
-  issue #26.
+   issue #8.
 
 ## Deployment note
 

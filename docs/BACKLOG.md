@@ -16,22 +16,22 @@ Legend:
 ### Active bugfix slice — facilities, housing and frontier autonomy
 
 - Pawn recovery follow-up: combined hunger/exhaustion/injury, combat/rescue disengagement, HP-aware Camp, Knight/Paladin eligibility, Researcher Study, explicit Recall recovery and failed-save preservation have deterministic regression coverage. Rendered browser verification remains open.
-- ✅ **30-pawn town expansion baseline** — map expanded from 38×23 to 38×33 without moving existing coordinates; a fixed-scale 23-row camera pans to the southern district, v4 saves migrate to v5, construction has a green/red footprint and rejection reason, population cap is 30, and frontier monster density scales with population. Touch confirmation and rendered browser verification remain open. See [building placement plan](./BUILDING_PLACEMENT_PLAN.md). Tracks #25 and #26.
-- 🚧 **Dungeon Village-style visible quest loop** — field quests now spawn visible monster packs; volunteers walk out, fight, gather, carry and return before rewards deposit. Mid-operation save/resume is covered. Direction and research: [Dungeon Village direction](./DUNGEON_VILLAGE_DIRECTION.md). Next: ordinary exploration hauling and facility activity feedback. Maps to #22, #24 and #25.
+- ✅ **30-pawn town expansion baseline** — map expanded from 38×23 to 38×33 without moving existing coordinates; a fixed-scale 23-row camera pans to the southern district, v4 saves migrate to v5, construction has a green/red footprint and rejection reason, population cap is 30, and frontier monster density scales with population. Touch confirmation and rendered browser verification remain open. See [building placement plan](./BUILDING_PLACEMENT_PLAN.md). Tracks #7 and #8.
+- 🚧 **Dungeon Village-style visible quest loop** — field quests now spawn visible monster packs; volunteers walk out, fight, gather, carry and return before rewards deposit. Mid-operation save/resume is covered. Direction and research: [Dungeon Village direction](./DUNGEON_VILLAGE_DIRECTION.md). Next: ordinary exploration hauling and facility activity feedback. Maps to #4, #6 and #7.
 - ✅ **Persistent directional equipment** — equipped swords, bows, staves, axes and hammers are visible beside pawns in town and dungeons, face their travel/attack direction and follow attack motion. Wood/round shields and spellbooks occupy the opposite hand; restrained coat/mail/robe/cloak cues complete the readable silhouette. Unarmed jobs show a training weapon until they acquire equipment.
 - ✅ **Equipment gifting and role fit** — stash gear can be gifted directly to the selected available pawn; gifted slots remain reserved from role-aware auto-equip, improve satisfaction, survive saves, and can be released by re-enabling auto-equip. Next: rendered scale/overlap verification and stronger Forge/shop presentation.
 - ✅ **Gift/shop equipment contract** — adventurers still buy upgrades autonomously while physically using the Weapon Shop, but shop AI cannot charge for or replace player-reserved gifts; an accepted purchase immediately changes the carried equipment.
 - ✅ **Reversible loadouts** — the Gear pane shows the selected adventurer's four equipment slots, marks gifted reservations, and can return individual items to the stash without losing item identity or disturbing other slots.
 - ✅ **Readable equipment payoff** — uncommon/rare/epic/unique carried weapons and offhands show compact rarity glints; gifting produces a rarity-colored EQUIPPED pop and a pawn celebration on the town map.
 
-- 🚧 **P0 Restore facility and pawn-state contracts** — research-gated Farm/Forge placement, starting-home assignment, home-based recovery, Forge work, and job-led frontier exploration. Evidence and acceptance checks: [project knowledge base](./PROJECT_KNOWLEDGE_BASE.md). Maps to #22, #23, #24 and #25.
+- 🚧 **P0 Restore facility and pawn-state contracts** — research-gated Farm/Forge placement, starting-home assignment, home-based recovery, Forge work, and job-led frontier exploration. Evidence and acceptance checks: [project knowledge base](./PROJECT_KNOWLEDGE_BASE.md). Maps to #4, #5, #6 and #7.
 
-- ⏳ **P0 Modular architecture/data-driven content** — [#19](https://github.com/karmiphuc/wayfarer-guild/issues/1)
-- 🚧 **P0 Cohesive pixel-art pipeline** — [#20](https://github.com/karmiphuc/wayfarer-guild/issues/2)
+- ⏳ **P0 Modular architecture/data-driven content** — [#1](https://github.com/karmiphuc/wayfarer-guild/issues/1)
+- 🚧 **P0 Cohesive pixel-art pipeline** — [#2](https://github.com/karmiphuc/wayfarer-guild/issues/2)
   - Character/monster mapping is now materially better.
   - **Facility art is NOT complete:** v0.6.9 is only an interim procedural isometric renderer and misses the authored concept-sheet quality bar.
   - Next serious building-art pass should use authored isometric pixel sprites/atlas with strong silhouettes, roof volume, texture, landscaping and facility-specific composition rather than canvas geometry.
-- ⏳ **P0 Music/ambience/SFX foundation** — [#21](https://github.com/karmiphuc/wayfarer-guild/issues/3)
+- ⏳ **P0 Music/ambience/SFX foundation** — [#3](https://github.com/karmiphuc/wayfarer-guild/issues/3) — slice 1 landed: procedural audio manager, three buses, generative town/night/dungeon loops, ambient beds, UI vocabulary, sliders; authored CC0 loop audition still open
 
 ### Small pending tasks inside v0.4
 - [x] 16px source-pixel art grid with integer/nearest-neighbor scaling
@@ -47,8 +47,8 @@ Legend:
 
 ## Next — pawn/town life
 
-- 🚧 **P1 Pawn personality/social/autonomy depth** — [#22](https://github.com/karmiphuc/wayfarer-guild/issues/4) — active in v0.7.0
-- ⏳ **P1 Town economy/facilities/events/content density** — [#25](https://github.com/karmiphuc/wayfarer-guild/issues/7)
+- 🚧 **P1 Pawn personality/social/autonomy depth** — [#4](https://github.com/karmiphuc/wayfarer-guild/issues/4) — active in v0.7.0
+- ⏳ **P1 Town economy/facilities/events/content density** — [#7](https://github.com/karmiphuc/wayfarer-guild/issues/7)
 
 Pending ideas:
 - [x] persistent personality dimensions + readable trait labels
@@ -67,7 +67,7 @@ Pending ideas:
 
 ## Next — RPG depth
 
-- ⏳ **P1 Jobs/mastery/equipment/buildcraft** — [#23](https://github.com/karmiphuc/wayfarer-guild/issues/5)
+- ⏳ **P1 Jobs/mastery/equipment/buildcraft** — [#5](https://github.com/karmiphuc/wayfarer-guild/issues/5)
 
 Pending:
 - [ ] full job graph
@@ -83,7 +83,7 @@ Pending:
 
 ## Next — dungeons/frontier
 
-- ⏳ **P1 Physical dungeon + roguelite depth** — [#24](https://github.com/karmiphuc/wayfarer-guild/issues/6)
+- ⏳ **P1 Physical dungeon + roguelite depth** — [#6](https://github.com/karmiphuc/wayfarer-guild/issues/6)
 
 Pending:
 - [ ] multiple room graphs
@@ -103,7 +103,7 @@ Pending:
 
 ## Platform / robustness
 
-- ⏳ **P1 iPad/mobile/performance/save hardening** — [#26](https://github.com/karmiphuc/wayfarer-guild/issues/8)
+- ⏳ **P1 iPad/mobile/performance/save hardening** — [#8](https://github.com/karmiphuc/wayfarer-guild/issues/8)
 
 Pending:
 - [ ] profile 30 active pawns
@@ -198,6 +198,6 @@ When an item becomes real work, give it an issue. When an issue is finished, upd
 - 🚨 **P0 art recovery / external asset migration:** current homemade character sprites are rejected as a final direction. Follow `docs/ASSET_RESEARCH_2026-09-25.md`. First Work-mode evaluation set: Ninja Adventure (CC0), Tiny Creatures (CC0), OGA 32x32 RPG Characters (CC0), Tiny Swords old CC0, Black Coffee Panda isometric buildings (CC-BY 4.0), Artyom Zagorskiy Isometric Medieval Pack (CC0). Do not spend more time polishing `readable-sprites.js` before this comparison.
 
 - ✅ v0.7.4 anti-grind economy: removed guild-wide Kingdom Energy from frontier deployment, removed Town Points/🔷 as a spend currency, moved research/events/quest refresh to ordinary Gold, made unlocked career changes free, replaced TP rewards with Gold/fame/material rewards, and added v6 save migration that converts legacy Town Points to Gold at 8G each.
-- 🎯 **Permanent economy rule — #32:** no account-level stamina, premium-like progression currency, real-world refill timers, daily-login gates, or low-value repetition whose purpose is to stretch playtime. Individual pawn fatigue remains simulation only; another healthy pawn can always continue the game.
+- 🎯 **Permanent economy rule — #14:** no account-level stamina, premium-like progression currency, real-world refill timers, daily-login gates, or low-value repetition whose purpose is to stretch playtime. Individual pawn fatigue remains simulation only; another healthy pawn can always continue the game.
 
 - ✅ v0.7.4 pacing pass: cumulative quest requirements for village ranks reduced from 3/8/18/32 to 2/5/10/16, with lower fame/income/build thresholds, and job-mastery XP requirements reduced from `40 + 18×job level` to `30 + 12×job level`. Pawn Energy is presented as personal **Vigor** so it cannot be confused with a guild-wide stamina meter.

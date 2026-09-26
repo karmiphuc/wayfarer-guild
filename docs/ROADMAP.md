@@ -51,6 +51,7 @@ Goals:
 
 ### P0: audio foundation
 Tracking: https://github.com/karmiphuc/wayfarer-guild/issues/3
+Status: procedural slice landed — audio manager, three buses, generative town/night/dungeon loops, ambient beds, UI vocabulary, sliders; authored CC0 loop audition still open.
 
 Goals:
 - audio manager;
@@ -169,13 +170,13 @@ Minimum 1.0 target:
 
 Unless a bug is blocking the live build:
 
-1. **P0 external-art evaluation + migration** (#20) — characters/monsters first, then authored buildings; see `ASSET_RESEARCH_2026-09-25.md`
-2. **P0 fair anti-grind economy** (#32) — remove monetization-shaped pacing and keep progression on ordinary earned resources
-3. autonomy/personality and town-life depth (#22, #25)
-4. P0 architecture cleanup (#19)
-5. audio foundation beyond procedural combat SFX (#21)
-6. jobs/items depth (#23)
-7. dungeons/frontier (#24)
-8. mobile/performance/save (#26)
+1. **P0 external-art evaluation + migration** (#2) — characters/monsters first, then authored buildings; see `ASSET_RESEARCH_2026-09-25.md`
+2. **P0 fair anti-grind economy** (#14) — remove monetization-shaped pacing and keep progression on ordinary earned resources
+3. autonomy/personality and town-life depth (#4, #7)
+4. P0 architecture cleanup (#1)
+5. audio: authored CC0 loop audition — procedural foundation (manager, buses, generative loops, sliders) landed; see #3
+6. jobs/items depth (#5)
+7. dungeons/frontier (#6)
+8. mobile/performance/save (#8)
 
 Update this file when priorities change.

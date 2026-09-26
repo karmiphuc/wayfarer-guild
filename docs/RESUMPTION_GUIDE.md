@@ -1,6 +1,6 @@
 # Wayfarer Guild resumption guide
 
-Updated: 2026-09-24
+Updated: 2026-09-26
 
 This is the operational restart point for future sessions. Read it with
 `AGENTS.md`, `PROJECT_KNOWLEDGE_BASE.md`, `BACKLOG.md`, and the current diff.
@@ -8,14 +8,16 @@ Live source always wins if this document becomes stale.
 
 ## Verified baseline
 
-- Branch: `master`; parent baseline before this slice: `a6c6212`.
+- Branch: `main` in repo `karmiphuc/wayfarer-guild` (moved from `karmiphuc.github.io/wayfarer-guild`; old issues #19-32 are now #1-14); tip `c2782a8`.
 - Public build: <https://karmiphuc.github.io/wayfarer-guild/>.
-- Game source: `wayfarer-guild/index.html`.
-- Save key/schema: `wayfarerGuildV2`, version 4.
-- Deterministic command: `node wayfarer-guild/tests/wayfarer-guild-smoke.js`.
+- Game source: `index.html`.
+- Save key/schema: `wayfarerGuildV2`, version 6.
+- Deterministic command: `node tests/wayfarer-guild-smoke.js`.
 - The smoke harness covers needs/recovery, combat/rescue, jobs/facilities,
   failed-save preservation, physical field quests, late-phase save/resume,
-  quest-boss rewards, dungeon KO propagation, and job-atlas mapping guards.
+  quest-boss rewards, dungeon KO propagation, job-atlas mapping guards,
+  and the procedural audio-manager foundation (modes, levels, clamping,
+  no-device safety).
 - This is simulation evidence. Local rendering, mobile interaction and the
   deployed Pages artifact remain separate release gates.
 
@@ -221,8 +223,7 @@ and more compact path-led town composition.
 
 1. Read current status/diff and this guide.
 2. Re-run deterministic checks.
-3. Verify dungeon and iPad rendering for the v0.7.2 Puny sprite import, then
-   verify the deployed Pages build after it updates.
+3. Verify the audio slice in a real browser (loops follow town/dungeon/day-night, sliders persist, no autoplay errors), then verify the deployed Pages build after it updates.
 4. Continue ordinary exploration hauling using the field-operation pattern.
 5. Add facility feedback before decorative density.
 6. Finish touch confirmation and profile the expanded map at 30 pawns.
