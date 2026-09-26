@@ -85,6 +85,17 @@ Combat-pose extension in v0.7.6:
   bow-string release. A live dungeon and touch-scale visual check remains a
   release gate.
 
+Contact-timing correction in v0.7.7:
+
+- Melee slash, cleave and smash effects wait for the weapon's contact frame.
+- Bows and staves finish their anticipation before spawning a projectile; hit
+  flash, recoil, damage text and critical feedback wait for projectile travel.
+- Attack audio follows release/contact instead of firing at the start of the
+  wind-up.
+- Pending effects stay hidden without consuming their visible lifetime.
+- Automated checks cover release/contact ordering, delayed-effect activation
+  and pre-contact recoil suppression.
+
 ## Findings
 
 ### P1 - non-humanoid job sprites
