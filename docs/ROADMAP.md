@@ -1,12 +1,12 @@
 # Roadmap
 
-Status: **v0.6.9 systems/art prototype live**
+Status: **v0.7.4 systems/art prototype live**
 
 Live build: https://karmiphuc.github.io/wayfarer-guild/
 
 This roadmap is ordered by leverage rather than novelty. The live prototype has moved beyond the original phase numbering, so version numbers now reflect shipped slices rather than these historical phase labels.
 
-Current priority: **art recovery via researched external asset packs**, then resume pawn autonomy/personality. The homemade v0.7.1 character sprites and v0.6.9 procedural isometric facilities are programmer-art placeholders, not an acceptable final visual direction. Follow `ASSET_RESEARCH_2026-09-25.md` before doing more custom sprite work.
+Current priorities: **art recovery via researched external asset packs** and **anti-grind economy cleanup**, then resume pawn autonomy/personality. The homemade v0.7.1 character sprites and v0.6.9 procedural isometric facilities are programmer-art placeholders, not an acceptable final visual direction. Follow `ASSET_RESEARCH_2026-09-25.md` before doing more custom sprite work.
 
 ## Phase 0 — Current baseline: v0.3 ✅
 
@@ -174,8 +174,8 @@ Unless a bug is blocking the live build:
 3. autonomy/personality and town-life depth (#22, #25)
 4. P0 architecture cleanup (#19)
 5. audio foundation beyond procedural combat SFX (#21)
-5. jobs/items depth (#23)
-6. dungeons/frontier (#24)
-7. mobile/performance/save (#26)
+6. jobs/items depth (#23)
+7. dungeons/frontier (#24)
+8. mobile/performance/save (#26)
 
 Update this file when priorities change.
