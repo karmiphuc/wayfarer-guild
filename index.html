@@ -49,7 +49,7 @@ button,select,input{font:inherit}button{background:#e8d8aa;border:2px solid #5d4
     </section>
   </aside>
 </div>
-<footer id="footer">Wayfarer Guild v0.7.17 · pink boxes removed, weapons back in hands.</footer>
+<footer id="footer">Wayfarer Guild v0.7.18 · one style, twelve distinct outfits.</footer>
 </div>
 <div class="modal" id="jobModal"><div class="modalBox"><h2>Change Job</h2><div id="jobChoices"></div><button onclick="closeModal('jobModal')">Cancel</button></div></div>
 <div class="modal" id="eventModal"><div class="modalBox"><h2>Village Event</h2><div id="eventChoices"></div><button onclick="closeModal('eventModal')">Cancel</button></div></div>
@@ -60,13 +60,13 @@ button,select,input{font:inherit}button{background:#e8d8aa;border:2px solid #5d4
 const TILE=32,COLS=38,ROWS=33,VIEW_ROWS=23,TOWN_MAX_X=24,POPULATION_CAP=30,DTILE=32,DW=18,DH=11;const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');let dpr=1,last=0,acc=0,speed=1,selectedId=null,buildType=null,buildPreview=null,exploreMode=false,autosaveClock=0,viewMode='town',cameraY=0;
 const PX={size:16,step:17,cols:12,town:new Image(),dungeon:new Image()};
 PX.town.src='assets/art/kenney-tiny-town.png';PX.dungeon.src='assets/art/kenney-tiny-dungeon.png';
-const PUNY_JOB_FILES={archer:'Archer-Green.png',mage:'Mage-Red.png',blacksmith:'Human-Worker-Red.png',farmer:'Human-Worker-Cyan.png'},PUNY_JOBS={};
+const PUNY_JOB_FILES={},PUNY_JOBS={};
 for(const[k,file]of Object.entries(PUNY_JOB_FILES)){let img=new Image();img.src='assets/art/puny-characters/'+file;PUNY_JOBS[k]=img}
 const ELDIRAN_RAW=new Image();ELDIRAN_RAW.src='assets/art/eldiran/RPGCharacterSprites32x32.png';
 const ELDIRAN=document.createElement('canvas');let ELDIRAN_READY=false;
 ELDIRAN_RAW.onload=()=>{try{ELDIRAN.width=384;ELDIRAN.height=672;let g=ELDIRAN.getContext('2d');g.drawImage(ELDIRAN_RAW,0,0);let d=g.getImageData(0,0,384,672),px=d.data;for(let i=0;i<px.length;i+=4){if(px[i]===255&&px[i+1]===0&&px[i+2]===255)px[i+3]=0}g.putImageData(d,0,0);ELDIRAN_READY=true}catch{}};
 function eldiranReady(){return ELDIRAN_READY}
-const ELDIRAN_JOB_ROWS={adventurer:9,fighter:16,cleric:6,knight:4,ninja:8,wizard:5,paladin:17,researcher:10};
+const ELDIRAN_JOB_ROWS={adventurer:9,fighter:16,archer:3,mage:10,cleric:6,knight:4,ninja:8,wizard:5,paladin:17,farmer:2,blacksmith:18,researcher:12};
 function jobBodySrc(key){if(ELDIRAN_JOB_ROWS[key]!=null&&ELDIRAN_READY)return{img:ELDIRAN,row:ELDIRAN_JOB_ROWS[key],cols:3};let f=PUNY_JOB_FILES[key],im=f&&PUNY_JOBS[key];if(im&&im.complete&&im.naturalWidth)return{img:im,row:2,cols:24};return null}
 const PUNY_HAND_ANCHORS=[[3.5,4],[3.5,4],[4.5,5],[2.5,5],[4.5,2.5]],PUNY_OFFHAND_ANCHORS=[[-3,4],[-3,4],[-2.5,5],[-4,5],[-2.5,2.5]];
 const TINY_CREATURES=new Image();TINY_CREATURES.src='assets/art/tiny-creatures/tilemap.png';

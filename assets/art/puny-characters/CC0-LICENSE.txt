@@ -6,19 +6,8 @@ License URL: https://creativecommons.org/publicdomain/zero/1.0/
 The source page permits personal and commercial use, modification, and use
 without attribution. Wayfarer Guild retains this notice for provenance.
 
-Imported files:
-- Archer-Green.png
-- Archer-Purple.png
-- Human-Worker-Cyan.png
-- Human-Worker-Red.png
-- Mage-Cyan.png
-- Mage-Red.png
+Imported files (v0.7.18: job bodies moved to Eldiran; only Slime retained):
 - Slime.png
-- Soldier-Blue.png
-- Soldier-Red.png
-- Soldier-Yellow.png
-- Warrior-Blue.png
-- Warrior-Red.png
 
 The game crops and nearest-neighbor scales frames at runtime. Source pixels are
 otherwise unmodified.

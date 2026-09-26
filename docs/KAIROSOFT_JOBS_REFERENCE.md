@@ -60,20 +60,20 @@ rather than hard-locking builds.
 
 ## Wayfarer 12 — mapping and gaps
 
-| Wayfarer job | Kairosoft counterpart | Weapon line | Current sprite (v0.7.16) | Gap |
+| Wayfarer job | Kairosoft counterpart | Weapon line | Current sprite (v0.7.18, one Eldiran style) | Gap |
 |---|---|---|---|---|
 | Adventurer | DV2 Adventurer | Sword (generalist) | Eldiran r9 traveler | None — cape/light gear later |
 | Fighter | DV2 Warrior | Sword | Eldiran r16 soldier | None |
-| Archer | DV2 Hunter | Bow | Puny Archer-Green | None (walk frames verified bow-free) |
-| Mage | DV2 Mage | Staff + cap | Puny Mage-Red | None |
-| Cleric | DV2 Monk | Holy staff + light headgear | Eldiran r6 white robe | None — split from Wizard resolved |
+| Archer | DV2 Hunter | Bow | Eldiran r3 red hood | None (walk frames verified bow-free) |
+| Mage | DV2 Mage | Staff + cap | Eldiran r10 robe | None |
+| Cleric | DV2 Monk | Holy staff + light headgear | Eldiran r6 white robe | None |
 | Knight | DV2 Knight | Sword, req Fighter | Eldiran r4 blue steel | Grayscale trio check pending eyeball |
 | Ninja | DV2 Ninja | Dagger + hair ornament | Eldiran r8 dark hood | Hairpin-class cue if sheets allow |
-| Wizard | DV2 Archmage | Wand, advanced arcane | Eldiran r5 dark-hood caster | None — split from Cleric resolved |
+| Wizard | DV2 Archmage | Wand, advanced arcane | Eldiran r5 dark-hood caster | None |
 | Paladin | KA Paladin | Sword + shield, holy | Eldiran r17 teal + cape, shield layer | None |
-| Blacksmith | DV2 Blacksmith | Sidearm + forge wear | Puny Human-Worker-Red | Hammer tool layer (Phase 4 tools) |
-| Farmer | DV2 Farmer | Spear-sidearm + farm wear | Puny Human-Worker-Cyan | Hoe/spear tool layer (Phase 4 tools) |
-| Researcher | DV2 Scholar | Wand + book | Eldiran r10 scholar robe | Book/wand layers (Phase 4 tools) |
+| Blacksmith | DV2 Blacksmith | Sidearm + forge wear | Eldiran r18 workwear | Hammer tool layer (Phase 4 tools) |
+| Farmer | DV2 Farmer | Spear-sidearm + farm wear | Eldiran r2 plain laborer | Hoe/spear tool layer (Phase 4 tools) |
+| Researcher | DV2 Scholar | Wand + book | Eldiran r12 scholar robe | Book/wand layers (Phase 4 tools) |
 
 ## Consequences for the Eldiran census
 
