@@ -16,6 +16,9 @@ The v0.5 pixel preview now uses two CC0 Kenney atlases in the live renderer.
 | `assets/art/kenney-tiny-dungeon.png` | Tiny Dungeon | Kenney | https://kenney.nl/assets/tiny-dungeon | CC0 1.0 | No source-pixel edits; cropped/scaled at render time | Attribution not required; credit retained here |
 | `assets/art/puny-characters/*.png` | Puny Characters | Shade | https://opengameart.org/content/puny-characters | CC0 1.0 | Selected frames cropped and nearest-neighbor scaled at render time | Attribution not required; credit and local license retained here |
 | `assets/art/tiny-creatures/tilemap.png` | Tiny Creatures | Clint Bellanger | https://opengameart.org/node/160872 | CC0 1.0 | Species tiles cropped and nearest-neighbor scaled at render time | Attribution not required; credit and original license retained here |
+| `assets/art/puny-characters/Archer-Purple.png` | Puny Characters | Shade | https://opengameart.org/content/puny-characters | CC0 1.0 | Hooded ranger sheet; walk frames verified weapon-neutral, baked-weapon rows excluded | Ninja mapping; fixes Warrior-Blue near-collision |
+| `assets/art/puny-characters/Human-Worker-Cyan.png` | Puny Characters | Shade | https://opengameart.org/content/puny-characters | CC0 1.0 | Worker body; walk frames verified weapon-neutral | Farmer mapping |
+| `assets/art/puny-characters/Human-Worker-Red.png` | Puny Characters | Shade | https://opengameart.org/content/puny-characters | CC0 1.0 | Worker body; walk frames verified weapon-neutral | Blacksmith mapping |
 
 No third-party audio is shipped yet: all game audio is procedural WebAudio
 (generative loops, ambient beds, oscillator SFX — see issue #3). The audio

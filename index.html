@@ -49,7 +49,7 @@ button,select,input{font:inherit}button{background:#e8d8aa;border:2px solid #5d4
     </section>
   </aside>
 </div>
-<footer id="footer">Wayfarer Guild v0.7.14 · actor metrics calibrated: HP, names, selection and gear sit cleanly on every pawn.</footer>
+<footer id="footer">Wayfarer Guild v0.7.15 · Ninja, Farmer and Blacksmith wear real sprite sheets now.</footer>
 </div>
 <div class="modal" id="jobModal"><div class="modalBox"><h2>Change Job</h2><div id="jobChoices"></div><button onclick="closeModal('jobModal')">Cancel</button></div></div>
 <div class="modal" id="eventModal"><div class="modalBox"><h2>Village Event</h2><div id="eventChoices"></div><button onclick="closeModal('eventModal')">Cancel</button></div></div>
@@ -60,7 +60,7 @@ button,select,input{font:inherit}button{background:#e8d8aa;border:2px solid #5d4
 const TILE=32,COLS=38,ROWS=33,VIEW_ROWS=23,TOWN_MAX_X=24,POPULATION_CAP=30,DTILE=32,DW=18,DH=11;const canvas=document.getElementById('world'),ctx=canvas.getContext('2d');let dpr=1,last=0,acc=0,speed=1,selectedId=null,buildType=null,buildPreview=null,exploreMode=false,autosaveClock=0,viewMode='town',cameraY=0;
 const PX={size:16,step:17,cols:12,town:new Image(),dungeon:new Image()};
 PX.town.src='assets/art/kenney-tiny-town.png';PX.dungeon.src='assets/art/kenney-tiny-dungeon.png';
-const PUNY_JOB_FILES={adventurer:'Warrior-Red.png',fighter:'Soldier-Red.png',archer:'Archer-Green.png',mage:'Mage-Red.png',cleric:'Mage-Cyan.png',knight:'Soldier-Blue.png',ninja:'Warrior-Blue.png',wizard:'Mage-Cyan.png',paladin:'Soldier-Yellow.png'},PUNY_JOBS={};
+const PUNY_JOB_FILES={adventurer:'Warrior-Red.png',fighter:'Soldier-Red.png',archer:'Archer-Green.png',mage:'Mage-Red.png',cleric:'Mage-Cyan.png',knight:'Soldier-Blue.png',ninja:'Archer-Purple.png',wizard:'Mage-Cyan.png',paladin:'Soldier-Yellow.png',blacksmith:'Human-Worker-Red.png',farmer:'Human-Worker-Cyan.png'},PUNY_JOBS={};
 for(const[k,file]of Object.entries(PUNY_JOB_FILES)){let img=new Image();img.src='assets/art/puny-characters/'+file;PUNY_JOBS[k]=img}
 const PUNY_HAND_ANCHORS=[[3.5,4],[3.5,4],[4.5,5],[2.5,5],[4.5,2.5]],PUNY_OFFHAND_ANCHORS=[[-3,4],[-3,4],[-2.5,5],[-4,5],[-2.5,2.5]];
 const TINY_CREATURES=new Image();TINY_CREATURES.src='assets/art/tiny-creatures/tilemap.png';

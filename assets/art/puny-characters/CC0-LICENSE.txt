@@ -8,6 +8,9 @@ without attribution. Wayfarer Guild retains this notice for provenance.
 
 Imported files:
 - Archer-Green.png
+- Archer-Purple.png
+- Human-Worker-Cyan.png
+- Human-Worker-Red.png
 - Mage-Cyan.png
 - Mage-Red.png
 - Slime.png

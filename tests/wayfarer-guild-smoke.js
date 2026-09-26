@@ -442,11 +442,14 @@ assert.notEqual(jobSprites.Blacksmith, 90, 'Blacksmith must not use the chest sp
 console.log('Job sprite atlas mapping checks passed');
 
 const punyJobs = debug.punyJobFiles();
-assert.deepEqual(Object.keys(punyJobs).sort(), ['adventurer','archer','cleric','fighter','knight','mage','ninja','paladin','wizard']);
+assert.deepEqual(Object.keys(punyJobs).sort(), ['adventurer','archer','blacksmith','cleric','farmer','fighter','knight','mage','ninja','paladin','wizard']);
 for (const file of [...new Set(Object.values(punyJobs)), 'Slime.png', 'CC0-LICENSE.txt']) {
   assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', 'assets', 'art', 'puny-characters', file)), `CC0 sprite asset ${file} must be shipped`);
 }
 assert.equal(punyJobs.archer, 'Archer-Green.png');
+assert.equal(punyJobs.ninja, 'Archer-Purple.png', 'Ninja must use the hooded purple sheet, not a Warrior recolor');
+assert.equal(punyJobs.farmer, 'Human-Worker-Cyan.png', 'Farmer must use a worker body, not code-drawn fallback');
+assert.equal(punyJobs.blacksmith, 'Human-Worker-Red.png', 'Blacksmith must use a worker body, not code-drawn fallback');
 assert.equal(punyJobs.mage, 'Mage-Red.png');
 assert.equal(punyJobs.knight, 'Soldier-Blue.png');
 console.log('CC0 Puny Characters asset mapping checks passed');
