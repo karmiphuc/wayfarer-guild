@@ -493,6 +493,12 @@ assert.equal(debug.supportGripTarget({kind: 'melee'}, {attacking: true}, 20, 1, 
 const mirroredWeaponPoint = debug.weaponPoint({angle: 0, facing: -1}, 10, 20, {x: 3, y: 2});
 assert.equal(mirroredWeaponPoint.x, 7, 'support grip transform should mirror with combat facing');
 assert.equal(mirroredWeaponPoint.y, 22, 'support grip transform should retain vertical weapon position');
+assert.equal(debug.attackTrail('melee', .2), 0, 'weapon trail must stay hidden during anticipation');
+assert.ok(debug.attackTrail('melee', .405) > .99, 'sword trail should peak at mid-swing');
+assert.equal(debug.attackTrail('melee', .7), 0, 'weapon trail must clear during recovery');
+assert.ok(debug.attackTrail('hammer', .495) > .99, 'hammer trail should follow its slower strike window');
+assert.ok(debug.attackTrail('arrow', .56) > .99, 'bow release streak should peak as the string snaps forward');
+assert.ok(debug.attackTrail('magic', .53) > .99, 'staff aura should peak during spell release');
 console.log('Weapon-family attack pose checks passed');
 const meleeTiming = debug.attackTiming('melee');
 const bowTiming = debug.attackTiming('arrow');

@@ -138,6 +138,19 @@ Two-handed carrying correction in v0.7.10:
 - Automated checks cover bow-notch following, heavy-handle placement, offhand
   conflicts, one-handed exclusions and mirrored coordinate transforms.
 
+Weapon-bound action emphasis in v0.7.11:
+
+- Dungeon Village 2 combat references consistently emphasize the attacking
+  adventurer with bright sword/spell energy, not only a reaction on the target.
+- Sword and axe swings now emit compact grip-centered arcs; hammer attacks use
+  a broader, heavier double arc; bows show paired release streaks; magic and
+  holy staves form an expanding ring around the focus crystal.
+- Trails inherit weapon mirroring, vertical aim, front/behind depth and rarity
+  accent color because they render inside the carried-weapon transform.
+- Trail intensity is phase-bound: zero in anticipation, highest at the center of
+  contact/release and zero again during recovery.
+- Automated checks cover exact family windows and peak/zero boundaries.
+
 ## Findings
 
 ### P1 - non-humanoid job sprites
