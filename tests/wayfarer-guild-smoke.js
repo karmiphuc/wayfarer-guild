@@ -760,3 +760,33 @@ assert.equal(debug.setAudioLevel('music', 9), true);
 assert.equal(debug.audioLevels().music, 1, 'music level should clamp');
 assert.equal(debug.setAudioLevel('bogus', .5), false, 'unknown buses should be rejected');
 console.log('Procedural audio-manager foundation checks passed');
+
+const townMetrics = debug.actorMetrics('town');
+assert.equal(townMetrics.body, 36, 'town body size must be contract-driven');
+assert.equal(debug.actorMetrics('nope'), townMetrics, 'unknown scopes should fall back to town metrics');
+const townEnv = debug.actorEnvelope('town');
+assert.ok(Math.abs(townEnv.halfW - 23.4) < .01, 'town nominal envelope must match body x puny scale');
+assert.ok(townMetrics.hpDy + 3 <= townEnv.top - 2, 'HP bar must clear the head with breathing room');
+assert.ok(townMetrics.nameDy >= townEnv.bottom + 2, 'nameplate must clear the feet with breathing room');
+assert.ok(townMetrics.selY <= townEnv.top - 1 && townMetrics.selY + townMetrics.selH >= townEnv.bottom + 1, 'selection must enclose the nominal body vertically');
+assert.ok(-townMetrics.selX >= townEnv.halfW + 1 && townMetrics.selX + townMetrics.selW >= townEnv.halfW + 1, 'selection must enclose the nominal body horizontally');
+assert.ok(townMetrics.taskY + 10 <= townMetrics.hpDy - 2, 'task marker must sit above the HP bar');
+const dungeonEnv = debug.actorEnvelope('dungeon');
+assert.ok(Math.abs(dungeonEnv.halfW - 18.85) < .01, 'dungeon nominal envelope must match body x puny scale');
+assert.ok(debug.actorMetrics('dungeon').partyHpDy + 3 <= dungeonEnv.top - 2, 'dungeon HP bar must clear the head');
+assert.ok(debug.enemyHpDy(38) < debug.enemyHpDy(31) && debug.enemyHpDy(31) < debug.enemyHpDy(27), 'larger bodies need higher enemy HP bars');
+assert.ok(debug.enemyHpDy(27) + 3 <= -(27 * 1.35 / 2) - 2, 'normal enemy HP bar must clear its silhouette');
+for (const scope of ['town', 'dungeon']) {
+  const env = debug.actorEnvelope(scope);
+  const size = debug.actorMetrics(scope).body * debug.actorMetrics(scope).scale;
+  for (const frame of [0, 1, 2, 3, 4]) for (const facing of [1, -1]) for (const offhand of [false, true]) {
+    const anchor = debug.punyHandAnchor(frame, size, facing, offhand);
+    assert.ok(Math.abs(anchor.x) <= env.halfW, `${scope} hand anchor must stay inside the body (frame ${frame})`);
+    assert.ok(anchor.y >= env.top && anchor.y <= env.bottom, `${scope} hand anchor must stay inside the body vertically (frame ${frame})`);
+  }
+}
+const htmlSrc = fs.readFileSync(htmlPath, 'utf8');
+for (const legacy of ['x-12,y-23,24', 'x-17,y-20,34,34', 'x+10,y-20,10,10', 'y+16,nameW,11', 'x-16,y-18,32,32', 'x-14,y-20,28', 'x-12,y-19,24', 'x-11,y-11,22,22', 'x-14,y-14,28,28']) {
+  assert.ok(!htmlSrc.includes(legacy), `legacy overlay constant must be gone: ${legacy}`);
+}
+console.log('Actor-metrics calibration checks passed');
