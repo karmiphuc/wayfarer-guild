@@ -459,6 +459,13 @@ assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', 'assets', 'ar
 assert.ok(fs.existsSync(require('node:path').join(__dirname, '..', 'assets', 'art', 'eldiran', 'CC0-LICENSE.txt')), 'Eldiran license must be shipped');
 const bodies = [...Object.values(punyJobs).map(f => 'puny:' + f), ...Object.values(eldiranRows).map(r => 'eldiran:' + r)];
 assert.equal(new Set(bodies).size, 12, 'all 12 jobs must use distinct bodies — no shared sheets');
+assert.equal(debug.eldiranReady(), false, 'eldiran keying must idle safely with no loaded image');
+for (const frame of [0, 1, 2, 3, 4]) for (const facing of [1, -1]) for (const offhand of [false, true]) {
+  const anchor = debug.punyHandAnchor(frame, 46.8, facing, offhand, 'eldiran');
+  assert.ok(Math.abs(anchor.x) <= 23.4 && anchor.y >= -26.4 && anchor.y <= 20.4, `eldiran anchor must stay on the body (frame ${frame})`);
+}
+assert.ok(Math.abs(debug.punyHandAnchor(0, 46.8, 1, false, 'eldiran').x) > Math.abs(debug.punyHandAnchor(0, 46.8, 1).x), 'eldiran hands must sit wider than puny hands');
+assert.equal(debug.punyHandAnchor(0, 48, 1, false, 'bogus').x, debug.punyHandAnchor(0, 48, 1).x, 'unknown anchor source must fall back to puny');
 console.log('CC0 Puny Characters asset mapping checks passed');
 
 const idleHand = debug.punyHandAnchor(0, 48, 1);
