@@ -449,6 +449,18 @@ assert.equal(debug.weaponPose(weaponPawn, 'town').facing, -1, 'idle carried equi
 debug.attackAnim().set(weaponPawn.id, {scope: 'town', life: .2, max: .34, dx: 2, dy: 0, kind: 'arrow'});
 assert.deepEqual({...debug.weaponPose(weaponPawn, 'town')}.attacking, true, 'carried weapon should enter its attack pose');
 assert.equal(debug.weaponPose(weaponPawn, 'town').facing, 1, 'attack target direction should override stale travel facing');
+debug.attackAnim().set(weaponPawn.id, {scope: 'town', life: .21, max: .46, dx: 0, dy: 3, kind: 'arrow'});
+const southBowPose = debug.weaponPose(weaponPawn, 'town');
+debug.attackAnim().set(weaponPawn.id, {scope: 'town', life: .21, max: .46, dx: 0, dy: -3, kind: 'arrow'});
+const northBowPose = debug.weaponPose(weaponPawn, 'town');
+assert.equal(southBowPose.facing, -1, 'near-vertical attacks should preserve the pawn travel facing');
+assert.equal(northBowPose.facing, -1, 'near-vertical attacks should not flicker horizontal facing');
+assert.ok(southBowPose.angle > northBowPose.angle + 1.5, 'bow aim should visibly distinguish targets north and south');
+assert.equal(southBowPose.behind, false, 'south-facing attacks should render the carried weapon in front');
+assert.equal(northBowPose.behind, true, 'north-facing attacks should pass behind the body for depth');
+const diagonalAim = debug.attackAim('arrow', -2, 2, 1);
+assert.equal(diagonalAim.facing, -1);
+assert.ok(diagonalAim.tilt > 0, 'down-left targets should produce a downward local bow angle');
 debug.attackAnim().delete(weaponPawn.id);
 const attackDurations = debug.attackDuration();
 assert.ok(attackDurations.hammer > attackDurations.melee, 'hammer attacks should read as heavier than sword attacks');

@@ -96,6 +96,19 @@ Contact-timing correction in v0.7.7:
 - Automated checks cover release/contact ordering, delayed-effect activation
   and pre-contact recoil suppression.
 
+Directional carrying correction in v0.7.8:
+
+- Attack vectors now influence weapon angle vertically as well as choosing a
+  left/right body facing. Near-vertical attacks retain the previous horizontal
+  facing so the pawn does not flicker unpredictably.
+- Bow aim receives the full directional treatment; melee and staff poses use a
+  restrained vertical tilt so their authored swing silhouettes remain clear.
+- Weapons, shields and books pass behind the pawn when attacking north and
+  render in front for southward or idle poses, adding readable depth without
+  moving either hand anchor.
+- Automated checks cover north/south angle separation, stable near-vertical
+  facing, diagonal aim and foreground/background selection.
+
 ## Findings
 
 ### P1 - non-humanoid job sprites
