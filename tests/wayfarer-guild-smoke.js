@@ -264,6 +264,52 @@ for (const [activity, hunger, energy, expected] of [
   assert.equal(resident.task, expected, activity + ' must yield to critical needs');
 }
 patient.ko = false;
+
+enemy.dead = false; enemy.hp = enemy.maxHp = 10000; enemy.boss = false;
+enemy.x = 12.8; enemy.y = 16;
+resident.questing = false; resident.ko = false; resident.x = 12; resident.y = 16;
+resident.hp = debug.stats(resident).maxHp; resident.energy = resident.hunger = 90;
+resident.task = 'Sleep'; resident.targetId = home.id; resident.path = [];
+debug.updatePawn(resident, 1/30);
+assert.equal(resident.task, 'Fight', 'a sleeping pawn must wake immediately when a monster enters attack range');
+assert.equal(resident.targetId, enemy.id, 'self-defense must target the town intruder rather than a frontier-only hunt');
+assert.equal(resident.lastThought, 'Defend yourself!');
+
+const rallyPawn = residents[1];
+rallyPawn.questing = false; rallyPawn.ko = false; rallyPawn.x = 18.5; rallyPawn.y = 16;
+rallyPawn.hp = debug.stats(rallyPawn).maxHp; rallyPawn.energy = rallyPawn.hunger = 90;
+rallyPawn.task = 'Train'; rallyPawn.targetId = null; rallyPawn.path = [];
+debug.updatePawn(rallyPawn, 1/30);
+assert.equal(rallyPawn.task, 'Fight', 'a healthy nearby pawn must interrupt ordinary work to rally to town defense');
+assert.equal(rallyPawn.targetId, enemy.id);
+assert.equal(rallyPawn.lastThought, 'The town is under attack!');
+
+resident.task = 'Sleep'; resident.targetId = home.id; resident.path = [];
+resident.hp = debug.stats(resident).maxHp; resident.energy = resident.hunger = 20;
+assert.equal(debug.shouldRetreat(resident, enemy), false, 'town defense should tolerate emergency vigor and satiety levels');
+debug.updatePawn(resident, 1/30);
+assert.equal(resident.task, 'Fight', 'a directly threatened pawn with emergency reserves must still defend itself');
+
+resident.task = 'Sleep'; resident.targetId = home.id; resident.path = [];
+resident.hp = debug.stats(resident).maxHp * .1; resident.energy = resident.hunger = 90;
+debug.updatePawn(resident, 1/30);
+assert.notEqual(resident.task, 'Fight', 'a critically wounded pawn should not be forced into suicidal defense');
+
+enemy.x = debug.mapSpec().townMaxX + 3; enemy.y = 16;
+resident.x = 12; resident.y = 16; resident.hp = debug.stats(resident).maxHp;
+resident.energy = resident.hunger = 90; resident.task = 'Sleep'; resident.targetId = home.id; resident.path = [];
+assert.equal(debug.townThreatFor(resident), null, 'ordinary frontier monsters must not wake the whole town');
+debug.updatePawn(resident, 1/30);
+assert.notEqual(resident.task, 'Fight');
+
+enemy.x = 12.8; enemy.y = 16; enemy.hp = 1; enemy.dead = false;
+resident.x = 12; resident.y = 16; resident.hp = debug.stats(resident).maxHp;
+resident.energy = resident.hunger = 90; resident.task = 'Fight'; resident.targetId = enemy.id;
+resident.path = []; resident.attackCd = 0;
+debug.fightTick(resident, 1/30);
+assert.equal(enemy.dead, true, 'an alerted pawn must complete town defense through the normal combat loop');
+
+resident.task = 'Wander'; resident.targetId = null; rallyPawn.task = 'Wander'; rallyPawn.targetId = null;
 enemy.dead = true;
 
 resident.mastered = [];

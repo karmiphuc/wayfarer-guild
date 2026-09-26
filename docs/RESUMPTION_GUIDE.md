@@ -64,6 +64,18 @@ Limitation: the atlas has ten humanoids for twelve jobs and lacks unmistakable
 farmer, blacksmith and bow-archer silhouettes. Current mappings are safe human
 stand-ins, not final job art.
 
+## Town defense baseline
+
+- A monster inside the town boundary is a dedicated town threat, independent
+  of the frontier-only hunting target search.
+- Directly threatened residents interrupt ordinary activities immediately;
+  healthy residents within the rally radius join the fight.
+- Emergency defense allows lower vigor and satiety than ordinary combat, while
+  critically wounded residents retain the retreat/recovery safety behavior.
+- Monsters outside town do not wake or redirect the whole village.
+- Smoke coverage exercises sleep interruption, ally rallying, emergency needs,
+  critical-wound restraint, frontier isolation and a normal combat-loop kill.
+
 ## Visible equipment baseline
 
 - Town and dungeon pawns carry a persistent weapon selected from the actual
