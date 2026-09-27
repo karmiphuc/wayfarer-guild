@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { newGame, makeAdventurer, maxHp, migrate } from '../js/state.js';
+import { FRONTIERS } from '../js/data.js';
+import { newGame, makeAdventurer, maxHp, migrate, MASTERY } from '../js/state.js';
 import { Sim, WEEK_SECONDS } from '../js/sim.js';
 import { UI } from '../js/ui.js';
 
@@ -42,6 +43,18 @@ function startThree() {
   assert.equal(JSON.stringify(s), before);
   assert(html.indexOf('data-act="startQuest"') < html.indexOf('data-act="togParty"'));
   assert(html.includes('4/8 selected'));
+  const selected = party[0];
+  assert(html.includes(`<button type="button" class="card party-choice sel" data-act="togParty" data-id="${selected}"`));
+  assert(html.includes(`data-focus-key="togParty:${selected}" aria-pressed="true"`));
+  assert(html.includes('<span aria-hidden="true">✓</span> Selected'));
+  ui.frontierPick = FRONTIERS[0].id; ui.frontierParty = party; ui.relicPick = null;
+  const frontierHtml = ui.panel_frontiers();
+  assert(frontierHtml.includes(`data-focus-key="togFrontierParty:${selected}" aria-pressed="true"`));
+  ui.campPick = s.banditCamps[0].id; ui.campParty = party;
+  const campHtml = ui.panel_camps();
+  assert(campHtml.includes(`data-focus-key="togCampParty:${selected}" aria-pressed="true"`));
+  s.advs[0].jobLv[s.advs[0].job] = MASTERY;
+  assert(ui.panel_people().includes('✓ Current job mastered'));
   s.advs = s.advs.slice(3, 5);
   assert.equal(sim.autoQuestParty(q.id).length, 2);
 }

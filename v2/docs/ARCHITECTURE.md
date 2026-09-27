@@ -81,7 +81,7 @@ not stored as extra perimeter buildings or timers; no new top-level save fields 
 | `mats {wood, hide, herb, ore, crystal}` | village materials (monster drops) used to develop gear |
 | `town {x0,y0,x1,y1}` | buildable rectangle (grows with the Expand event) |
 | `mapWidth, mapHeight`, `frontier {completed, relics}` | 152x112 map; completed site IDs grant additional buildable rectangles and bonuses; relic item IDs map to one resident owner ID or `null` in the vault |
-| `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt}`; `readyAt` is the simulation tick when a cleared camp can be challenged again |
+| `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt,cooldownWeeks}`; `readyAt` is the simulation tick when a cleared camp can be challenged again, and `cooldownWeeks` records its latest 8–20 week recovery roll |
 | `ground` (string), `roads` (string of '0'/'1'), `props[]` | terrain detail per cell · road flags · trees/rocks/cave `{k,x,y,w,block,soft?}` |
 | `buildings[]` | `{id, type, x, y, lv, sales, visits, occ[], v?, free?}` — `type` is a key of `FAC` or `DECOR`; `free` = charter gift (refunds 0 G) |
 | `advs[]` | adventurers (below); a fallen pawn may carry `rescueBy` while another pawn owns its rescue task |
@@ -119,7 +119,7 @@ then × (1 + `titleBonus(s, k)`) — e.g. the Iron Fortress title gives `def: 0.
 | Calendar | `calendar, monthEnd, taxes, starProgress, checkStars` | every week: `tickHappenings()` then `rollHappening()`. Month end: upkeep 1.5%·cost·lv (× charter), TP = 3 + kills/4 (× charter) + residents, new quest board, star check. April W1 taxes. |
 | Spawning | `spawner, edgeSpawn, spawnMonster, spawnBoss, randomCellInZone, zoneMons` | visitors arrive from the south edge: at most `VISITOR_CAP[stars]` (5/5/10/15/20/30) at once, fewer while popularity and inn beds are low; arrival chance per 0.5 s tick = min(0.1, 0.015 + pop/80000) × bonuses. Wild spawns roll `ELITE_CHANCE` (6%) for an Elite (hp ×1.8, atk ×1.4, def ×1.3; rewards ×2.5, drops ×2, treasure ×3). Zones keep `ZONE_POP` monsters (× charter) picked from `zoneMons(z)` = this world's roster (falls back to `ZONE_MONS` in `data.js`), levels from `ZONE_LV` |
 | Adventurer AI | `decide, advStep, insideStep, settleVisit, addSat, tryMoveIn, rescueTarget, rescueStep, releaseRescue` | utility scores (hunger, energy, HP, gear upgrade on sale, potions, training, hunting, fun, leaving) × personality multipliers (`pmul`). Tasks: `visit, hunt, return, stroll, camp, leave, quest, rescue`. Visits hide the adventurer inside for `dur` seconds, then `settleVisit` charges money (village income) and adds satisfaction. Satisfaction ≥ 60 + free home → moves in. |
-| Movement | `walkTo, speed, stepToward` | A* path cached per goal + grid version; monsters/pets use straight steps with collision |
+| Movement | `walkTo, speed, stepToward` | A* path cached per goal + grid version; an optional `PathGrid.find()` predicate constrains defenders to owned land; monsters/pets use straight steps with collision |
 | Combat | `huntStep, fight, hitMonster, killMonster, treasure, hurtAdv, koStep` | adventurers hunt in the zone their power allows (`zoneFor`); healers heal first; perks applied here (see §5). Kills: XP shared with adventurers within 5 tiles, gold to the killer, materials to the village, 2.5% treasure chest (unlocks gear), taming chance if a Stable exists. At 0 HP a pawn stays fallen; one free healthy pawn claims it, carries it to a usable bed, or stabilizes it in the field after 60 seconds when no bed is reachable. Rescue claims release safely if the carrier becomes invalid. |
 | Monsters | `monStep, petStep, towerStep, fleeStep, chargeStep, raidStrength, spawnRaider` | ordinary outlaws and generated raiders use human sheets and visible weapons and cannot be tamed. Raid strength follows village rank and, at ★5, the leading party's average level; generated classes can use melee, range, magic or healing. Aggro radius 2.2 (boss 4), leash 9 tiles, never enter town — except raiders: stampedes charge the town edge and bandits may chase into town. The Golden Slime flees adventurers. Pets follow their partner and become mounts at bond ≥ 50. Towers credit kills to `s.advs[0]` (known bug, #17). |
 | Quests | `refreshQuests, frontierQuest, campQuest, autoQuestParty, questCandidates, questReady, questCost, instantQuest, startQuest, questStep, questCheck, checkQuest, dungeonTick, endDungeon` | any available quests concurrently; each owns its party, targets and completion. Outbreak: kill N mobs; boss: next 2 undefeated and inactive bosses with `star ≤ stars`; dungeon: cave at `cavePos(s)`, floors every 7 s; frontier and camp entries are virtual quests resolved by string ID |
@@ -182,8 +182,10 @@ tile, is clickable.
 not advance the running simulation seed. Each site reserves a 3x3 core and stores its tier, clear count and cooldown tick.
 `campQuest()` exposes a virtual `camp:<site>` quest with a rank-scaled recommended level, 5/7/9/11 generated human raiders,
 entry fee and gold/TP/popularity/material rewards. Dormant camps never spawn actors; departure uses the
-normal 1-8 pawn party rules and creates the raiders. Victory increments `clears`, awards the stores and starts a four-week
-(1200-tick) cooldown. Failure removes that attempt's raiders and permits another attempt without changing the ledger.
+normal 1-8 pawn party rules and creates the raiders. Victory increments `clears`, awards the stores and rolls a persisted
+8–20 week cooldown. Migration extends a pending legacy four-week cooldown once while retaining its elapsed time; its
+isolated RNG does not advance the running simulation seed. Failure removes that attempt's raiders and permits another
+attempt without changing the ledger.
 
 The Bandit Camps panel is reached from the Quest Board or by tapping the camp's visible ±3-tile landmark. It shows all 16
 sites, rank locks, cooldown, reward, clear count, party controls and Watch/Show on map. The renderer draws dormant camps
@@ -202,10 +204,12 @@ Not in DV2; our own. Everything is driven by the seeded RNG, so **the same world
   rewards/penalties and clean-up (NPCs removed, leftover raiders despawned). Passive ones (`rain sunny harvest fog`) are just
   read where they apply with `this.happening('rain')`.
 - **Raids**: `raidStrength()` derives count and level from village rank, then also considers the top four adventurers at ★5.
-  `stampede` monsters charge the edge (breach = −3 popularity and gold, max 5 penalties); the bandit company is built by
-  `spawnRaider()` from eligible job classes, including ranged, magic and healing roles. `rally()` sends free, healthy,
-  non-rescuing adventurers to defend; `decide()` also scores a defend task while raiders live. Rewards and theft scale with
-  strength, then charter `raidReward` applies.
+  `stampede` monsters charge the edge (breach = −3 popularity and gold, max 5 penalties). A bandit raid selects one ready,
+  unchallenged camp, records it as `h.data.camp` and on each raider as `sourceCamp`, and gives the company enough time to
+  march from that site to the village. With no eligible camp the happening cannot start. Bandits that are still outside
+  owned land when time expires turn back without theft. `rally()` sends free, healthy, non-rescuing adventurers to defend;
+  defenders inside owned land hold there using constrained A*, while defenders already outside return to the nearest owned
+  defense point. Rewards and arrival-gated theft scale with strength, then charter `raidReward` applies.
 - **Charters** (`CHARTERS` table): `chooseCharter(id)` applies `start` once (gold, free buildings/decor via `placeFree` — marked
   `free`, refund 0 — and an optional starting adventurer) and stores the id. `charter(key)` returns the numeric mod (0 if none);
   every key is read exactly where it applies:
@@ -285,6 +289,8 @@ Not in DV2; our own. Everything is driven by the seeded RNG, so **the same world
 - Panels: `open(name)` renders `panel_<name>()` (build, people, quests, frontiers, camps, develop, village, system, jobs) into `#panel-body`.
   Live panels re-render every 0.25 s but only when the HTML string changed (`setBody` diff) and **never while the
   pointer is down** on a panel (prevents lost clicks).
+- Quest, frontier and camp party choices are semantic buttons with keyboard focus, `aria-pressed`, explicit Select/Selected
+  text and a high-contrast selected style. The People and Jobs panels give a mastered current job a prominent checked badge.
 - All clicks go through one delegated handler: elements with `data-act="<name>"` call `act(name, dataset)`.
   Existing actions: `buyMerchant cat charter classes demolish deselect devTab develop event exitBuild export follow gift import jobs
   newgame open partners pick pickQuest reroll save seedGame selAdv setJob setPartner startQuest togParty tool upgrade watchQuest`.

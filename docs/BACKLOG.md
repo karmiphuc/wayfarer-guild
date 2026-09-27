@@ -19,11 +19,11 @@ Legend:
 
 - Frontier conquest: fourfold map area, eight dormant den sites, connected territory capture, permanent small village bonuses and single-copy legendary accessories. Existing villages keep their coordinates; regular population limits remain. This is continuous-map expansion, not the separate multi-map/reset roadmap in #41.
 
-- Bandit camps: 16 world-seeded dormant sites offer repeatable tiered party fights, material stores and a four-week cooldown. Generated bandits use visible job classes, weapons, ranged attacks, magic and healing; ordinary raids scale with village rank and late-game party strength.
+- Bandit camps: 16 world-seeded dormant sites offer repeatable tiered party fights, material stores and randomized 8–20 week recovery. Generated bandits use visible job classes, weapons, ranged attacks, magic and healing. Ordinary raids scale with village rank and late-game party strength, march from a ready unchallenged camp and cannot steal unless they reach owned land.
 
 - KO rescue (#24): one healthy pawn exclusively claims a fallen adventurer, carries them to a reachable bed and releases the claim safely if interrupted. If no bed can be reached, field recovery prevents a permanent deadlock. Revive items remain pending.
 
-- Quest parties and parallel quests (#25): random capable defaults (up to four), paid extras up to eight, no concurrent quest cap while pawns are available, Instant Depart on quest cards, and Depart before the pawn list. Legacy active quests migrate without losing their party or progress. The broader volunteer-personality, Counterattack and autonomous-quest slices remain pending.
+- Quest parties and parallel quests (#25): random capable defaults (up to four), paid extras up to eight, no concurrent quest cap while pawns are available, Instant Depart on quest cards, and Depart before the pawn list. Party choices are accessible buttons with a strong selected state, and the roster clearly marks a mastered current job. Legacy active quests migrate without losing their party or progress. The broader volunteer-personality, Counterattack and autonomous-quest slices remain pending.
 
 ## Now — live prototype priorities
 

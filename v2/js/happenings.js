@@ -23,7 +23,7 @@ export const HAPPENINGS = [
   { id: 'stampede', icon: 'e15', short: 'Stampede!', name: 'Monster Stampede', weight: 6, weeks: 1, minStars: 1,
     desc: 'A pack charges the village! Each monster that reaches the edge scares visitors away — stop them all for a reward.' },
   { id: 'bandits', icon: 'c_NinjaRed2', short: 'Bandits!', name: 'Bandit Raid', weight: 5, weeks: 1, minStars: 1,
-    desc: 'A bandit gang camps outside the village. Beat them all this week or they steal gold.' },
+    desc: 'Bandits march from an active camp. Hold village territory and defeat them before the raid ends; survivors who reach the village steal gold.' },
   { id: 'meteor', icon: 'i_GoldCup', short: 'Meteors', name: 'Meteor Shower', weight: 4, weeks: 1, minStars: 1, night: true,
     desc: 'Falling stars scatter crystals over the fields tonight.' },
   { id: 'fog', icon: 'e23', short: 'Fog', name: 'Mysterious Fog', weight: 4, weeks: 1, minStars: 2,

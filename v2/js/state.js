@@ -129,7 +129,16 @@ function clearFrontierScenery(s) {
 
 export function seedBanditCamps(s) {
   if (Array.isArray(s.banditCamps)) {
-    for (const c of s.banditCamps) { c.clears ??= 0; c.readyAt ??= 0; }
+    const R = makeRng({ seed: (s.world?.code || 4242) ^ 0x434f4f4c });
+    for (const c of s.banditCamps) {
+      c.clears ??= 0; c.readyAt ??= 0;
+      if (c.readyAt > s.tick && c.cooldownWeeks == null) {
+        c.cooldownWeeks = R.int(8, 20);
+        // Old four-week cooldowns: retain elapsed time (300 fixed steps per week).
+        c.readyAt += (c.cooldownWeeks - 4) * 300;
+      }
+      c.cooldownWeeks ??= 0;
+    }
     return;
   }
   const R = makeRng({ seed: (s.world?.code || 4242) ^ 0x43414d50 });
@@ -150,7 +159,7 @@ export function seedBanditCamps(s) {
   for (const [x, y] of choices) {
     if (s.banditCamps.some(c => Math.hypot(c.x - x, c.y - y) < 9)) continue;
     const i = s.banditCamps.length;
-    s.banditCamps.push({ id: 'bandit' + (i + 1), name: names[i] + ' Camp', x, y, tier: 1 + Math.floor(i / 4), clears: 0, readyAt: 0 });
+    s.banditCamps.push({ id: 'bandit' + (i + 1), name: names[i] + ' Camp', x, y, tier: 1 + Math.floor(i / 4), clears: 0, readyAt: 0, cooldownWeeks: 0 });
     if (s.banditCamps.length === 16) break;
   }
   s.props = s.props.filter(p => p.k === 'cave' || !s.banditCamps.some(c => Math.abs(c.x - p.x) <= 4 + p.w && Math.abs(c.y - p.y) <= 4));

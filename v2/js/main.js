@@ -132,7 +132,7 @@ function bindInput() {
   }, { passive: false });
   cv.addEventListener('pointerleave', () => { rnd.ghost = null; });
   const keys = new Set();
-  window.addEventListener('keydown', e => { if (e.target.tagName !== 'INPUT') keys.add(e.key.toLowerCase()); if (e.key === '+' || e.key === '=') rnd.cam.zoom = Math.min(6, rnd.cam.zoom + 1); if (e.key === '-') rnd.cam.zoom = Math.max(1, rnd.cam.zoom - 1); });
+  window.addEventListener('keydown', e => { if (e.target.closest?.('button, input, select, textarea, [contenteditable]')) return; keys.add(e.key.toLowerCase()); if (e.key === '+' || e.key === '=') rnd.cam.zoom = Math.min(6, rnd.cam.zoom + 1); if (e.key === '-') rnd.cam.zoom = Math.max(1, rnd.cam.zoom - 1); });
   window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
   window.addEventListener('blur', () => keys.clear());
   setInterval(() => {

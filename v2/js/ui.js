@@ -35,6 +35,7 @@ export class UI {
     window.addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT' || this.game.modal) return;
       if (e.key === 'Escape') { if (this.buildMode) this.exitBuild(); else if (this.panel) this.close(); else this.deselect(); }
+      if (e.target.closest?.('button, input, select, textarea, [contenteditable]')) return;
       if (e.key === ' ') { this.setSpeed(this.game.speed ? 0 : 1); e.preventDefault(); }
       if (e.key >= '1' && e.key <= '3') this.setSpeed([1, 2, 4][+e.key - 1]);
     });
@@ -103,9 +104,16 @@ export class UI {
   renderPanel() {
     const titles = { jobs: 'Class Hall', build: 'Build', people: 'Adventurers', quests: 'Quest Board', frontiers: 'Frontiers', camps: 'Bandit Camps', develop: 'Blacksmith · Develop', village: 'Village', system: 'System' };
     $('#panel-title').textContent = titles[this.panel];
-    const html = this['panel_' + this.panel]();
     const body = $('#panel-body');
-    if (this.setBody(body, html, 'panel')) this.hydrate(body);
+    const active = document.activeElement, focusKey = body.contains(active) ? active.dataset.focusKey : null;
+    const html = this['panel_' + this.panel]();
+    if (this.setBody(body, html, 'panel')) {
+      this.hydrate(body);
+      if (focusKey) {
+        const next = [...body.querySelectorAll('[data-focus-key]')].find(el => el.dataset.focusKey === focusKey);
+        next?.focus({ preventScroll: true });
+      }
+    }
   }
   // swap <i data-icon="..."> placeholders for pixel canvases
   hydrate(root) {
@@ -152,9 +160,10 @@ export class UI {
     const s = this.s, advs = s.advs.slice().sort((a, b) => (b.resident - a.resident) || b.lv - a.lv);
     let h = `<div class="muted">${advs.filter(a => a.resident).length} residents · ${advs.filter(a => !a.resident).length} visitors · ${s.monsters.length} village monsters</div><div class="grid" style="margin-top:6px">`;
     for (const a of advs) {
-      const hpR = a.hp / maxHp(a, s);
+      const hpR = a.hp / maxHp(a, s), jobLv = a.jobLv[a.job] || 1, mastered = jobLv >= MASTERY;
       h += `<div class="card" data-act="selAdv" data-id="${a.id}"><div class="thumb"><i data-face="f_${a.spr}" data-scale="1"></i></div><div class="meta">
-        <div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv} ${a.resident ? '<span class="tag res">Resident</span>' : '<span class="tag vis">Visitor</span>'}${a.ko ? '<span class="tag ko">KO</span>' : ''}${a.wantsHome ? '<span class="tag gold">Wants home</span>' : ''}</div>
+        <div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv} · Job Lv${jobLv} ${a.resident ? '<span class="tag res">Resident</span>' : '<span class="tag vis">Visitor</span>'}${a.ko ? '<span class="tag ko">KO</span>' : ''}${a.wantsHome ? '<span class="tag gold">Wants home</span>' : ''}</div>
+        ${mastered ? '<div><strong class="tag gold mastery-status">✓ Current job mastered</strong></div>' : ''}
         <div class="bar hp" title="HP"><i style="width:${hpR * 100}%"></i></div><div class="bar sat" title="Satisfaction" style="margin-top:2px"><i style="width:${Math.min(100, a.sat / (a.resident ? 3 : 0.6))}%"></i></div>
         <div class="sub">${this.taskLabel(a)}</div></div></div>`;
     }
@@ -173,7 +182,15 @@ export class UI {
     if (a.inside) { const b = this.s.buildings.find(o => o.id === a.inside.b); return b ? `At the ${defOf(b.type).name}` : 'Inside'; }
     const t = a.task; if (!t) return 'Thinking…';
     if (t.type === 'rescue') { const fallen = this.s.advs.find(o => o.id === t.target); return `${t.carrying ? 'Carrying' : 'Rescuing'} ${fallen ? fallen.name : 'a fallen adventurer'}`; }
+    if (t.type === 'hunt' && t.defend) return 'Defending village territory';
     if (a.dungeon) return 'Exploring the Old Cave'; return { visit: 'Heading into town', hunt: 'Hunting monsters', return: 'Returning to town', stroll: 'Strolling', camp: 'Napping outside', leave: 'Leaving the village', quest: 'On a quest!' }[t.type] || t.type;
+  }
+  partyChoice(a, selected, action, rec) {
+    const job = JOBS[a.job], visitor = a.resident ? '' : ' · visitor', low = a.lv < rec ? ' · below suggested level' : '';
+    const label = `${a.name}, ${job.name}, level ${a.lv}${a.resident ? '' : ', visitor'}`;
+    return `<button type="button" class="card party-choice ${selected ? 'sel' : ''}" data-act="${action}" data-id="${a.id}" data-focus-key="${action}:${a.id}" aria-pressed="${selected}" aria-label="${esc(label)}">
+      <span class="thumb"><i data-char="${a.spr}"></i></span><span class="meta"><span class="name">${esc(a.name)}</span><span class="sub">${job.name} Lv${a.lv}${visitor}${low}</span></span>
+      <strong class="party-state">${selected ? '<span aria-hidden="true">✓</span> Selected' : 'Select'}</strong></button>`;
   }
   panel_quests() {
     const s = this.s; let h = '';
@@ -201,8 +218,8 @@ export class UI {
         this.party = (this.party || []).filter(id => cands.some(a => a.id === id));
         const extra = Math.max(0, this.party.length - 4), cost = this.sim.questCost(q, this.party.length);
         h += `<div class="row" style="margin:8px 0"><button class="btn" data-act="startQuest" data-id="${q.id}" ${!this.party.length || s.gold < cost ? 'disabled' : ''}>Depart (${cost}G)</button><span class="muted">${this.party.length}/8 selected · ${q.fee}G entry + ${extra * this.sim.questExtraFee(q)}G extras</span></div>`;
-        h += `<div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Pawns on other quests are unavailable.</div><div class="grid">`;
-        for (const a of cands) h += `<div class="card ${this.party.includes(a.id) ? 'sel' : ''}" data-act="togParty" data-id="${a.id}"><div class="thumb"><i data-char="${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv}${a.resident ? '' : ' · visitor'}${a.lv < rec ? ' · below suggested level' : ''}</div></div></div>`;
+        h += `<div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Pawns on other quests are unavailable.</div><div class="grid party-grid">`;
+        for (const a of cands) h += this.partyChoice(a, this.party.includes(a.id), 'togParty', rec);
         h += `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
       }
     }
@@ -251,9 +268,9 @@ export class UI {
     const extra = Math.max(0, party.length - 4), cost = this.sim.questCost(q, party.length), ready = this.sim.questReady(q).length;
     h += `<div class="row" style="margin:8px 0"><button class="btn" data-act="startFrontier" data-id="${q.id}" ${!party.length || s.gold < cost ? 'disabled' : ''}>Depart (${cost}G)</button>
       <button class="btn sm" data-act="instantFrontier" data-id="${q.id}" ${!ready || s.gold < q.fee ? 'disabled' : ''}>Instant Depart (${q.fee}G)</button><span class="muted">${party.length}/8 selected · ${q.fee}G entry + ${extra * this.sim.questExtraFee(q)}G extras</span></div>
-      <div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected when you choose the site. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. The boss appears only after departure.</div><div class="grid">`;
+      <div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected when you choose the site. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. The boss appears only after departure.</div><div class="grid party-grid">`;
     const rec = this.sim.questLevel(q);
-    for (const a of cands) h += `<div class="card ${party.includes(a.id) ? 'sel' : ''}" data-act="togFrontierParty" data-id="${a.id}"><div class="thumb"><i data-char="${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv}${a.resident ? '' : ' · visitor'}${a.lv < rec ? ' · below suggested level' : ''}</div></div></div>`;
+    for (const a of cands) h += this.partyChoice(a, party.includes(a.id), 'togFrontierParty', rec);
     return h + `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
   }
   frontierRelics() {
@@ -279,8 +296,8 @@ export class UI {
   }
   panel_camps() {
     const s = this.s, camps = s.banditCamps || [];
-    let h = `<div class="row spread"><span class="muted">Strike the outlaw camps beyond the village. Each camp regroups four weeks after a victory.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
-      <p class="muted camp-note">Camps are quiet until a party departs. Winning pays the listed bounty; a cleared camp can be challenged again after its cooldown.</p>`;
+    let h = `<div class="row spread"><span class="muted">Strike the outlaw camps beyond the village. A cleared camp regroups after a random 8–20 weeks.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
+      <p class="muted camp-note">Available camps can launch village raids. Winning a camp challenge pays the listed bounty and prevents new raids from that camp until its cooldown ends.</p>`;
     const picked = camps.find(c => c.id === this.campPick);
     if (picked) h += this.campDetail(picked);
     h += '<div class="section">Known camps</div><div class="grid camp-grid">';
@@ -321,9 +338,9 @@ export class UI {
     const party = this.campParty, extra = Math.max(0, party.length - 4), cost = this.sim.questCost(q, party.length), ready = this.sim.questReady(q).length;
     h += `<div class="row" style="margin:8px 0"><button class="btn" data-act="startCamp" data-id="${q.id}" ${!party.length || s.gold < cost ? 'disabled' : ''}>Depart (${cost}G)</button>
       <button class="btn sm" data-act="instantCamp" data-id="${q.id}" ${!ready || s.gold < q.fee ? 'disabled' : ''}>Instant Depart (${q.fee}G)</button><span class="muted">${party.length}/8 selected · ${q.fee}G entry + ${extra * this.sim.questExtraFee(q)}G extras</span></div>
-      <div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected when you choose the camp. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Raiders appear only after departure.</div><div class="grid">`;
+      <div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected when you choose the camp. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Raiders appear only after departure.</div><div class="grid party-grid">`;
     const rec = this.sim.questLevel(q);
-    for (const a of cands) h += `<div class="card ${party.includes(a.id) ? 'sel' : ''}" data-act="togCampParty" data-id="${a.id}"><div class="thumb"><i data-char="${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv}${a.resident ? '' : ' · visitor'}${a.lv < rec ? ' · below suggested level' : ''}</div></div></div>`;
+    for (const a of cands) h += this.partyChoice(a, party.includes(a.id), 'togCampParty', rec);
     return h + `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
   }
   panel_develop() {
@@ -357,7 +374,7 @@ export class UI {
         const P = PERKS[j.perk], lv = a ? a.jobLv[id] || 0 : 0, mastered = lv >= MASTERY, cur = a && a.job === id;
         const err = a ? this.sim.canChangeJob(a, id) : null;
         const req = (j.req || []).map(r => `${a && (a.jobLv[r] || 0) >= MASTERY ? '✔' : '·'} ${JOBS[r].name}`).join(' ');
-        const status = !a ? '' : cur ? `<span class="tag res">Current · Lv${lv}</span>` : mastered ? `<span class="tag gold">★ Mastered · Lv${lv}</span>` : lv ? `<span class="tag">Lv${lv}</span>` : '';
+        const status = !a ? '' : cur && mastered ? `<strong class="tag res mastery-status">✓ Current job mastered · Lv${lv}</strong>` : cur ? `<span class="tag res">Current · Lv${lv}</span>` : mastered ? `<span class="tag gold">★ Mastered · Lv${lv}</span>` : lv ? `<span class="tag">Lv${lv}</span>` : '';
         h += `<div class="card ${a && err && !cur ? 'locked' : ''} ${cur ? 'sel' : ''}" ${a && !err ? `data-act="setJob" data-id="${a.id}" data-job="${id}"` : ''}>
           <div class="thumb"><i data-char="${j.sprites[0]}" data-scale="3"></i></div><div class="meta"><div class="name">${j.name}</div>${status ? `<div>${status}</div>` : ''}
           <div class="sub"><b>${P.name}</b>: ${esc(P.desc)}</div>
@@ -401,7 +418,7 @@ export class UI {
       const H = HAPPENINGS.find(x => x.id === hh.id); if (!H) continue; const d = hh.data || {};
       let st = hh.weeks > 1 ? `${hh.weeks} weeks left` : 'Ends this week';
       if (H.id === 'stampede') st += ` · ${alive(d.mobs)} still charging · ${d.breaches || 0} broke through`;
-      if (H.id === 'bandits') st += ` · ${alive(d.mobs)} bandits left`;
+      if (H.id === 'bandits') { const camp = (s.banditCamps || []).find(c => c.id === d.camp); st += ` · ${alive(d.mobs)} bandits left${camp ? ` · from ${esc(camp.name)}` : ''}`; }
       if (H.id === 'goldslime') st += alive([d.mob]) ? ' · still roaming (red arrows show raiders, gold = the slime)' : ' · caught!';
       if (H.id === 'meteor') st += ` · +${d.crystals} Crystal at week end`;
       if (H.id === 'wanderer') { const a = s.advs.find(o => o.id === d.adv); st += a ? ` · ${esc(a.name)} the ${JOBS[a.job].name}${a.resident ? ' has settled here!' : ''}` : ''; }

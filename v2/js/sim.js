@@ -4,7 +4,7 @@ import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, FAC, DECOR, JOBS, ITEMS, MONST
   ZONE_MONS, ZONE_POP, ZONE_LV, HAPPENINGS, HAPPEN_CHANCE, CHARTERS, VISITOR_CAP, ELITE_CHANCE } from './data.js';
 import { PathGrid } from './path.js';
 import { makeRng } from './rng.js';
-import { defOf, buildingAt, roadAt, setRoad, place, spawnAdventurer, stat, maxHp, log, zoneAt, townDist, frontierBonus, villageBoundary, ZONE_BIOME, CAVE, cavePos, shuffle, teachJob, perkSum, gearSum, LV_CAP, JOB_CAP, MASTERY } from './state.js';
+import { defOf, buildingAt, roadAt, setRoad, place, spawnAdventurer, stat, maxHp, log, zoneAt, townDist, buildAreas, frontierBonus, villageBoundary, ZONE_BIOME, CAVE, cavePos, shuffle, teachJob, perkSum, gearSum, LV_CAP, JOB_CAP, MASTERY } from './state.js';
 import { BIOMES } from './data.js';
 
 export const DT = 0.1;              // seconds per sim step
@@ -348,15 +348,16 @@ export class Sim {
     // train
     { const b = this.pickFacility(a, 'train', b => this.price(b) <= a.gold); if (b) add(16 * this.pmul(a, 'train') + (a.jobLv[a.job] < 10 ? 6 : 0), { type: 'visit', b: b.id, dur: 8, train: true }); }
     // hunt
-    if (hpR > 0.6 && a.energy > 40) {
+    const raiding = s.mons.some(m => m.raid && m.hp > 0);
+    if (hpR > 0.6 && a.energy > 40 && !raiding) {
       const z = this.zoneFor(a);
       add((28 + (a.gold < 80 ? 30 : 0)) * this.pmul(a, 'hunt') * (this.eventOn('contest') ? 1.6 : 1) * (this.happening('rain') ? 0.6 : 1), { type: 'hunt', zone: z, dur: 40 + R.int(0, 30) });
     }
     // a Golden Slime is worth chasing across the map
     const gold = s.mons.find(m => m.golden && m.hp > 0);
-    if (gold && a.lv >= 3 && hpR > 0.6) add(50 * this.pmul(a, 'hunt'), { type: 'hunt', zone: 9, chase: gold.id, dur: 60 });
+    if (gold && a.lv >= 3 && hpR > 0.6 && !raiding) add(50 * this.pmul(a, 'hunt'), { type: 'hunt', zone: 9, chase: gold.id, dur: 60 });
     // raid defence: everyone healthy rallies against stampedes and bandits
-    if (hpR > 0.5 && s.mons.some(m => m.raid && m.hp > 0)) {
+    if (hpR > 0.5 && raiding) {
       add(75 * this.pmul(a, 'hunt'), { type: 'hunt', zone: 9, defend: true, dur: 90 });
     }
     // fun
@@ -583,12 +584,13 @@ export class Sim {
   // ---------- movement ----------
   walkTo(a, gx, gy, step = this.speed(a) * DT) {
     if (Math.abs(a.x - gx) < 0.15 && Math.abs(a.y - gy) < 0.15) { a.path = null; return true; }
-    if (!a.path || a.pathGoal !== gx + ',' + gy || a.pathV !== this.grid.version || (!a.path.length && this.s.tick >= a.pathRetry)) {
+    const defend = !!a.task?.defend && townDist(this.s, Math.round(a.x), Math.round(a.y)) === 0;
+    if (!a.path || a.pathDefend !== defend || a.pathGoal !== gx + ',' + gy || a.pathV !== this.grid.version || (!a.path.length && this.s.tick >= a.pathRetry)) {
       const sx = Math.round(a.x), sy = Math.round(a.y);
       const start = this.grid.walkable(sx, sy) ? [sx, sy] : (this.grid.nearestWalkable(sx, sy) || [sx, sy]);
       const goal = this.grid.walkable(gx, gy) ? [gx, gy] : this.grid.nearestWalkable(gx, gy);
       if (!goal) return false;
-      a.path = this.grid.find(start[0], start[1], goal[0], goal[1]) || []; a.pathGoal = gx + ',' + gy; a.pathV = this.grid.version; a.pi = 0;
+      a.path = this.grid.find(start[0], start[1], goal[0], goal[1], undefined, defend ? (x, y) => townDist(this.s, x, y) === 0 : null) || []; a.pathGoal = gx + ',' + gy; a.pathV = this.grid.version; a.pathDefend = defend; a.pi = 0;
       a.pathEnd = goal; a.pathRetry = this.s.tick + 10;
     }
     const node = a.path[a.pi]; if (!node) return !!a.pathEnd && Math.hypot(a.x - a.pathEnd[0], a.y - a.pathEnd[1]) < 0.5;
@@ -623,6 +625,7 @@ export class Sim {
       if (a.potions > 0 && hpR < retreat) { a.potions--; a.hp = Math.min(maxHp(a, s), Math.round(a.hp + this.potion().heal * (1 + this.bonus('heal') + perkSum(a, 'healPct')))); this.emote(a, 'heart'); this.emit('sfx', 'heal'); return; }
       t.type = 'return';
     }
+    if (t.defend && t.type !== 'return') { this.defendStep(a, t); return; }
     if (t.type === 'return' || a.taskT > t.dur) {
       const home = this.randomTownCellNear(38, 36);
       if (this.walkTo(a, home[0], home[1]) || a.taskT > t.dur + 60) a.task = null;
@@ -639,6 +642,34 @@ export class Sim {
     }
   }
   nearestRaider(a) { let best = null, bd = 1e9; for (const m of this.s.mons) { if (!m.raid || m.hp <= 0) continue; const d = Math.hypot(m.x - a.x, m.y - a.y); if (d < bd) { bd = d; best = m; } } return best; }
+  defensePoint(x, y) {
+    let best = null, distance = Infinity;
+    for (const r of buildAreas(this.s)) {
+      const cx = Math.max(r.x0, Math.min(r.x1 - 1, Math.round(x))), cy = Math.max(r.y0, Math.min(r.y1 - 1, Math.round(y)));
+      for (let radius = 0; radius <= 8; radius++) {
+        let found = false;
+        for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+          const xx = cx + dx, yy = cy + dy;
+          if (xx < r.x0 || xx >= r.x1 || yy < r.y0 || yy >= r.y1 || !this.grid.walkable(xx, yy)) continue;
+          const d = Math.hypot(xx - x, yy - y); found = true;
+          if (d < distance) { distance = d; best = [xx, yy]; }
+        }
+        if (found) break;
+      }
+    }
+    return best;
+  }
+  defendStep(a, t) {
+    const m = this.nearestRaider(a);
+    if (!m) { a.task = null; a.path = null; return; }
+    const outside = townDist(this.s, Math.round(a.x), Math.round(a.y)) > 0;
+    if (!outside && Math.hypot(m.x - a.x, m.y - a.y) <= JOBS[a.job].range + perkSum(a, 'range') + 0.4) { this.fight(a, m); return; }
+    const x = outside ? a.x : m.x, y = outside ? a.y : m.y;
+    const key = `${outside}:${Math.round(x)},${Math.round(y)}:${this.grid.version}`;
+    if (t.holdKey !== key) { t.hold = this.defensePoint(x, y); t.holdKey = key; }
+    if (t.hold) this.walkTo(a, ...t.hold);
+  }
   randomTownCellNear(x, y) { return this.grid.nearestWalkable(x + this.R.int(-4, 4), y + this.R.int(-2, 2), 8) || [x, y]; }
   nearestMonster(a, r, maxZone = 9) {
     let best = null, bd = r;
@@ -774,6 +805,9 @@ export class Sim {
   monStep(m) {
     if (m.hp <= 0) return;
     const s = this.s, R = this.R; m.anim += DT; if (m.hitT > 0) m.hitT -= DT; if (m.atkT > 0) m.atkT -= DT;
+    if (m.raid === 'bandits' && townDist(s, Math.round(m.x), Math.round(m.y)) === 0) {
+      const raid = this.happening('bandits'); if (raid) raid.data.arrived = true;
+    }
     const M = m.boss ? BOSSES[m.boss] : MONSTERS[m.type];
     const spd = (m.boss ? 0.7 : m.moveSpeed || M.spd) * 1.2 * DT;
     if (m.flee) return this.fleeStep(m, spd);
@@ -804,6 +838,7 @@ export class Sim {
       }
       return;
     }
+    if (m.raid === 'bandits' && m.raidGoal) { this.walkTo(m, ...m.raidGoal, spd); return; }
     if (m.charge) return this.chargeStep(m, spd);
     // wander around home point, never into town
     if (Math.hypot(m.tx - m.x, m.ty - m.y) < 0.1 || R.chance(0.005)) {
@@ -897,11 +932,12 @@ export class Sim {
 
   // ---------- happenings (weekly random events, see js/happenings.js) ----------
   happening(id) { return this.s.happen && this.s.happen.find(h => h.id === id); }
+  raidCamps() { return (this.s.banditCamps || []).filter(c => c.readyAt <= this.s.tick && !this.s.activeQuests.some(q => q.camp === c.id)); }
   rollHappening() {
     const s = this.s, R = this.R;
     if (!R.chance(Math.min(0.95, HAPPEN_CHANCE + this.charter('happenChance')))) return;
     const recent = new Set(s.happenLog.slice(-3).map(h => h.id));
-    const pool = HAPPENINGS.filter(h => s.stars >= h.minStars && !this.happening(h.id) && !recent.has(h.id) && (h.id !== 'merchant' || this.merchantPool().length));
+    const pool = HAPPENINGS.filter(h => s.stars >= h.minStars && !this.happening(h.id) && !recent.has(h.id) && (h.id !== 'merchant' || this.merchantPool().length) && (h.id !== 'bandits' || this.raidCamps().length));
     if (!pool.length) return;
     const w = h => h.weight * this.charterHappen(h.id);
     let r = R.range(0, pool.reduce((n, h) => n + w(h), 0));
@@ -912,6 +948,7 @@ export class Sim {
     const s = this.s, R = this.R, H = HAPPENINGS.find(h => h.id === id); if (!H) return 'Unknown happening';
     if (this.happening(id)) return 'Already happening';
     if (id === 'merchant' && !this.merchantPool().length) return 'The merchant has nothing left to sell';
+    if (id === 'bandits' && !this.raidCamps().length) return 'No active camp can launch a raid';
     const h = { id, weeks: H.weeks, data: {} };
     s.happen.push(h); s.happenLog.push({ id, t: `Y${s.time.year} M${s.time.month} W${s.time.week}` }); if (s.happenLog.length > 24) s.happenLog.shift();
     const guild = s.buildings.find(b => b.type === 'guild');
@@ -945,14 +982,16 @@ export class Sim {
       }
       case 'bandits': {
         const strength = this.raidStrength(); h.data.mobs = []; h.data.rewardMult = strength.rewardMult;
+        const camp = R.pick(this.raidCamps()), goal = nearGuild(0);
+        h.data.camp = camp.id; h.data.arrived = false;
+        log(s, `Bandits are marching from ${camp.name}. Hold the village!`, 'bad');
+        const route = this.grid.find(camp.x, camp.y, ...goal);
+        // Allow a distant company to march in, then leave a full week for the defence.
+        h.weeks += Math.ceil((route ? route.length * 1.414 : Math.hypot(camp.x - goal[0], camp.y - goal[1]) * 2) / (0.7 * WEEK_SECONDS));
         for (let i = 0; i < strength.count; i++) {
-          let c = null;
-          for (let k = 0; k < 60 && !c; k++) {
-            const x = R.int(s.town.x0 - 4, s.town.x1 + 3), y = R.int(s.town.y0 - 4, s.town.y1 + 3), d = townDist(s, x, y);
-            if (d >= 2 && d <= 4 && this.grid.walkable(x, y) && !(Math.abs(x - 38) < 4 && y >= s.town.y1)) c = [x, y];
-          }
+          const c = this.grid.nearestWalkable(camp.x + R.int(-1, 1), camp.y + R.int(-1, 1), 2);
           if (!c) continue;
-          const m = this.spawnRaider(c, strength.level, { raid: 'bandits' });
+          const m = this.spawnRaider(c, strength.level, { raid: 'bandits', sourceCamp: camp.id, raidGoal: goal });
           if (m) h.data.mobs.push(m.id);
         }
         this.rally();
@@ -997,7 +1036,8 @@ export class Sim {
       case 'bandits': {
         const left = alive(h.data.mobs);
         for (const m of left) { m.hp = 0; m.deadT = 0.3; }
-        if (left.length) { const steal = Math.floor(Math.min(s.gold * 0.1, (200 + s.stars * 150) * (h.data.rewardMult || 1))); s.gold -= steal; log(s, `The bandits made off with ${steal}G!`, 'bad'); this.emit('sfx', 'fail'); }
+        if (left.length && h.data.camp && !h.data.arrived) log(s, 'The bandits turned back before reaching the village.', 'good');
+        else if (left.length) { const steal = Math.floor(Math.min(s.gold * 0.1, (200 + s.stars * 150) * (h.data.rewardMult || 1))); s.gold -= steal; log(s, `The bandits made off with ${steal}G!`, 'bad'); this.emit('sfx', 'fail'); }
         else { const g = Math.round((150 + s.stars * 100) * bonus * (h.data.rewardMult || 1)), tp = Math.round(3 * (h.data.rewardMult || 1)); s.gold += g; s.tp += tp; log(s, `Bandits driven off! Their loot: +${g}G, +${tp} TP`, 'title'); this.emit('fanfare', 'Bandits driven off!', `+${g}G`); }
         break;
       }
@@ -1228,7 +1268,7 @@ export class Sim {
       if (q.frontier) this.captureFrontier(q.frontier);
       else if (q.camp) {
         const c = s.banditCamps.find(c => c.id === q.camp);
-        c.clears++; c.readyAt = s.tick + Math.round(4 * WEEK_SECONDS / DT);
+        c.clears++; c.cooldownWeeks = this.R.int(8, 20); c.readyAt = s.tick + Math.round(c.cooldownWeeks * WEEK_SECONDS / DT);
         for (const [k, n] of Object.entries(q.reward.materials)) s.mats[k] = (s.mats[k] || 0) + n;
         if (party.length) this.treasure({ lv: q.rec, x: c.x, y: c.y }, party[0]);
       }

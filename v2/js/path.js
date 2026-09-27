@@ -14,9 +14,9 @@ export class PathGrid {
   walkable(x, y) { return x >= 0 && y >= 0 && x < this.w && y < this.h && this.cost[y * this.w + x] > 0; }
 
   // Returns [[x,y],...] from start (exclusive) to goal (inclusive), or null.
-  find(sx, sy, gx, gy, maxIter = this.w * this.h * 4) {
+  find(sx, sy, gx, gy, maxIter = this.w * this.h * 4, allowed = null) {
     const { w, h, cost, g, from, stamp, closed, heap, f } = this;
-    if (!this.walkable(gx, gy)) return null;
+    if (!this.walkable(gx, gy) || (allowed && !allowed(gx, gy))) return null;
     const run = ++this.run, start = sy * w + sx, goal = gy * w + gx;
     if (start === goal) return [];
     let hn = 0;
@@ -43,8 +43,9 @@ export class PathGrid {
         const nx = cx + dx, ny = cy + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
         const ni = ny * w + nx, c = cost[ni];
-        if (c <= 0) continue;
+        if (c <= 0 || (allowed && !allowed(nx, ny))) continue;
         if (dx && dy && (cost[cy * w + nx] <= 0 || cost[ny * w + cx] <= 0)) continue; // no corner cutting
+        if (allowed && dx && dy && (!allowed(nx, cy) || !allowed(cx, ny))) continue;
         const ng = g[cur] + c * (dx && dy ? 1.414 : 1);
         if (stamp[ni] !== run || ng < g[ni]) {
           stamp[ni] = run; g[ni] = ng; from[ni] = cur; f[ni] = ng + hEst(ni); push(ni);
