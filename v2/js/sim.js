@@ -549,9 +549,12 @@ export class Sim {
     a.energy = Math.max(0, a.energy - DT * (a.task && a.task.type === 'hunt' ? 0.45 : 0.22));
     a.fun = Math.max(0, a.fun - DT * 0.18);
     if (a.ko) return this.koStep(a);
-    // Respond locally without replacing errands, quest ownership or village-wide defense orders.
-    if (!a.task?.carrying && townDist(s, Math.round(a.x), Math.round(a.y)) === 0) {
-      const threat = s.mons.find(m => m.hp > 0 && m.raid && Math.hypot(m.x - a.x, m.y - a.y) <= (m.target === a.id ? Math.max(4, (m.range || 1) + 0.2) : 4));
+    // Retaliate only when targeted; let existing retreat, potion and carrying behavior run first.
+    const task = a.task, hpR = a.hp / maxHp(a, s);
+    const recovering = task?.type === 'return' || (task?.type === 'hunt' && (task.done || a.energy < 12 || hpR < 0.35 * this.pmul(a, 'retreat') + 0.05)) ||
+      (task?.type === 'quest' && hpR < 0.3 && a.potions > 0);
+    if (!task?.carrying && !recovering && townDist(s, Math.round(a.x), Math.round(a.y)) === 0) {
+      const threat = s.mons.find(m => m.hp > 0 && m.raid && m.target === a.id && Math.hypot(m.x - a.x, m.y - a.y) <= Math.max(4, (m.range || 1) + 0.2));
       if (threat) { this.fight(a, threat, true); return; }
     }
     if (a.hunger >= 100 && s.tick % 50 === 0) { a.sat = Math.max(0, a.sat - 2); this.emote(a, 'hungry'); }

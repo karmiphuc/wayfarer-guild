@@ -101,11 +101,11 @@ for (let rank = 1; rank <= 5; rank++) {
   s.tick++; sim.campPatrols(); assert(s.mons.length > before, 'another eligible camp can dispatch after the interval');
 }
 // Local self-defense actually damages attackers while preserving the interrupted routine.
-for (const type of ['visit', 'stroll', 'camp', 'hunt', 'return']) {
+for (const type of ['visit', 'stroll', 'camp', 'hunt', 'quest', 'rescue', 'leave']) {
   const { s, sim } = setup(), a = s.advs[0]; s.advs = [a];
   Object.assign(a, { x: 38, y: 28, job: 'warrior', cool: 0, energy: 80, hunger: 0, task: { type, zone: 1, dur: 20 } });
   a.hp = maxHp(a, s); const task = a.task;
-  const guard = sim.spawnRaider([39, 28], 3, { raid: 'patrol', expiresAt: s.tick + week });
+  const guard = sim.spawnRaider([39, 28], 3, { raid: 'patrol', target: a.id, expiresAt: s.tick + week });
   const hp = guard.hp; sim.advStep(a);
   assert(guard.hp < hp, type + ' must fight back'); assert.equal(a.task, task); assert(!a.task.defend);
   guard.hp = 0; a.task = { type: 'camp', dur: 20 }; const energy = a.energy;
@@ -116,13 +116,63 @@ for (const type of ['visit', 'stroll', 'camp', 'hunt', 'return']) {
   const { s, sim } = setup(), a = s.advs[0]; s.advs = [a];
   Object.assign(a, { x: 38, y: 32, job: 'warrior', cool: 0, task: { type: 'camp', dur: 50 }, energy: 80 });
   a.hp = maxHp(a, s);
-  const guard = sim.spawnRaider([41, 32], 3, { raid: 'patrol', job: 'archer', expiresAt: s.tick + week });
+  const guard = sim.spawnRaider([41, 32], 3, { raid: 'patrol', job: 'archer', target: a.id, expiresAt: s.tick + week });
   const hp = guard.hp;
   for (let i = 0; i < 50; i++) { s.tick++; sim.advStep(a); }
   assert(guard.hp < hp, 'melee pawn must approach and hit a ranged attacker');
   a.x = 28; a.y = 20; a.path = null; guard.x = 25; guard.y = 20;
   a.task = { type: 'camp', dur: 50 };
   for (let i = 0; i < 50; i++) { s.tick++; sim.advStep(a); assert.equal(townDist(s, Math.round(a.x), Math.round(a.y)), 0); }
+}
+// Nearby guards and attacks on someone else never interrupt routine rest.
+for (const target of [null, -1]) {
+  const { s, sim } = setup(), a = s.advs[0]; s.advs = [a];
+  Object.assign(a, { x: 38, y: 28, energy: 70, task: { type: 'camp', dur: 30 } }); a.hp = maxHp(a, s);
+  const guard = sim.spawnRaider([39, 28], 3, { raid: 'patrol', target, expiresAt: s.tick + week }), hp = guard.hp;
+  sim.advStep(a); assert.equal(guard.hp, hp); assert(a.energy > 70, 'uninvolved pawn should continue resting');
+}
+// Self-defense must not bypass existing quest, rescue, retreat or indoor/cave behavior.
+for (const type of ['return', 'carrying', 'inside', 'dungeon']) {
+  const { s, sim } = setup(), a = s.advs[0]; s.advs = [a];
+  Object.assign(a, { x: 38, y: 28, energy: 80, task: { type, dur: 30 } }); a.hp = maxHp(a, s);
+  const guard = sim.spawnRaider([39, 28], 3, { raid: 'patrol', target: a.id, expiresAt: s.tick + week }), hp = guard.hp;
+  if (type === 'inside') a.inside = { b: s.buildings[0].id, t: 10, task: { type: 'visit', sleep: true } };
+  if (type === 'dungeon') a.dungeon = true;
+  if (type === 'carrying') a.task = { type: 'rescue', carrying: true };
+  let continued = false;
+  sim.questStep = sim.rescueStep = sim.huntStep = sim.walkTo = () => { continued = true; };
+  sim.advStep(a); assert.equal(guard.hp, hp, type + ' must retain existing behavior');
+  if (!['inside', 'dungeon'].includes(type)) assert(continued, type + ' should continue');
+}
+{
+  const { s, sim } = setup(), a = s.advs[0]; s.advs = [a];
+  Object.assign(a, { x: 38, y: 28, energy: 80, potions: 1, task: { type: 'hunt', zone: 1, dur: 30 } });
+  a.hp = maxHp(a, s) * 0.2;
+  const guard = sim.spawnRaider([39, 28], 3, { raid: 'patrol', target: a.id }), hp = guard.hp;
+  sim.advStep(a); assert.equal(a.potions, 0, 'critical hunters must still use potions'); assert.equal(guard.hp, hp);
+  a.hp = maxHp(a, s); a.energy = 5; sim.advStep(a);
+  assert.equal(a.task?.type, 'return', 'exhausted hunters must still retreat');
+}
+{
+  const { s, sim } = setup(), a = s.advs[0]; s.advs = [a];
+  Object.assign(a, { x: 38, y: 28, energy: 80, potions: 1, task: { type: 'quest', qid: 123 } });
+  a.hp = maxHp(a, s) * 0.2;
+  s.activeQuests = [{ id: 123, members: [a.id], kind: 'outbreak', spot: [38, 28] }];
+  const guard = sim.spawnRaider([39, 28], 3, { raid: 'patrol', target: a.id }), hp = guard.hp;
+  sim.advStep(a); assert.equal(a.potions, 0, 'quest healing must run before retaliation'); assert.equal(guard.hp, hp);
+  assert.equal(a.task.qid, 123); assert.deepEqual(s.activeQuests[0].members, [a.id]);
+}
+// A real rescue reservation survives retaliation and resumes the pickup.
+{
+  const { s, sim } = setup(), [a, fallen] = s.advs; s.advs = [a, fallen];
+  Object.assign(a, { x: 39, y: 34, job: 'warrior', energy: 80, cool: 0, taskT: 0, task: { type: 'rescue', target: fallen.id, carrying: false } });
+  a.hp = maxHp(a, s);
+  Object.assign(fallen, { x: 43, y: 34, hp: 0, ko: true, koT: 10, rescueBy: a.id });
+  const guard = sim.spawnRaider([40, 34], 3, { raid: 'patrol', target: a.id }), task = a.task, hp = guard.hp;
+  sim.advStep(a); assert(guard.hp < hp); assert.equal(a.task, task); assert.equal(a.taskT, 0);
+  guard.hp = 0;
+  for (let i = 0; i < 200 && !task.carrying; i++) { s.tick++; sim.advStep(a); }
+  assert(task.carrying, 'rescuer must resume and pick up its reserved casualty'); assert.equal(fallen.rescueBy, a.id);
 }
 // Existing overpowering guards and rapid schedules are corrected once, without rerolling on each load.
 {
