@@ -4,6 +4,11 @@ import { IMG, EMOTE, HANDS, tinted, goldified } from './assets.js';
 import { roadAt, defOf, maxHp, buildAreas, townDist } from './state.js';
 import { WEEK_SECONDS } from './sim.js';
 
+export function palisadeConnections(x, y, barriers) {
+  const at = (xx, yy) => !!(barriers && xx >= 0 && yy >= 0 && xx < MAP_W && yy < MAP_H && barriers[yy * MAP_W + xx]);
+  return { n: at(x, y - 1), e: at(x + 1, y), s: at(x, y + 1), w: at(x - 1, y) };
+}
+
 export class Renderer {
   constructor(canvas) {
     this.cv = canvas; this.g = canvas.getContext('2d');
@@ -106,7 +111,7 @@ export class Renderer {
       else if (k === 4) this.drawMon(o);
       else if (k === 5) { this.drawShadow(o.x, o.y); this.drawChar('c_' + o.spr, o.x, o.y, o.dir, o.path ? Math.floor(o.anim * 6) % 4 : 0, 0); }
       else if (k === 6) this.drawAnimal(o);
-      else if (k === 8) this.drawPalisade(o.x, o.y, o.vertical);
+      else if (k === 8) this.drawPalisade(o.x, o.y, palisadeConnections(o.x, o.y, ui.barriers));
       else this.drawNpc(s, o);
     }
     if (this.ghost) this.drawGhost(s, ui);
@@ -139,7 +144,7 @@ export class Renderer {
     const sp = SPR[key]; if (!sp) return;
     const [w, h] = d.fp;
     if (d.barrier) {
-      this.drawPalisade(b.x, b.y, this.palisadeVertical(b.x, b.y, ui.barriers));
+      this.drawPalisade(b.x, b.y, palisadeConnections(b.x, b.y, ui.barriers));
       if (this.selected && this.selected.kind === 'b' && this.selected.id === b.id) {
         this.g.strokeStyle = '#ffe36e'; this.g.lineWidth = 1; this.g.strokeRect(b.x * T + 0.5, b.y * T + 0.5, T - 1, T - 1);
       }
@@ -159,15 +164,23 @@ export class Renderer {
       g.strokeStyle = '#ffe36e'; g.lineWidth = 1; g.strokeRect(b.x * T + 0.5, b.y * T + 0.5, w * T - 1, h * T - 1);
     }
   }
-  palisadeVertical(x, y, barriers) {
-    if (!barriers) return false;
-    const at = (xx, yy) => xx >= 0 && yy >= 0 && xx < MAP_W && yy < MAP_H && barriers[yy * MAP_W + xx];
-    const ns = +!!at(x, y - 1) + +!!at(x, y + 1), ew = +!!at(x - 1, y) + +!!at(x + 1, y);
-    return ns > ew;
+  sprPart(key, sx, sy, sw, sh, dx, dy) {
+    const sp = SPR[key], im = sp && IMG[sp.img]; if (!im) return;
+    this.g.drawImage(im, sp.x + sx, sp.y + sy, sw, sh, Math.round(dx), Math.round(dy), sw, sh);
   }
-  drawPalisade(x, y, vertical) {
-    const key = vertical ? 'palisadeV' : 'palisadeH', sp = SPR[key];
-    this.spr(key, x * T + (T - sp.w) / 2, (y + 1) * T - sp.h);
+  drawPalisade(x, y, links) {
+    const px = x * T, py = y * T, any = links.n || links.e || links.s || links.w;
+    if (!any) { this.spr('palisadeH', px, py); return; }
+    if (links.w && links.e) this.sprPart('palisadeH', 0, 0, 16, 16, px, py);
+    else {
+      if (links.w) this.sprPart('palisadeH', 0, 0, 8, 16, px, py);
+      if (links.e) this.sprPart('palisadeH', 8, 0, 8, 16, px + 8, py);
+    }
+    if (links.n && links.s) this.sprPart('palisadeV', 0, 0, 8, 32, px + 4, py - 16);
+    else {
+      if (links.n) this.sprPart('palisadeV', 0, 0, 8, links.e || links.w ? 24 : 16, px + 4, py - 16);
+      if (links.s) this.sprPart('palisadeV', 0, 16, 8, 16, px + 4, py);
+    }
   }
   drawChar(sheet, x, y, dir, frame, row) {
     const im = IMG[sheet]; if (!im) return;
@@ -184,7 +197,7 @@ export class Renderer {
     // mount: draw the partner monster under the rider
     const pet = a.partner && s.monsters.find(m => m.id === a.partner && m.riding);
     let lift = 0;
-    if (pet) { const M = MONSTERS[pet.type]; this.monFrame('m_' + M.spr, a.x, a.y + 0.15, a.dir, Math.floor(a.anim * 7)); lift = 0.35; }
+    if (pet) { const M = MONSTERS[pet.type]; this.monFrame('m_' + M.spr, a.x, a.y + 0.15, a.dir, Math.floor(a.anim * 7), null, M.sheetRows); lift = 0.35; }
     if (a.ko) {
       const carrier = a.rescueBy && s.advs.find(o => o.id === a.rescueBy && o.task?.type === 'rescue' && o.task.carrying);
       const side = carrier ? (carrier.dir === 0 ? -0.35 : carrier.dir === 1 ? 0.35 : 0) : 0;
@@ -260,9 +273,11 @@ export class Renderer {
     g.fillStyle = '#2b1a10'; g.fillRect(cx - 4, cy - 1, 9, 5);
     g.fillStyle = '#ffd84a'; g.fillRect(cx - 3, cy + 1, 7, 2); g.fillRect(cx - 3, cy, 1, 1); g.fillRect(cx, cy - 0, 1, 1); g.fillRect(cx + 3, cy, 1, 1);
   }
-  monFrame(sheet, x, y, dir, frame, img) {
+  monFrame(sheet, x, y, dir, frame, img, sheetRows = false) {
     const im = img || IMG[sheet]; if (!im) return;
-    this.g.drawImage(im, dir * 16, (frame % 4) * 16, 16, 16, Math.round(x * T), Math.round(y * T) - 3, 16, 16);
+    const sx = (sheetRows ? frame % 4 : dir) * 16;
+    const sy = (sheetRows ? [0, 2, 1, 3][dir] : frame % 4) * 16;
+    this.g.drawImage(im, sx, sy, 16, 16, Math.round(x * T), Math.round(y * T) - 3, 16, 16);
   }
   drawAnimal(an) {
     const im = IMG['an_' + an.k]; if (!im) return; const g = this.g, f = an.moving ? Math.floor(this.time * 6) % 2 : 0;
@@ -273,7 +288,7 @@ export class Renderer {
   drawPet(m) {
     const M = MONSTERS[m.type]; if (!M) return;
     this.drawShadow(m.x, m.y, 10);
-    this.monFrame('m_' + M.spr, m.x, m.y, m.dir, Math.floor(m.anim * 5));
+    this.monFrame('m_' + M.spr, m.x, m.y, m.dir, Math.floor(m.anim * 5), null, M.sheetRows);
     // little heart to mark village monsters
     const e = IMG['e27']; if (e && Math.floor(this.time * 0.5 + m.id) % 6 === 0) this.g.drawImage(e, Math.round(m.x * T + 2), Math.round(m.y * T - 12), 12, 11);
   }
@@ -291,7 +306,7 @@ export class Renderer {
     } else {
       this.drawShadow(m.x, m.y, 10);
       if (m.hitT > 0) { g.save(); g.filter = 'brightness(2.2)'; }
-      this.monFrame('m_' + M.spr, m.x, m.y, m.dir, Math.floor(m.anim * 5), m.golden ? goldified('m_' + M.spr) : m.elite ? tinted('m_' + M.spr, 150) : null);
+      this.monFrame('m_' + M.spr, m.x, m.y, m.dir, Math.floor(m.anim * 5), m.golden ? goldified('m_' + M.spr) : m.elite ? tinted('m_' + M.spr, 150) : null, M.sheetRows);
       if (m.hitT > 0) g.restore();
       if (m.elite && m.hp > 0) this.crown(m.x, m.y);
       if (m.golden && m.hp > 0) this.sparkle(m.x, m.y, m.id);
@@ -392,8 +407,11 @@ export class Renderer {
     g.fillStyle = gh.ok ? 'rgba(120,255,140,0.35)' : 'rgba(255,80,80,0.4)';
     g.fillRect(gh.x * T, gh.y * T, w * T, h * T);
     if (d.road) return;
-    const key = d.barrier && this.palisadeVertical(gh.x, gh.y, ui.barriers) ? 'palisadeV' : Array.isArray(d.spr) ? d.spr[0] : d.spr, sp = SPR[key];
-    if (sp) { g.save(); g.globalAlpha = 0.75; this.spr(key, gh.x * T + (w * T - sp.w) / 2, (gh.y + h) * T - sp.h); g.restore(); }
+    if (d.barrier) { g.save(); g.globalAlpha = 0.75; this.drawPalisade(gh.x, gh.y, palisadeConnections(gh.x, gh.y, ui.barriers)); g.restore(); }
+    else {
+      const key = Array.isArray(d.spr) ? d.spr[0] : d.spr, sp = SPR[key];
+      if (sp) { g.save(); g.globalAlpha = 0.75; this.spr(key, gh.x * T + (w * T - sp.w) / 2, (gh.y + h) * T - sp.h); g.restore(); }
+    }
     if (FAC[gh.type]) { g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect((gh.x + (w >> 1)) * T + 5, (gh.y + h) * T + 5, 6, 6); }  // door marker
     if (d.appeal && d.r) { g.strokeStyle = 'rgba(255,200,255,0.6)'; g.lineWidth = 1 / this.scale; g.strokeRect((gh.x - d.r) * T, (gh.y - d.r) * T, (w + d.r * 2) * T, (h + d.r * 2) * T); }
   }

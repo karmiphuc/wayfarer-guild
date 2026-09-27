@@ -60,7 +60,7 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     quests: [], activeQuests: [], cleared: 0, bossesBeaten: {},
     titles: {}, events: [], log: [],
     stats: { income: 0, lastIncome: 0, kills: 0, monthKills: 0, visitorsTotal: 0, spentBuild: 0 },
-    flags: { tutorial: 0 },
+    flags: { tutorial: 0, nextCampPatrol: 0 },
     world: null, charter: null, charterChoices: [], happen: [], happenLog: [], npcs: [],
   };
   const R = makeRng(s);
@@ -128,6 +128,7 @@ function clearFrontierScenery(s) {
 }
 
 export function seedBanditCamps(s) {
+  const patrolRng = makeRng({ seed: (s.world?.code || 4242) ^ 0x50415452 });
   if (Array.isArray(s.banditCamps)) {
     const R = makeRng({ seed: (s.world?.code || 4242) ^ 0x434f4f4c });
     for (const c of s.banditCamps) {
@@ -138,6 +139,7 @@ export function seedBanditCamps(s) {
         c.readyAt += (c.cooldownWeeks - 4) * 300;
       }
       c.cooldownWeeks ??= 0;
+      c.patrolAt ??= Math.max(s.tick, c.readyAt) + patrolRng.int(2, 4) * 300;
     }
     return;
   }
@@ -159,7 +161,7 @@ export function seedBanditCamps(s) {
   for (const [x, y] of choices) {
     if (s.banditCamps.some(c => Math.hypot(c.x - x, c.y - y) < 9)) continue;
     const i = s.banditCamps.length;
-    s.banditCamps.push({ id: 'bandit' + (i + 1), name: names[i] + ' Camp', x, y, tier: 1 + Math.floor(i / 4), clears: 0, readyAt: 0, cooldownWeeks: 0 });
+    s.banditCamps.push({ id: 'bandit' + (i + 1), name: names[i] + ' Camp', x, y, tier: 1 + Math.floor(i / 4), clears: 0, readyAt: 0, cooldownWeeks: 0, patrolAt: s.tick + patrolRng.int(2, 4) * 300 });
     if (s.banditCamps.length === 16) break;
   }
   s.props = s.props.filter(p => p.k === 'cave' || !s.banditCamps.some(c => Math.abs(c.x - p.x) <= 4 + p.w && Math.abs(c.y - p.y) <= 4));
@@ -247,7 +249,7 @@ export function makeAdventurer(s, R, jobId = 'villager') {
     hp: 1, gold: R.int(60, 160), sat: R.int(15, 35), work: 100,
     hunger: R.int(20, 50), energy: R.int(60, 90), fun: R.int(30, 60),
     persona: [R.pick(personaKeys)], resident: false, home: null, partner: null,
-    eq: { weapon: null, armor: null, offhand: null, acc: null }, perks: [], potions: 1,
+    eq: { weapon: null, armor: null, offhand: null, acc: null, blessing: null }, perks: [], potions: 1,
     x: 0, y: 0, px: 0, py: 0, dir: 0, path: null, task: null, taskT: 0, cool: 0, stay: R.int(3, 6) * 7, days: 0,
     ko: false, rescueBy: null, rescueRetry: 0, emote: null, emoteT: 0, anim: 0, atkT: 0, bark: null, barkT: 0, kills: 0,
   };
@@ -286,7 +288,7 @@ export const LV_CAP = 99, JOB_CAP = 99, MASTERY = 10;
 // Sum of a bonus key over the town titles earned so far (TITLES[].bonus). Sim uses the same data via Sim.bonus().
 export function titleBonus(s, key) { let v = 0; for (const t of TITLES) if (s.titles && s.titles[t.id] && t.bonus[key]) v += t.bonus[key]; return v; }
 export function perkSum(a, key) { let v = 0; for (const p of a.perks || []) { const P = PERKS[p]; if (P && P[key]) v += P[key]; } return v; }
-export function gearSum(a, key) { let v = 0; for (const slot of ['weapon', 'armor', 'offhand', 'acc']) { const it = a.eq[slot] && ITEMS[a.eq[slot]]; if (it && it[key]) v += it[key]; } return v; }
+export function gearSum(a, key) { let v = 0; for (const slot of ['weapon', 'armor', 'offhand', 'acc', 'blessing']) { const it = a.eq[slot] && ITEMS[a.eq[slot]]; if (it && it[key]) v += it[key]; } return v; }
 export function stat(a, k, s) {
   const job = JOBS[a.job], v0 = JOBS.villager;
   let v = a.base[k] + (job[k] - v0[k]) + (a.lv - 1) * GROW[k] * (1 + job[k] / 25);
@@ -326,6 +328,7 @@ export function valid(s) { return s && typeof s === 'object' && s.schema && Arra
 const ITEM_RENAME = { wand: 'oakWand', bow: 'shortBow', axe: 'battleAxe', book: 'sutra', bigSword: 'greatSword', scroll: null };
 const JOB_RENAME = { princess: 'royal' };
 export function migrate(s) {
+  s.flags ??= {}; s.flags.nextCampPatrol ??= 0;
   s.fx = []; s.folk = s.folk || []; s.animals = s.animals || [];
   if (!Array.isArray(s.activeQuests)) s.activeQuests = [];
   if (s.quest && !s.activeQuests.some(q => q.id === s.quest.id)) s.activeQuests.push(s.quest);
@@ -358,6 +361,7 @@ export function migrate(s) {
   for (const a of s.advs) {
     a.rescueBy ??= null; a.rescueRetry ??= 0;
     a.perks = a.perks || []; a.eq = a.eq || {}; a.eq.acc = a.eq.acc || null;
+    a.eq.blessing ??= null;
     // Older saves used the body slot for helmets and shields. Move the exact owned item once.
     if (a.eq.offhand === undefined) {
       a.eq.offhand = ITEMS[a.eq.armor]?.slot === 'offhand' ? a.eq.armor : null;
@@ -379,8 +383,14 @@ export function migrate(s) {
     const owner = s.frontier.completed[f.id] && s.advs.find(a => a.id === s.frontier.relics[f.relic] && a.resident);
     if (s.frontier.completed[f.id]) s.frontier.relics[f.relic] = owner ? owner.id : null;
     else delete s.frontier.relics[f.relic];
-    for (const a of s.advs) if (a.eq.acc === f.relic && a !== owner) a.eq.acc = null;
-    if (owner && owner.eq.acc !== f.relic) s.frontier.relics[f.relic] = null;
+    for (const a of s.advs) {
+      if (a.eq.acc === f.relic) {
+        if (a === owner && !a.eq.blessing) a.eq.blessing = f.relic;
+        a.eq.acc = null;
+      }
+      if (a.eq.blessing === f.relic && a !== owner) a.eq.blessing = null;
+    }
+    if (owner && owner.eq.blessing !== f.relic) s.frontier.relics[f.relic] = null;
   }
   return s;
 }

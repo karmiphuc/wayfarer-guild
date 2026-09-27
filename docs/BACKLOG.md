@@ -13,6 +13,8 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Frontier blessings and village routines: assign one permanent relic blessing per resident alongside ordinary accessories; migrate existing owners. Live camps send bounded 2–4 guard patrols, recalled on clearance. Pawns prefer rest at dusk while preserving quests, rescue, emergencies and ongoing visits. Connected palisade corners and corrected monster animation axes improve map readability.
+
 - Equipment and class progression (#31): separate body armor and helm/shield slots with old-save migration; 15 additional items (85 ordinary items total), CC0 masterwork sprites, and eight additional classes (37 total). Every tier-3 class has a tier-4 successor, including a complete archer progression.
 
 - Gear clarity and resident essentials (#26): show earned legendary rewards prominently in the guild vault, expose accessory stock in Armor and Item Shops, and prioritize affordable missing basic equipment while reserving savings from optional spending. Urgent food and recovery remain available.
@@ -21,7 +23,7 @@ Legend:
 
 - Map interaction polish: Road, Palisade and Remove drags interpolate every crossed tile and suppress native browser image dragging. The eight frontier sites now have distinct atlas-built landmarks with full visible click targets and compact captured forms.
 
-- Frontier conquest: fourfold map area, eight dormant den sites, connected territory capture, permanent small village bonuses and single-copy legendary accessories. Existing villages keep their coordinates; regular population limits remain. This is continuous-map expansion, not the separate multi-map/reset roadmap in #41.
+- Frontier conquest: fourfold map area, eight dormant den sites, connected territory capture, permanent small village bonuses and unique assigned legendary blessings. Existing villages keep their coordinates; regular population limits remain. This is continuous-map expansion, not the separate multi-map/reset roadmap in #41.
 
 - Bandit camps: 16 world-seeded dormant sites offer repeatable tiered party fights, material stores and randomized 8–20 week recovery. Generated bandits use visible job classes, weapons, ranged attacks, magic and healing. Ordinary raids scale with village rank and late-game party strength, march from a ready unchallenged camp and cannot steal unless they reach owned land.
 

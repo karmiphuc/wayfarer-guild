@@ -129,7 +129,7 @@ v2/
   and the 3 charters offered. Weekly happenings (`HAPPEN_CHANCE` 0.37 ≈ one every 2.7 weeks) use the same seeded RNG, so code +
   choices replay identically.
 - Visitors (non-residents) are capped per rank by `VISITOR_CAP` = 5/5/10/15/20/30 for ★0–★5 (owner's play-test call).
-- Eight `FRONTIERS` sites spawn a guardian only when challenged. Completion grants land, a small bonus and one legendary accessory; never put these relics in shop unlocks. See ARCHITECTURE's Frontier conquests section.
+- Eight `FRONTIERS` sites spawn a guardian only when challenged. Completion grants land, a small bonus and one legendary blessing assignable to one resident, separate from their accessory; never put these relics in shop unlocks. See ARCHITECTURE's Frontier conquests section.
 - 72 monster types: 66 creatures + 6 outlaws (`human: true` — human pawns drawn from character sheets with a weapon; they roam
   zones 3–4 and form the Bandit Raid gang). 6% of wild spawns are Elites (`ELITE_CHANCE`: recoloured, crown, ×2.5 EXP/gold).
 - 1 in-game week = 30 s at 1× speed (`WEEK_SECONDS`), 4 weeks/month, sim step `DT = 0.1 s`, max 40 steps per frame.

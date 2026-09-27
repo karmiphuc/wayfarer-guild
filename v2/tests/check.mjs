@@ -71,7 +71,11 @@ try {
 { const r = run('node', ['tests/palisades.mjs']);
   r.status ? fail('palisade routing checks', r.stdout + (r.stderr || '')) : ok('palisades', r.stdout.trim()); }
 
-for (const name of ['camps', 'raids', 'rescue', 'economy', 'relic-ui', 'equipment']) {
+// Canvas source selection: connected palisade composition and monster sheet axes.
+{ const r = run('node', ['tests/rendering.mjs']);
+  r.status ? fail('rendering regression checks', r.stdout + (r.stderr || '')) : ok('rendering', r.stdout.trim()); }
+
+for (const name of ['camps', 'raids', 'rescue', 'economy', 'relic-ui', 'equipment', 'blessings', 'patrols', 'night-rest']) {
   const r = run('node', [`tests/${name}.mjs`]);
   r.status ? fail(`${name} regression checks`, r.stdout + (r.stderr || '')) : ok(name, r.stdout.trim());
 }

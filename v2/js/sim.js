@@ -227,6 +227,28 @@ export class Sim {
       const n = s.mons.filter(m => m.zone === z && m.hp > 0 && !m.quest).length;
       if (n < Math.round(ZONE_POP[z] * (1 + this.charter('monsterPop'))) && R.chance(0.08)) this.spawnMonster(z);
     }
+    if (s.tick % 10 === 0) this.campPatrols();
+  }
+  campPatrols() {
+    const s = this.s, R = this.R;
+    if (s.stars < 1 || s.tick < s.flags.nextCampPatrol) return;
+    const patrols = s.mons.filter(m => m.raid === 'patrol' && m.hp > 0);
+    if (patrols.length > 10) return;
+    const camp = this.raidCamps().filter(c => c.tier <= s.stars && c.patrolAt <= s.tick && !patrols.some(m => m.sourceCamp === c.id))
+      .sort((a, b) => a.patrolAt - b.patrolAt)[0];
+    if (!camp) return;
+    camp.patrolAt = s.tick + R.int(2, 4) * WEEK_SECONDS / DT;
+    const guild = s.buildings.find(b => b.type === 'guild');
+    const target = guild ? this.door(guild) : [(s.town.x0 + s.town.x1) >> 1, (s.town.y0 + s.town.y1) >> 1];
+    const origin = this.grid.nearestWalkable(camp.x, camp.y, 3), goal = this.defensePoint(...target);
+    if (!origin || !goal) return;
+    const route = this.grid.find(...origin, ...goal); if (!route) return;
+    const n = Math.min(R.int(2, 4), 12 - patrols.length), level = this.raidStrength().level;
+    // Travel allowance plus two weeks at the village; blocked or abandoned patrols never accumulate.
+    const expiresAt = s.tick + Math.ceil((route.length * 1.414 / 0.7 + WEEK_SECONDS * 2) / DT);
+    for (let i = 0; i < n; i++) this.spawnRaider(origin, level, { zone: 9, raid: 'patrol', sourceCamp: camp.id, raidGoal: goal, expiresAt });
+    s.flags.nextCampPatrol = s.tick + WEEK_SECONDS / DT / 2;
+    log(s, `${camp.name} sent ${n} guards toward the village. Clear the camp to stop its patrols.`, 'warn');
   }
   edgeSpawn() {
     const R = this.R; const x = 38 + R.int(-1, 1);
@@ -357,12 +379,27 @@ export class Sim {
   potion() { return this.s.unlocked.medipack ? ITEMS.medipack : ITEMS.potion; }
   itemPrice(id) { return Math.round(ITEMS[id].price * (1 + this.bonus('shopSales') * 0) ); }
 
+  villageThreat(m) { return m.hp > 0 && m.raid && (m.raid !== 'patrol' || townDist(this.s, Math.round(m.x), Math.round(m.y)) <= 4); }
+  nightRest(a, reserve) {
+    const s = this.s;
+    // Start heading home at dusk, before the brief visible night. Emergencies still take priority.
+    if (s.time.t < WEEK_SECONDS * 0.7 || a.energy >= 95 || a.hunger >= 80 || a.hp < maxHp(a, s) * 0.3 ||
+        a.ko || a.inside || a.dungeon || this.questForPawn(a.id) || ['quest', 'rescue', 'leave'].includes(a.task?.type)) return null;
+    if (s.mons.some(m => m.hp > 0 && (this.villageThreat(m) || Math.hypot(m.x - a.x, m.y - a.y) <= 4))) return null;
+    reserve ??= a.resident ? this.basicGearNeeds(a).reduce((n, g) => n + g.price, 0) : 0;
+    const home = a.home && s.buildings.find(b => b.id === a.home);
+    const bed = home || this.pickFacility(a, 'sleep', b => this.visitPrice(a, b) <= a.gold - reserve);
+    if (bed) return { type: 'visit', b: bed.id, dur: 12, sleep: true, night: true };
+    const dest = townDist(s, Math.round(a.x), Math.round(a.y)) > 0 ? this.defensePoint(a.x, a.y) : null;
+    return { type: 'camp', dur: 10, night: true, dest };
+  }
   decide(a) {
     const s = this.s, R = this.R, sc = [];
     const hpR = a.hp / maxHp(a, s);
-    const raiding = s.mons.some(m => m.raid && m.hp > 0);
+    const raiding = s.mons.some(m => this.villageThreat(m));
     const basics = a.resident ? this.basicGearNeeds(a) : [];
     const reserve = basics.reduce((n, g) => n + g.price, 0);
+    const bedtime = this.nightRest(a, reserve); if (bedtime) return bedtime;
     const saving = reserve > 0, urgent = saving && (a.hunger >= 80 || a.energy < 15 || hpR < 0.3);
     const canSpend = cost => cost <= a.gold && (!reserve || a.gold - cost >= reserve);
     const add = (score, task) => { if (score > 0) sc.push([score + R.range(0, 8), task]); };
@@ -511,6 +548,10 @@ export class Sim {
       if (fallen) { a.task = { type: 'rescue', target: fallen.id, carrying: false }; fallen.rescueBy = a.id; a.taskT = 0; a.path = null; }
     }
     if (a.task && a.task.type === 'quest') return this.questStep(a);
+    if (['hunt', 'stroll'].includes(a.task?.type) && !a.task.sleep && (s.tick + a.id) % 10 === 0) {
+      const bedtime = this.nightRest(a);
+      if (bedtime) { a.task = bedtime; a.taskT = 0; a.path = null; this.emote(a, 'zzz'); }
+    }
     if (!a.task) {
       const q = this.questForPawn(a.id);
       a.task = q ? { type: 'quest', qid: q.id } : this.decide(a);
@@ -537,7 +578,15 @@ export class Sim {
         if (!t.dest || this.walkTo(a, t.dest[0], t.dest[1]) || a.taskT > 20) { a.fun = Math.min(100, a.fun + 12 + this.decorFun(a)); a.task = null; }
         break;
       }
-      case 'camp': { a.energy = Math.min(100, a.energy + DT * 3); a.hp = Math.min(maxHp(a, s), Math.round((a.hp + DT) * 10) / 10); if (a.taskT > t.dur) { a.task = null; a.sat -= 3; this.emote(a, 'sad'); } break; }
+      case 'camp': {
+        if (t.dest) {
+          if (t.travelLimit === undefined) t.travelLimit = 45 + Math.hypot(t.dest[0] - a.x, t.dest[1] - a.y) * 2;
+          if (!this.walkTo(a, ...t.dest) && a.taskT < t.travelLimit) break;
+          t.dest = null; a.taskT = 0;
+        }
+        a.energy = Math.min(100, a.energy + DT * 3); a.hp = Math.min(maxHp(a, s), Math.round((a.hp + DT) * 10) / 10);
+        if (a.taskT > t.dur) { a.task = null; a.sat -= 3; this.emote(a, 'sad'); } break;
+      }
       case 'leave': {
         if (this.walkTo(a, 38, HOME_H - 1)) {
           for (const id in s.frontier.relics) if (s.frontier.relics[id] === a.id) s.frontier.relics[id] = null;
@@ -870,6 +919,10 @@ export class Sim {
   monStep(m) {
     if (m.hp <= 0) return;
     const s = this.s, R = this.R; m.anim += DT; if (m.hitT > 0) m.hitT -= DT; if (m.atkT > 0) m.atkT -= DT;
+    if (m.raid === 'patrol') {
+      if (s.tick >= m.expiresAt) { m.hp = 0; m.deadT = 0.3; m.path = null; return; }
+      if (!m.rallied && this.villageThreat(m)) { m.rallied = true; this.rally(); }
+    }
     if (m.raid === 'bandits' && townDist(s, Math.round(m.x), Math.round(m.y)) === 0) {
       const raid = this.happening('bandits'); if (raid) raid.data.arrived = true;
     }
@@ -903,7 +956,7 @@ export class Sim {
       }
       return;
     }
-    if (m.raid === 'bandits' && m.raidGoal) { this.walkTo(m, ...m.raidGoal, spd); return; }
+    if (m.raidGoal) { this.walkTo(m, ...m.raidGoal, spd); return; }
     if (m.charge) return this.chargeStep(m, spd);
     // wander around home point, never into town
     if (Math.hypot(m.tx - m.x, m.ty - m.y) < 0.1 || R.chance(0.005)) {
@@ -1238,7 +1291,7 @@ export class Sim {
     s.props = s.props.filter(p => p.k === 'cave' || townDist(s, p.x, p.y) > 0 || p.soft);
     for (const m of s.mons) if (!m.quest && !m.raid && townDist(s, m.x, m.y) === 0) m.hp = 0;
     this.rebuildGrid(); this.invalidatePaths();
-    log(s, `${f.name} captured! Land is buildable. ${f.benefit}. ${ITEMS[f.relic].name} is in the guild vault; equip it from Frontiers.`, 'title');
+    log(s, `${f.name} captured! Land is buildable. ${f.benefit}. ${ITEMS[f.relic].name} is in the guild vault; assign its permanent blessing from Frontiers.`, 'title');
   }
   equipRelic(id, pawnId) {
     const s = this.s, it = ITEMS[id];
@@ -1246,12 +1299,12 @@ export class Sim {
     const a = pawnId == null ? null : s.advs.find(a => a.id === pawnId && a.resident);
     if (pawnId != null && !a) return 'Choose a resident adventurer';
     const old = s.advs.find(a => a.id === s.frontier.relics[id]);
-    if (old === a && a?.eq.acc === id) return null;
+    if (old === a && a?.eq.blessing === id) return null;
     if ([old, a].some(a => a && (a.ko || this.questForPawn(a.id)))) return 'Wait until the adventurer returns and recovers';
-    if (old?.eq.acc === id) { old.eq.acc = null; old.hp = Math.min(old.hp, maxHp(old, s)); }
+    if (old?.eq.blessing === id) { old.eq.blessing = null; old.hp = Math.min(old.hp, maxHp(old, s)); }
     if (a) {
-      if (ITEMS[a.eq.acc]?.legendary) s.frontier.relics[a.eq.acc] = null;
-      a.eq.acc = id; a.hp = Math.min(a.hp, maxHp(a, s));
+      if (ITEMS[a.eq.blessing]?.legendary) s.frontier.relics[a.eq.blessing] = null;
+      a.eq.blessing = id; a.hp = Math.min(a.hp, maxHp(a, s));
     }
     s.frontier.relics[id] = a ? a.id : null;
     return null;
@@ -1334,6 +1387,8 @@ export class Sim {
       else if (q.camp) {
         const c = s.banditCamps.find(c => c.id === q.camp);
         c.clears++; c.cooldownWeeks = this.R.int(8, 20); c.readyAt = s.tick + Math.round(c.cooldownWeeks * WEEK_SECONDS / DT);
+        c.patrolAt = c.readyAt + this.R.int(2, 4) * WEEK_SECONDS / DT;
+        for (const m of s.mons) if (m.raid === 'patrol' && m.sourceCamp === c.id) { m.hp = 0; m.deadT = 0.3; m.path = null; }
         for (const [k, n] of Object.entries(q.reward.materials)) s.mats[k] = (s.mats[k] || 0) + n;
         if (party.length) this.treasure({ lv: q.rec, x: c.x, y: c.y }, party[0]);
       }

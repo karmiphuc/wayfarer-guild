@@ -24,7 +24,7 @@ assert(html.includes('2/8 earned'));
 assert(html.includes('1 ready to assign'));
 assert(html.includes(`${ITEMS[vaultSite.relic].name}`));
 assert(html.includes('In vault · select to assign'));
-assert(html.includes(`Equipped by ${s.advs[0].name}`));
+assert(html.includes(`Blessing assigned to ${s.advs[0].name}`));
 assert(html.includes(`data-act="pickRelic" data-id="${vaultSite.relic}">Manage relic</button>`));
 
 ui.frontierPick = vaultSite.id;
