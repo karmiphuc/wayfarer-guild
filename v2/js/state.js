@@ -1,6 +1,7 @@
 // Game state creation, world generation, save/load. State is plain JSON (no class instances).
 import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, TOWN0, FAC, DECOR, JOBS, NAMES, PERSONA, ITEMS, PERKS, VISITOR_JOBS, TITLES, ZONE_MONS, CHARTERS, ROSTER_SIZE, MONSTERS, HAPPENINGS } from './data.js';
 import { makeRng } from './rng.js';
+import { CAMP_PATROLS } from './data.js';
 
 export const SCHEMA = 1;
 const SAVE_KEYS = ['wayfarerV2_a', 'wayfarerV2_b'];
@@ -60,7 +61,7 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     quests: [], activeQuests: [], cleared: 0, bossesBeaten: {},
     titles: {}, events: [], log: [],
     stats: { income: 0, lastIncome: 0, kills: 0, monthKills: 0, visitorsTotal: 0, spentBuild: 0 },
-    flags: { tutorial: 0, nextCampPatrol: 0 },
+    flags: { tutorial: 0, nextCampPatrol: 0, patrolScaling: true },
     world: null, charter: null, charterChoices: [], happen: [], happenLog: [], npcs: [],
   };
   const R = makeRng(s);
@@ -129,6 +130,7 @@ function clearFrontierScenery(s) {
 
 export function seedBanditCamps(s) {
   const patrolRng = makeRng({ seed: (s.world?.code || 4242) ^ 0x50415452 });
+  const rules = CAMP_PATROLS[s.stars];
   if (Array.isArray(s.banditCamps)) {
     const R = makeRng({ seed: (s.world?.code || 4242) ^ 0x434f4f4c });
     for (const c of s.banditCamps) {
@@ -139,7 +141,7 @@ export function seedBanditCamps(s) {
         c.readyAt += (c.cooldownWeeks - 4) * 300;
       }
       c.cooldownWeeks ??= 0;
-      c.patrolAt ??= Math.max(s.tick, c.readyAt) + patrolRng.int(2, 4) * 300;
+      c.patrolAt ??= Math.max(s.tick, c.readyAt) + patrolRng.int(...rules.weeks) * 300;
     }
     return;
   }
@@ -161,7 +163,7 @@ export function seedBanditCamps(s) {
   for (const [x, y] of choices) {
     if (s.banditCamps.some(c => Math.hypot(c.x - x, c.y - y) < 9)) continue;
     const i = s.banditCamps.length;
-    s.banditCamps.push({ id: 'bandit' + (i + 1), name: names[i] + ' Camp', x, y, tier: 1 + Math.floor(i / 4), clears: 0, readyAt: 0, cooldownWeeks: 0, patrolAt: s.tick + patrolRng.int(2, 4) * 300 });
+    s.banditCamps.push({ id: 'bandit' + (i + 1), name: names[i] + ' Camp', x, y, tier: 1 + Math.floor(i / 4), clears: 0, readyAt: 0, cooldownWeeks: 0, patrolAt: s.tick + patrolRng.int(...rules.weeks) * 300 });
     if (s.banditCamps.length === 16) break;
   }
   s.props = s.props.filter(p => p.k === 'cave' || !s.banditCamps.some(c => Math.abs(c.x - p.x) <= 4 + p.w && Math.abs(c.y - p.y) <= 4));
@@ -349,6 +351,19 @@ export function migrate(s) {
   expandWorld(s);
   clearFrontierScenery(s);
   seedBanditCamps(s);
+  if (!s.flags.patrolScaling) {
+    const rules = CAMP_PATROLS[s.stars], R = makeRng({ seed: (s.world?.code || 4242) ^ 0x50415453 });
+    s.flags.nextCampPatrol = s.tick + R.int(...rules.weeks) * 300;
+    for (const c of s.banditCamps) c.patrolAt = Math.max(c.readyAt, s.tick) + R.int(...rules.weeks) * 300;
+    for (const m of s.mons || []) if (m.raid === 'patrol' && m.lv > rules.level[1]) {
+      const ratio = m.hp / Math.max(1, m.mhp), lv = rules.level[1], tier = lv >= 20 ? 3 : lv >= 8 ? 2 : 1;
+      const job = JOBS[m.job]?.tier <= tier ? m.job : 'warrior', J = JOBS[job], k = 0.95 + (lv - 1) * 0.14;
+      Object.assign(m, { lv, job, spr: J.sprites[0], weapon: J.weapon, className: J.name, range: J.range, healer: !!J.heal,
+        moveSpeed: J.spd, mag: Math.round(J.mag * k), atk: Math.round(J.atk * k), def: Math.round(J.def * k), mhp: Math.round(J.hp * k * 1.25) });
+      m.hp = ratio > 0 ? Math.max(1, Math.round(m.mhp * Math.min(1, ratio))) : 0;
+    }
+    s.flags.patrolScaling = true;
+  }
   if (s.world.zoneMons) for (const z of Object.keys(s.world.zoneMons)) {  // drop unknown species; an empty roster falls back to ZONE_MONS
     const l = (Array.isArray(s.world.zoneMons[z]) ? s.world.zoneMons[z] : []).filter(id => MONSTERS[id]);
     if (l.length) s.world.zoneMons[z] = l; else delete s.world.zoneMons[z];

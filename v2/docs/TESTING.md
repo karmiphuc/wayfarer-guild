@@ -67,7 +67,8 @@ and the new weapon sprites in carried/attack poses. Every tier-3 class must have
 and save persistence. In a five-star village, upgrade a pet through Adventurers and verify its Alpha label and gold crown
 on foot and mounted. Research Phoenix Sigil in Develop > Items, let a wealthy equipped pawn buy it, and verify one lethal
 hit consumes the charge at half HP while the next causes KO. Equipment must stay unchanged.
-`patrols.mjs` covers seeded guard waves, camp eligibility, staggering, population/lifetime bounds, capture recall and migration.
+`patrols.mjs` covers rank-based guard counts, levels and shared intervals, camp eligibility, population/lifetime bounds,
+capture recall, old over-level guard migration and local self-defense during errands/rest without a village rally.
 `rendering.mjs` checks palisade connectivity and monster direction/frame axes; visually check all corner orientations,
 boundary joins and Panda/TRex walking in each direction as well.
 

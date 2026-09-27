@@ -13,6 +13,8 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Local self-defense interrupts errands and outdoor rest to fight nearby intruders, then resumes the pawn's task without a village rally or chase outside owned land. Camp patrols now scale count, interval and level by stars, with a shared interval across camps; old rapid schedules and over-level patrols migrate once.
+
 - Camp guard patrols no longer rally the village, attract distant defenders or prevent distant pawns from resting. Nearby encounters still use normal combat; real bandit raids and stampedes retain territorial defense.
 
 - Late-game investments: one-time Alpha pets cost 10,000 village gold plus 1,000 of every material at five stars with a Stable, granting +50% assist damage and bonded stat bonuses. Research-only Phoenix Sigils cost 15,000 gold plus materials to unlock; pawns buy one slot-free resurrection charge at a 10,000-gold base price, consumed to return at half health in field or cave battles.

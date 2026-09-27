@@ -5,7 +5,7 @@ import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, FAC, DECOR, JOBS, ITEMS, MONST
 import { PathGrid } from './path.js';
 import { makeRng } from './rng.js';
 import { defOf, buildingAt, roadAt, setRoad, place, spawnAdventurer, stat, maxHp, log, zoneAt, townDist, buildAreas, frontierBonus, villageBoundary, ZONE_BIOME, CAVE, cavePos, shuffle, teachJob, perkSum, gearSum, LV_CAP, JOB_CAP, MASTERY } from './state.js';
-import { BIOMES } from './data.js';
+import { BIOMES, CAMP_PATROLS } from './data.js';
 
 export const DT = 0.1;              // seconds per sim step
 export const WEEK_SECONDS = 30;     // one in-game week at 1x
@@ -238,17 +238,18 @@ export class Sim {
     const camp = this.raidCamps().filter(c => c.tier <= s.stars && c.patrolAt <= s.tick && !patrols.some(m => m.sourceCamp === c.id))
       .sort((a, b) => a.patrolAt - b.patrolAt)[0];
     if (!camp) return;
-    camp.patrolAt = s.tick + R.int(2, 4) * WEEK_SECONDS / DT;
+    const rules = CAMP_PATROLS[s.stars];
+    camp.patrolAt = s.tick + R.int(...rules.weeks) * WEEK_SECONDS / DT;
     const guild = s.buildings.find(b => b.type === 'guild');
     const target = guild ? this.door(guild) : [(s.town.x0 + s.town.x1) >> 1, (s.town.y0 + s.town.y1) >> 1];
     const origin = this.grid.nearestWalkable(camp.x, camp.y, 3), goal = this.defensePoint(...target);
     if (!origin || !goal) return;
     const route = this.grid.find(...origin, ...goal); if (!route) return;
-    const n = Math.min(R.int(2, 4), 12 - patrols.length), level = this.raidStrength().level;
+    const n = Math.min(R.int(...rules.count), 12 - patrols.length), level = R.int(...rules.level);
     // Travel allowance plus two weeks at the village; blocked or abandoned patrols never accumulate.
     const expiresAt = s.tick + Math.ceil((route.length * 1.414 / 0.7 + WEEK_SECONDS * 2) / DT);
     for (let i = 0; i < n; i++) this.spawnRaider(origin, level, { zone: 9, raid: 'patrol', sourceCamp: camp.id, raidGoal: goal, expiresAt });
-    s.flags.nextCampPatrol = s.tick + WEEK_SECONDS / DT / 2;
+    s.flags.nextCampPatrol = camp.patrolAt;
     log(s, `${camp.name} sent ${n} guards toward the village. Clear the camp to stop its patrols.`, 'warn');
   }
   edgeSpawn() {
@@ -548,6 +549,11 @@ export class Sim {
     a.energy = Math.max(0, a.energy - DT * (a.task && a.task.type === 'hunt' ? 0.45 : 0.22));
     a.fun = Math.max(0, a.fun - DT * 0.18);
     if (a.ko) return this.koStep(a);
+    // Respond locally without replacing errands, quest ownership or village-wide defense orders.
+    if (!a.task?.carrying && townDist(s, Math.round(a.x), Math.round(a.y)) === 0) {
+      const threat = s.mons.find(m => m.hp > 0 && m.raid && Math.hypot(m.x - a.x, m.y - a.y) <= (m.target === a.id ? Math.max(4, (m.range || 1) + 0.2) : 4));
+      if (threat) { this.fight(a, threat, true); return; }
+    }
     if (a.hunger >= 100 && s.tick % 50 === 0) { a.sat = Math.max(0, a.sat - 2); this.emote(a, 'hungry'); }
     if (a.task?.type !== 'rescue' && !this.questForPawn(a.id)) {
       const fallen = this.rescueTarget(a);
@@ -708,9 +714,9 @@ export class Sim {
   xpNeed(a) { return Math.round(12 * Math.pow(a.lv, 1.3)); }
 
   // ---------- movement ----------
-  walkTo(a, gx, gy, step = this.speed(a) * DT) {
+  walkTo(a, gx, gy, step = this.speed(a) * DT, holdTerritory = false) {
     if (Math.abs(a.x - gx) < 0.15 && Math.abs(a.y - gy) < 0.15) { a.path = null; return true; }
-    const defend = !!a.task?.defend && townDist(this.s, Math.round(a.x), Math.round(a.y)) === 0;
+    const defend = (holdTerritory || !!a.task?.defend) && townDist(this.s, Math.round(a.x), Math.round(a.y)) === 0;
     if (!a.path || a.pathDefend !== defend || a.pathGoal !== gx + ',' + gy || a.pathV !== this.grid.version || (!a.path.length && this.s.tick >= a.pathRetry)) {
       const sx = Math.round(a.x), sy = Math.round(a.y);
       const start = this.grid.walkable(sx, sy) ? [sx, sy] : (this.grid.nearestWalkable(sx, sy) || [sx, sy]);
@@ -802,7 +808,7 @@ export class Sim {
     for (const m of this.s.mons) { if (m.hp <= 0 || m.zone > maxZone || (m.quest && m.quest !== (a.task && a.task.qid))) continue; const d = Math.hypot(m.x - a.x, m.y - a.y); if (d < bd) { bd = d; best = m; } }
     return best;
   }
-  fight(a, m) {
+  fight(a, m, holdTerritory = false) {
     const s = this.s, job = JOBS[a.job], range = job.range + perkSum(a, 'range') + 0.4, d = Math.hypot(m.x - a.x, m.y - a.y);
     // healers mend wounded allies first
     if (job.heal && a.cool <= 0) {
@@ -810,7 +816,11 @@ export class Sim {
       if (ally) { const h = Math.round(stat(a, 'mag', s) * 1.6 * (1 + this.bonus('heal') + perkSum(a, 'healPct'))); ally.hp = Math.min(maxHp(ally, s), ally.hp + h);
         s.fx.push({ k: 'heal', x: ally.x, y: ally.y, t: 0, life: 0.8 }, { k: 'num', x: ally.x, y: ally.y - 0.8, t: 0, life: 0.9, text: '+' + h, c: '#7cff8a' }); a.cool = 1.4; a.atkT = 0.3; this.emit('sfx', 'heal'); return; }
     }
-    if (d > range) { this.walkTo(a, Math.round(m.x), Math.round(m.y)) || (a.path && a.path.length > 12 && (a.path = null)); return; }
+    if (d > range) {
+      const goal = holdTerritory ? this.defensePoint(m.x, m.y) : [Math.round(m.x), Math.round(m.y)];
+      if (goal) this.walkTo(a, ...goal, undefined, holdTerritory) || (a.path && a.path.length > 12 && (a.path = null));
+      return;
+    }
     a.path = null;
     a.dir = Math.abs(m.x - a.x) > Math.abs(m.y - a.y) ? (m.x < a.x ? 2 : 3) : (m.y < a.y ? 1 : 0);
     a.cool -= DT; if (a.cool > 0) return;
@@ -1436,7 +1446,7 @@ export class Sim {
       else if (q.camp) {
         const c = s.banditCamps.find(c => c.id === q.camp);
         c.clears++; c.cooldownWeeks = this.R.int(8, 20); c.readyAt = s.tick + Math.round(c.cooldownWeeks * WEEK_SECONDS / DT);
-        c.patrolAt = c.readyAt + this.R.int(2, 4) * WEEK_SECONDS / DT;
+        c.patrolAt = c.readyAt + this.R.int(...CAMP_PATROLS[s.stars].weeks) * WEEK_SECONDS / DT;
         for (const m of s.mons) if (m.raid === 'patrol' && m.sourceCamp === c.id) { m.hp = 0; m.deadT = 0.3; m.path = null; }
         for (const [k, n] of Object.entries(q.reward.materials)) s.mats[k] = (s.mats[k] || 0) + n;
         if (party.length) this.treasure({ lv: q.rec, x: c.x, y: c.y }, party[0]);

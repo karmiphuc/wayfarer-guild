@@ -81,7 +81,7 @@ not stored as extra perimeter buildings or timers; no new top-level save fields 
 | `mats {wood, hide, herb, ore, crystal}` | village materials (monster drops) used to develop gear |
 | `town {x0,y0,x1,y1}` | buildable rectangle (grows with the Expand event) |
 | `mapWidth, mapHeight`, `frontier {completed, relics}` | 152x112 map; completed site IDs grant additional buildable rectangles and bonuses; relic item IDs map to one resident owner ID or `null` in the vault |
-| `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt,cooldownWeeks,patrolAt}`; `readyAt` ends the persisted 8–20 week recovery; `patrolAt` schedules its next guard wave. `flags.nextCampPatrol` spaces waves globally by at least half a week |
+| `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt,cooldownWeeks,patrolAt}`; `readyAt` ends the persisted 8–20 week recovery; `patrolAt` schedules its next guard wave. `flags.nextCampPatrol` enforces the rank-based interval across all camps |
 | `ground` (string), `roads` (string of '0'/'1'), `props[]` | terrain detail per cell · road flags · trees/rocks/cave `{k,x,y,w,block,soft?}` |
 | `buildings[]` | `{id, type, x, y, lv, sales, visits, occ[], v?, free?}` — `type` is a key of `FAC` or `DECOR`; `free` = charter gift (refunds 0 G) |
 | `advs[]` | adventurers (below); a fallen pawn may carry `rescueBy` while another pawn owns its rescue task |
@@ -152,7 +152,10 @@ include the corresponding damage-rate bonus. An unequipped default sprite grants
 At dusk (70% through the week), `nightRest()` prioritizes home, affordable inn or outdoor village rest when energy is
 below 95. It respects basic-gear savings and urgent hunger, injury, nearby foes, active quests and rescue. Routine
 hunts/strolls reconsider bedtime once per second; existing visits finish, including long journeys to captured land.
-Camp patrols never trigger village-wide defense or block distant pawns from resting; nearby danger still interrupts rest.
+Camp patrols never trigger village-wide defense or block distant pawns from resting. Outdoors in owned land, pawns
+interrupt routines to fight raiders within four tiles (or their attacker's range), retaining their current task to resume
+after danger passes. Local defense routes stay on owned land and do not chase outside it. Indoor pawns, cave parties,
+KO pawns and rescuers carrying someone stay protected by their existing behavior.
 
 ### Late-game investments
 
@@ -233,13 +236,16 @@ normal 1-8 pawn party rules and creates the raiders. Victory increments `clears`
 isolated RNG does not advance the running simulation seed. Failure removes that attempt's raiders and permits another
 attempt without changing the ledger.
 
-Live camps at or below the village's star rank also send seeded 2–4 guard patrols every 2–4 weeks when capacity allows.
-There is one group per camp, at most 12 patrol guards globally, and at least half a week between departures. Patrols
+Live camps at or below village rank send seeded guard patrols using `CAMP_PATROLS`: stars 1/2/3/4/5 send 1/1/1/2/2–3
+guards at levels 1–3/3–5/5–8/8–12/12–20. Intervals are `(7 - stars)` to `(9 - stars)` weeks, globally across all camps.
+There is one group per camp and at most 12 patrol guards globally. Patrols
 use generated human classes without rallying pawns, follow a path from the real camp, and expire after their
 travel allowance plus two weeks. Pawns encounter them through normal nearby combat; only large raid happenings trigger
 territorial defense, and existing defense orders end when only patrols remain. They are separate from camp quest defenders. Clearing a
-camp recalls its patrols and postpones the next departure until 2–4 weeks after its 8–20 week recovery. Initial timers
-migrate with isolated RNG and persist through loads. Scheduling runs once per second; no callback timer is retained.
+camp recalls its patrols and postpones its next departure by the rank-based interval after its 8–20 week recovery.
+Initial timers use isolated RNG. The one-time `flags.patrolScaling` migration resets old rapid schedules and reduces
+existing over-level patrols to the rank cap, preserving their remaining health fraction and leaving other enemies alone.
+Schedules persist through loads. Scheduling runs once per second; no callback timer is retained.
 
 The Bandit Camps panel is reached from the Quest Board or by tapping the camp's visible ±3-tile landmark. It shows all 16
 sites, rank locks, cooldown, reward, clear count, party controls and Watch/Show on map. The renderer draws dormant camps
