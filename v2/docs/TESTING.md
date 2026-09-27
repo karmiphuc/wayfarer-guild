@@ -53,12 +53,17 @@ Run from the repository root.
 ## Manual play check (1 minute, every feature)
 
 Gear economy regressions run in `tests/economy.mjs`; `tests/relic-ui.mjs` checks vault visibility and shop stock.
-For gear changes, open Frontiers after a conquest, assign its vault relic to a resident, verify the pawn's accessory,
+For gear changes, open Frontiers after a conquest, assign its vault relic to a resident, verify the separate blessing and accessory,
 and inspect both Armor and Item Shops for ordinary accessory stock. Check an under-equipped resident buys cheap basics
 before upgrades, preserves savings during routine needs, and still meets urgent hunger/rest/healing needs.
 `equipment.mjs` covers independent body/helm-shield stats, all six legacy armor migrations, shopping priorities,
 and every new class's mastery prerequisites. Visually inspect four equipment labels, both Develop armor tabs,
 and the new weapon sprites in carried/attack poses. Every tier-3 class must have a tier-4 successor.
+`blessings.mjs` covers all eight legacy relic migrations, unique transfers, independent accessory stats and save/load.
+`night-rest.mjs` covers dusk decisions, routine hunt interruption, home recovery, urgent exceptions and protected savings.
+`patrols.mjs` covers seeded guard waves, camp eligibility, staggering, population/lifetime bounds, capture recall and migration.
+`rendering.mjs` checks palisade connectivity and monster direction/frame axes; visually check all corner orientations,
+boundary joins and Panda/TRex walking in each direction as well.
 
 ```
 python3 v2/tools/serve.py 8766 .

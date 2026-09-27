@@ -36,7 +36,7 @@ chibi proportions. Reject: isometric, side-view, coloured outlines, muted palett
 | Kind | Path | Format |
 |---|---|---|
 | Character | `assets/chars/<Name>.png` + `<Name>.face.png` | 64×112: 4 columns (down, up, left, right) × 7 rows (0–3 walk, 4 attack, 5 jump, 6 misc); face 38×38 |
-| Monster | `assets/monsters/<Spr>.png` + `<Spr>.face.png` | 64×64: 4 columns (dirs) × 4 rows (frames) |
+| Monster | `assets/monsters/<Spr>.png` + `<Spr>.face.png` | 64×64. Most use 4 direction columns (down, up, left, right) × 4 animation rows. Entries marked `sheetRows` in `MONSTERS` use 4 animation columns × direction rows (down, left, up, right). |
 | Farm animal | `assets/monsters/animal_<Name>.png` | 32×16: 2 frames facing left (flipped for right) |
 | Boss | `assets/bosses/<Dir>/Idle.png` + `Faceset.png` | one row: `frames` × `fw`, height `fh` |
 | Weapon icon | `assets/items/w_<Name>.png` | ≤16×16 |

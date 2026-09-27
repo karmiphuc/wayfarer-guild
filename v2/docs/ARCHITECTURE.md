@@ -81,7 +81,7 @@ not stored as extra perimeter buildings or timers; no new top-level save fields 
 | `mats {wood, hide, herb, ore, crystal}` | village materials (monster drops) used to develop gear |
 | `town {x0,y0,x1,y1}` | buildable rectangle (grows with the Expand event) |
 | `mapWidth, mapHeight`, `frontier {completed, relics}` | 152x112 map; completed site IDs grant additional buildable rectangles and bonuses; relic item IDs map to one resident owner ID or `null` in the vault |
-| `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt,cooldownWeeks}`; `readyAt` is the simulation tick when a cleared camp can be challenged again, and `cooldownWeeks` records its latest 8–20 week recovery roll |
+| `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt,cooldownWeeks,patrolAt}`; `readyAt` ends the persisted 8–20 week recovery; `patrolAt` schedules its next guard wave. `flags.nextCampPatrol` spaces waves globally by at least half a week |
 | `ground` (string), `roads` (string of '0'/'1'), `props[]` | terrain detail per cell · road flags · trees/rocks/cave `{k,x,y,w,block,soft?}` |
 | `buildings[]` | `{id, type, x, y, lv, sales, visits, occ[], v?, free?}` — `type` is a key of `FAC` or `DECOR`; `free` = charter gift (refunds 0 G) |
 | `advs[]` | adventurers (below); a fallen pawn may carry `rescueBy` while another pawn owns its rescue task |
@@ -99,7 +99,7 @@ not stored as extra perimeter buildings or timers; no new top-level save fields 
 
 Adventurer (`makeAdventurer` in `state.js`):
 `id, name, job, spr (sprite sheet name), lv, xp, jobLv {job: level}, jobXp, base {hp,atk,def,mag}, hp, gold, sat (satisfaction),
-work, hunger, energy, fun, persona [PERSONA keys], resident, home (building id), partner (monster id), eq {weapon, armor, offhand, acc},
+work, hunger, energy, fun, persona [PERSONA keys], resident, home (building id), partner (monster id), eq {weapon, armor, offhand, acc, blessing},
 perks [PERKS keys], potions, x, y, dir (0 down,1 up,2 left,3 right), path, task, inside, dungeon, ko, stay, days, kills` + animation fields.
 
 **Stat formula** (`stat(a, k, s)` in `state.js`):
@@ -144,6 +144,11 @@ meals favor cost per hunger restored; residents still prefer their free home for
 `visitPrice()` include current surcharges so decisions budget the checkout price. Settlement rechecks optional
 purchases and weapon compatibility; inn recovery already delivered during a visit is still billed. No new save fields.
 
+At dusk (70% through the week), `nightRest()` prioritizes home, affordable inn or outdoor village rest when energy is
+below 95. It respects basic-gear savings and urgent hunger, injury, nearby foes, active quests and rescue. Routine
+hunts/strolls reconsider bedtime once per second; existing visits finish, including long journeys to captured land.
+Distant patrols do not keep the village awake; approaching patrols trigger territorial defense.
+
 Quest selection calls `autoQuestParty()` once from the UI action, never during rendering. It shuffles available pawns
 with the seeded RNG, selecting up to four at the suggested level and at least half HP. The player can adjust the party
 to 1-8 available non-KO pawns; slots 5-8 each cost `ceil(entry fee * 0.25)` extra. Depart and the total cost appear before
@@ -161,7 +166,7 @@ The world is 152x112 tiles (four times the original area). `expandWorld()` prese
 buildings, actors and roads, padding each terrain/road row rather than reinterpreting its stride. Added terrain uses a
 separate deterministic RNG; migration leaves the running simulation seed untouched and is idempotent. The frontier
 extends east and south, with sparse scenery and cleared den approaches. Ordinary spawns, visitor arrival/departure
-and raids retain the original home-region bounds and population caps.
+retain the original home-region bounds and population caps. Bandit companies march from their camp sites.
 
 `FRONTIERS` defines eight connected one-time challenges, prerequisites, rank/level guidance, land, bonuses and relics.
 Sites are data and map markers only; opening a site never spawns a monster. `frontierQuest()` returns a virtual quest
@@ -175,10 +180,11 @@ Capture clears blocking scenery and rebuilds paths. Normal paid expansion still 
 Distant facility visits receive travel time proportional to distance, initialized on the visit task when first needed.
 Bonuses derive from the completion ledger via `frontierBonus()`, never from repeatedly incremented counters.
 
-Legendary accessories have `legendary: true` and cannot be developed, discovered as shop stock, purchased or duplicated.
-`equipRelic()` moves the one physical copy between the vault and residents, returning a replaced relic to the vault;
-owners away on quests or KO must return first. Autonomous shopping cannot replace an equipped relic. Migration
-reconciles equipped copies against the eight-entry ownership ledger.
+Legendary relics have `legendary: true`, `slot: 'blessing'` and cannot be developed, stocked, purchased or duplicated.
+`equipRelic()` assigns one permanent blessing per resident in `eq.blessing`, returning a replaced blessing to the vault.
+Each relic has one owner; owners away on quests or KO must return first. Bonuses add to all four ordinary equipment
+slots and have no timer. Migration moves ledger-owned legendary accessories into the blessing slot once, frees the
+accessory slot, preserves ordinary accessories and removes unowned duplicates against the eight-entry ledger.
 
 Victory stores the relic in the guild vault, not a pawn inventory. The vault appears before the territory list in
 Frontiers, with unassigned rewards and their current owners shown explicitly. Armor and Item Shops both sell ordinary
@@ -197,18 +203,25 @@ tile, is clickable.
 
 ### Bandit camps
 
-`seedBanditCamps()` deterministically places 16 dormant camps from the world code with an isolated RNG, so migration does
+`seedBanditCamps()` deterministically places 16 camps from the world code with an isolated RNG, so migration does
 not advance the running simulation seed. Each site reserves a 3x3 core and stores its tier, clear count and cooldown tick.
 `campQuest()` exposes a virtual `camp:<site>` quest with a rank-scaled recommended level, 5/7/9/11 generated human raiders,
-entry fee and gold/TP/popularity/material rewards. Dormant camps never spawn actors; departure uses the
+entry fee and gold/TP/popularity/material rewards. Camp defenders spawn only on challenge; departure uses the
 normal 1-8 pawn party rules and creates the raiders. Victory increments `clears`, awards the stores and rolls a persisted
 8–20 week cooldown. Migration extends a pending legacy four-week cooldown once while retaining its elapsed time; its
 isolated RNG does not advance the running simulation seed. Failure removes that attempt's raiders and permits another
 attempt without changing the ledger.
 
+Live camps at or below the village's star rank also send seeded 2–4 guard patrols every 2–4 weeks when capacity allows.
+There is one group per camp, at most 12 patrol guards globally, and at least half a week between departures. Patrols
+share generated human classes and territorial raid defense, follow a path from the real camp, and expire after their
+travel allowance plus two weeks. They are separate from camp quest defenders and large raid happenings. Clearing a
+camp recalls its patrols and postpones the next departure until 2–4 weeks after its 8–20 week recovery. Initial timers
+migrate with isolated RNG and persist through loads. Scheduling runs once per second; no callback timer is retained.
+
 The Bandit Camps panel is reached from the Quest Board or by tapping the camp's visible ±3-tile landmark. It shows all 16
 sites, rank locks, cooldown, reward, clear count, party controls and Watch/Show on map. The renderer draws dormant camps
-without live actors; tier changes the existing hut, fence, cart and supply composition.
+without standing garrisons; tier changes the existing hut, fence, cart and supply composition.
 
 ## 4b. Replayability layer — happenings, charters, seeded world (`happenings.js` + `sim.js`)
 
@@ -297,7 +310,11 @@ Not in DV2; our own. Everything is driven by the seeded RNG, so **the same world
 - Happenings: raiders get a red marker; the Golden Slime is drawn with `goldified()` (luminance → gold ramp) plus `sparkle()`;
   the merchant sits by a rug showing his three licences (`drawNpc`), the bard strolls with a music note.
 - Sheets: characters 64×112 = 4 columns (down, up, left, right) × 7 rows (0–3 walk, 4 attack, 5 jump, 6 misc);
-  monsters 64×64 = 4 dirs × 4 frames; bosses = one row of `frames` frames of `fw×fh`.
+  monsters 64×64 = 4 dirs × 4 frames. Most use direction columns; `MONSTERS[].sheetRows` identifies sheets with
+  direction rows (down, left, up, right). Wild, companion and mounted rendering all honor this layout. Bosses = one
+  row of `frames` frames of `fw×fh`.
+- Palisades choose horizontal halves and vertical pieces from their north/east/south/west neighbors in the combined
+  player-wall and village-boundary barrier mask. Corners, T junctions and crosses share this rule with build previews.
 - Held weapons (`drawWeapon`): the grip pixel for every (sheet, dir, row) is detected at load by `computeHands` in
   `assets.js` (outermost opaque pixel on the facing side below the head, 1 px inside the outline). The in-hand sprite is
   rotated around that pixel: carry = blade up leaning forward; attack = swing arc / thrust / raised tome / drawn bow.

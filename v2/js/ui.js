@@ -228,7 +228,7 @@ export class UI {
   panel_frontiers() {
     const s = this.s, completed = s.frontier?.completed || {}, relics = s.frontier?.relics || {};
     let h = `<div class="row spread"><span class="muted">Conquer each den once to claim its land, permanent village bonus and unique legendary relic.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
-      <p class="frontier-note"><b>Legendary rewards go to the Guild Relic Vault below, not a pawn inventory.</b> Select an earned relic, then choose a resident to equip it.</p>`;
+      <p class="frontier-note"><b>Legendary rewards go to the Guild Relic Vault below, not a pawn inventory.</b> Select an earned relic, then choose a resident to receive its blessing.</p>`;
     h += this.frontierRelics();
     const picked = FRONTIERS.find(f => f.id === this.frontierPick);
     if (picked) h += this.frontierDetail(picked);
@@ -239,7 +239,7 @@ export class UI {
       const status = captured ? '<span class="tag res">Captured</span>' : active ? '<span class="tag gold">Underway</span>'
         : block ? `<span class="tag ko">${esc(block)}</span>` : '<span class="tag vis">Ready</span>';
       const relic = ITEMS[f.relic], q = this.sim.frontierQuest(f.id), owner = s.advs.find(a => a.id === relics[f.relic]);
-      const relicStatus = captured ? owner ? `Equipped by ${esc(owner.name)}` : 'In Guild Relic Vault · ready to assign' : esc(statLine(relic));
+      const relicStatus = captured ? owner ? `Blessing assigned to ${esc(owner.name)}` : 'In Guild Relic Vault · ready to assign' : esc(statLine(relic));
       h += `<div class="card frontier-card ${this.frontierPick === f.id ? 'sel' : ''}" data-act="pickFrontier" data-id="${f.id}"><div class="thumb"><i data-face="bf_${f.boss}"></i></div><div class="meta">
         <div class="name">${esc(f.name)}</div><div>${status}</div><div class="sub">${esc(f.bossName)} · Suggested Lv${f.rec}+ · (${f.x}, ${f.y})</div>
         <div class="sub">Fee ${q.fee}G · Victory ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop</div>
@@ -260,7 +260,7 @@ export class UI {
     }
     if (captured) {
       const owner = s.advs.find(a => a.id === s.frontier?.relics?.[f.relic]);
-      return h + `<p class="check">Captured permanently. This land bonus is active and the one-of-a-kind ${esc(ITEMS[f.relic].name)} ${owner ? `is equipped by ${esc(owner.name)}` : 'is stored in the Guild Relic Vault'}.</p><button class="btn sm" data-act="pickRelic" data-id="${f.relic}">Manage relic</button>`;
+      return h + `<p class="check">Captured permanently. This land bonus is active and the one-of-a-kind ${esc(ITEMS[f.relic].name)} ${owner ? `blesses ${esc(owner.name)}` : 'is stored in the Guild Relic Vault'}.</p><button class="btn sm" data-act="pickRelic" data-id="${f.relic}">Manage relic</button>`;
     }
     const block = this.sim.frontierBlock(f.id);
     if (block) return h + `<p class="cross">${esc(block)}</p>`;
@@ -280,21 +280,21 @@ export class UI {
     const s = this.s, relics = s.frontier?.relics || {}, earned = FRONTIERS.filter(f => Object.prototype.hasOwnProperty.call(relics, f.relic));
     const inVault = earned.filter(f => relics[f.relic] == null).length;
     let h = `<div class="section relic-summary">Guild Relic Vault <span class="tag gold">${earned.length}/${FRONTIERS.length} earned</span>${inVault ? `<span class="tag vis">${inVault} ready to assign</span>` : ''}</div>`;
-    if (!earned.length) return h + '<p class="muted relic-note">Win a frontier conquest to place its one-of-a-kind legendary accessory here.</p>';
+    if (!earned.length) return h + '<p class="muted relic-note">Win a frontier conquest to earn its one-of-a-kind permanent blessing.</p>';
     const itemId = earned.some(f => f.relic === this.relicPick) ? this.relicPick : null;
-    h += '<p class="muted relic-note">These are single physical relics. Select one to assign or transfer it; ordinary accessories remain available through shops.</p><div class="grid relic-grid">';
+    h += '<p class="muted relic-note">Each relic grants a permanent blessing to one assigned resident. One blessing per pawn, on top of all four equipment slots: their accessory stays free. Blessings never expire; select one to assign or transfer it.</p><div class="grid relic-grid">';
     for (const f of earned) {
       const it = ITEMS[f.relic], owner = s.advs.find(a => a.id === relics[f.relic]);
       const selected = this.relicPick === f.relic;
-      h += `<button type="button" class="card relic-choice ${selected ? 'sel' : ''}" data-act="pickRelic" data-id="${f.relic}" data-focus-key="relic:${f.relic}" aria-pressed="${selected}" aria-label="${esc(`${it.name}, ${owner ? 'equipped by ' + owner.name : 'in Guild Relic Vault, ready to assign'}`)}"><span class="thumb"><i data-item="${f.relic}" data-scale="3"></i></span><span class="meta"><span class="name">${esc(it.name)}</span><span class="sub">${esc(statLine(it))}</span><strong class="sub ${owner ? 'check' : 'relic-ready'}">${owner ? 'Equipped by ' + esc(owner.name) : 'In vault · select to assign'}</strong></span></button>`;
+      h += `<button type="button" class="card relic-choice ${selected ? 'sel' : ''}" data-act="pickRelic" data-id="${f.relic}" data-focus-key="relic:${f.relic}" aria-pressed="${selected}" aria-label="${esc(`${it.name}, ${owner ? 'blessing assigned to ' + owner.name : 'in Guild Relic Vault, ready to assign'}`)}"><span class="thumb"><i data-item="${f.relic}" data-scale="3"></i></span><span class="meta"><span class="name">${esc(it.name)}</span><span class="sub">${esc(statLine(it))}</span><strong class="sub ${owner ? 'check' : 'relic-ready'}">${owner ? 'Blessing assigned to ' + esc(owner.name) : 'In vault · select to assign'}</strong></span></button>`;
     }
     h += '</div>';
     if (itemId) {
       const item = ITEMS[itemId], ownerId = relics[itemId], owner = s.advs.find(a => a.id === ownerId), ownerAway = owner && (owner.ko || this.sim.questForPawn(owner.id));
-      h += `<div class="relic-transfer"><div class="row spread"><b>Assign ${esc(item.name)}</b><button class="btn sm" data-act="equipRelic" data-id="${itemId}" data-pawn="none" ${ownerId == null || ownerAway ? 'disabled' : ''}>Return to vault</button></div><p class="muted">Choose a resident to equip or transfer this relic.${ownerAway ? ' Its owner must return and recover first.' : ''}</p><div class="grid relic-owner-grid">`;
+      h += `<div class="relic-transfer"><div class="row spread"><b>Assign ${esc(item.name)}</b><button class="btn sm" data-act="equipRelic" data-id="${itemId}" data-pawn="none" ${ownerId == null || ownerAway ? 'disabled' : ''}>Return to vault</button></div><p class="muted">Choose a resident to bless. Their previous blessing returns to the vault; ordinary equipment is kept.${ownerAway ? ' Its owner must return and recover first.' : ''}</p><div class="grid relic-owner-grid">`;
       for (const a of s.advs.filter(a => a.resident).sort((a, b) => b.lv - a.lv)) {
         const unavailable = ownerAway || a.ko || a.task?.type === 'quest' || !!this.sim.questForPawn(a.id), current = ownerId === a.id;
-        const state = current ? 'equipped' : unavailable ? a.ko ? 'KO' : 'away on quest' : 'available';
+        const state = current ? 'blessed' : unavailable ? a.ko ? 'KO' : 'away on quest' : 'available';
         h += `<button type="button" class="card relic-choice ${current ? 'sel' : ''} ${unavailable ? 'locked' : ''}" data-act="equipRelic" data-id="${itemId}" data-pawn="${a.id}" data-focus-key="relic-owner:${itemId}:${a.id}" aria-pressed="${current}" aria-label="${esc(`${a.name}, ${JOBS[a.job].name}, level ${a.lv}, ${state}`)}" ${unavailable ? 'disabled' : ''}><span class="thumb"><i data-face="f_${a.spr}"></i></span><span class="meta"><span class="name">${esc(a.name)}</span><span class="sub">${JOBS[a.job].name} Lv${a.lv} · ${state}</span></span></button>`;
       }
       h += '</div></div>';
@@ -304,7 +304,7 @@ export class UI {
   panel_camps() {
     const s = this.s, camps = s.banditCamps || [];
     let h = `<div class="row spread"><span class="muted">Strike the outlaw camps beyond the village. A cleared camp regroups after a random 8–20 weeks.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
-      <p class="muted camp-note">Available camps can launch village raids. Winning a camp challenge pays the listed bounty and prevents new raids from that camp until its cooldown ends.</p>`;
+      <p class="muted camp-note">Live camps at your village tier send 2–4 guards every 2–4 weeks, with at most 12 patrol guards active across the map. Clearing a camp recalls its patrols and stops new attacks for 8–20 weeks. Larger village raids can also come from live camps.</p>`;
     const picked = camps.find(c => c.id === this.campPick);
     if (picked) h += this.campDetail(picked);
     h += '<div class="section">Known camps</div><div class="grid camp-grid">';
@@ -480,6 +480,7 @@ export class UI {
       <div class="row muted"><span>💰 ${a.gold}G</span><span>Potions ${a.potions}</span><span>Kills ${a.kills}</span><span>Hunger ${Math.round(a.hunger)}</span><span>Energy ${Math.round(a.energy)}</span></div>
       <div class="muted">${this.taskLabel(a)}</div>
       <div class="row" style="margin:6px 0">${['weapon', 'armor', 'offhand', 'acc'].map(sl => { const it = a.eq[sl] && ITEMS[a.eq[sl]], label = { weapon: 'Weapon', armor: 'Body armor', offhand: 'Helm / shield', acc: 'Accessory' }[sl]; return `<span class="chip">${label}: ${it ? `<i data-item="${a.eq[sl]}" data-scale="1"></i>${it.name}` : 'None'}</span>`; }).join('')}</div>
+      ${a.eq.blessing && ITEMS[a.eq.blessing] ? `<div class="relic-summary"><strong class="tag gold">★ Permanent blessing</strong><div><i data-item="${a.eq.blessing}" data-scale="1"></i> ${esc(ITEMS[a.eq.blessing].name)}</div><div class="muted">${esc(statLine(ITEMS[a.eq.blessing]))} · Accessory slot stays free</div></div>` : ''}
       ${a.perks.length ? `<div class="muted">Mastered perks:</div><div class="row">${a.perks.map(p => `<span class="tag gold" title="${esc(PERKS[p].desc)}">★ ${PERKS[p].name}</span>`).join('')}</div>` : ''}
       <div class="muted">Job Lv${a.jobLv[a.job] || 1}/99 · ${(a.jobLv[a.job] || 1) >= MASTERY ? 'mastered' : `${MASTERY - (a.jobLv[a.job] || 1)} to mastery`} · Lv${a.lv}/99</div>`;
     const pet = a.partner && s.monsters.find(m => m.id === a.partner);

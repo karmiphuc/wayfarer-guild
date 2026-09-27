@@ -6,15 +6,15 @@ const W = (name, type, hand, stats, price, dev, tint = 0, bow = false) =>
   ({ name, slot: 'weapon', type, hand, icon: 'w_' + hand, tint, ...stats, price, dev, bow });
 
 export const ITEMS = {
-  // Single physical relics from frontier victories; never developed or stocked in shops.
-  rootheart:    { name: 'Rootheart Pendant', slot: 'acc', icon: 'c_charm', hp: 30, def: 3, price: 1200, legendary: true },
-  mireSeal:     { name: 'Seal of the Mire', slot: 'acc', icon: 'c_charm', def: 8, hp: 15, price: 1500, legendary: true },
-  ironOath:     { name: 'Iron Oath Emblem', slot: 'acc', icon: 'c_charm', atk: 8, def: 6, price: 2000, legendary: true },
-  moonTear:     { name: 'Tear of the Moon', slot: 'acc', icon: 'c_charm', mag: 12, hp: 20, price: 2200, legendary: true },
-  cinderSignet: { name: 'Cinder Signet', slot: 'acc', icon: 'c_charm', atk: 14, crit: 0.03, price: 3000, legendary: true },
-  stormKnot:    { name: 'Tempest Knot', slot: 'acc', icon: 'c_charm', mag: 10, spd: 0.12, price: 2800, legendary: true },
-  paleEmber:    { name: 'Pale Ember Heart', slot: 'acc', icon: 'c_charm', hp: 60, def: 10, price: 4000, legendary: true },
-  regentStar:   { name: 'Last Regent Star', slot: 'acc', icon: 'c_charm', atk: 18, mag: 18, def: 8, price: 6000, legendary: true },
+  // Unique frontier blessings: one assigned resident per relic, separate from ordinary equipment.
+  rootheart:    { name: 'Rootheart Pendant', slot: 'blessing', icon: 'c_charm', hp: 30, def: 3, price: 1200, legendary: true },
+  mireSeal:     { name: 'Seal of the Mire', slot: 'blessing', icon: 'c_charm', def: 8, hp: 15, price: 1500, legendary: true },
+  ironOath:     { name: 'Iron Oath Emblem', slot: 'blessing', icon: 'c_charm', atk: 8, def: 6, price: 2000, legendary: true },
+  moonTear:     { name: 'Tear of the Moon', slot: 'blessing', icon: 'c_charm', mag: 12, hp: 20, price: 2200, legendary: true },
+  cinderSignet: { name: 'Cinder Signet', slot: 'blessing', icon: 'c_charm', atk: 14, crit: 0.03, price: 3000, legendary: true },
+  stormKnot:    { name: 'Tempest Knot', slot: 'blessing', icon: 'c_charm', mag: 10, spd: 0.12, price: 2800, legendary: true },
+  paleEmber:    { name: 'Pale Ember Heart', slot: 'blessing', icon: 'c_charm', hp: 60, def: 10, price: 4000, legendary: true },
+  regentStar:   { name: 'Last Regent Star', slot: 'blessing', icon: 'c_charm', atk: 18, mag: 18, def: 8, price: 6000, legendary: true },
   // ---- swords ----
   woodSword:   W('Wood Sword', 'sword', 'Sword', { atk: 3 }, 60, null),
   ironSword:   W('Iron Sword', 'sword', 'Sword2', { atk: 7 }, 220, { ore: 4 }),

@@ -114,23 +114,23 @@ function timeoutChallenge(s, sim, f, party) {
 
   const relic = FRONTIERS[0].relic, [a, b] = s.advs;
   assert.equal(sim.equipRelic(relic, a.id), null);
-  assert.equal(a.eq.acc, relic); assert.equal(s.frontier.relics[relic], a.id);
+  assert.equal(a.eq.blessing, relic); assert.equal(s.frontier.relics[relic], a.id);
   const sameOwner = JSON.stringify({ relics: s.frontier.relics, eq: s.advs.map(x => x.eq), hp: s.advs.map(x => x.hp) });
   assert.equal(sim.equipRelic(relic, a.id), null);
   assert.equal(JSON.stringify({ relics: s.frontier.relics, eq: s.advs.map(x => x.eq), hp: s.advs.map(x => x.hp) }), sameOwner);
   assert.equal(sim.equipRelic(relic, b.id), null);
-  assert.equal(a.eq.acc, null); assert.equal(b.eq.acc, relic); assert.equal(s.frontier.relics[relic], b.id);
+  assert.equal(a.eq.blessing, null); assert.equal(b.eq.blessing, relic); assert.equal(s.frontier.relics[relic], b.id);
 
-  // A normal shop choice made before the relic transfer cannot overwrite it on checkout.
+  // Accessories can now be bought alongside the permanent blessing.
   const shop = { id: s.nextId++, type: 'item', x: 31, y: 31, lv: 1, occ: [b.id], visits: 0, sales: 0 };
   s.buildings.push(shop); s.unlocked.luckyCharm = true; b.gold = 10_000;
   const pending = { type: 'visit', b: shop.id, dur: 0, buy: 'luckyCharm' };
   b.task = pending; b.inside = { b: shop.id, t: 0, task: pending };
   sim.insideStep(b);
-  assert.equal(b.eq.acc, relic); assert.equal(s.frontier.relics[relic], b.id);
+  assert.equal(b.eq.acc, 'luckyCharm'); assert.equal(b.eq.blessing, relic); assert.equal(s.frontier.relics[relic], b.id);
 
   assert.equal(sim.equipRelic(relic, null), null);
-  assert.equal(b.eq.acc, null); assert.equal(s.frontier.relics[relic], null);
+  assert.equal(b.eq.acc, 'luckyCharm'); assert.equal(b.eq.blessing, null); assert.equal(s.frontier.relics[relic], null);
   s.buildings.push({ id: s.nextId++, type: 'smith', x: 27, y: 32, lv: 1, occ: [] });
   assert(sim.develop(relic), 'a legendary relic was developable');
   assert(!s.unlocked[relic]);

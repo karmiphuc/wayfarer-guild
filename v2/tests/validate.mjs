@@ -69,7 +69,8 @@ for (const [id, j] of Object.entries(JOBS)) if (j.tier === 3 && !Object.values(J
 const KNOWN_ITEM_KEYS = ['name', 'slot', 'type', 'hand', 'icon', 'tint', 'price', 'dev', 'bow', 'atk', 'def', 'mag', 'hp', 'crit', 'spd', 'heal', 'legendary'];
 for (const [id, it] of Object.entries(ITEMS)) {
   const where = `ITEMS.${id}`;
-  if (!['weapon', 'armor', 'offhand', 'acc', 'item'].includes(it.slot)) err(`${where}: bad slot "${it.slot}"`);
+  if (!['weapon', 'armor', 'offhand', 'acc', 'item', 'blessing'].includes(it.slot)) err(`${where}: bad slot "${it.slot}"`);
+  if ((it.slot === 'blessing') !== !!it.legendary) err(`${where}: only unique relics belong in the blessing slot`);
   if (!exists(`assets/items/${it.icon}.png`)) err(`${where}: icon assets/items/${it.icon}.png missing`);
   if (!(it.price > 0)) err(`${where}: price must be > 0`);
   for (const k of Object.keys(it)) if (!KNOWN_ITEM_KEYS.includes(k)) err(`${where}: unknown key "${k}"`);
