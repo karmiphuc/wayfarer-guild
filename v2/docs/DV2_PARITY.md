@@ -55,6 +55,8 @@ playthrough. Never hard-code them as targets: our numbers come from the bot soak
 | Village charters | pick 1 of 3 at founding; each has an upside, a downside and a starting gift (9 charters) | ✅ | #45 |
 | Weekly happenings | 11 seeded random events: merchant, Golden Slime, rain, clear skies, bard, harvest, stampede, bandits, meteors, fog, legendary wanderer | ✅ | #45 |
 | Raids defend the town | stampedes charge the village edge, bandits camp outside; free adventurers rally (gives towers and the `Safe` trait a job) | 🟡 | #45, #25 |
+| Outlaws | 6 human enemy types with weapons (Cutthroat, Shadow Thief, Swine Raider, Orc Brute, Ronin, Bandit Chief): the bandit gang, plus roaming in zones 3–4 and "Hideout" quests | ✅ | #45 |
+| Elite monsters | 6% of wild spawns: recoloured with a crown, tougher, ×2.5 EXP/gold, ×2 drops | ✅ | #45 |
 
 ## 2. Roadmap (GitHub issues)
 

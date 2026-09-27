@@ -1,5 +1,8 @@
 # Wayfarer Guild — Agent Working Agreement
 
+> **Working on v2 (the `/v2/` folder, the current game)? Stop here and read [`v2/AGENTS.md`](v2/AGENTS.md) instead.**
+> This file covers the legacy v1 build at the repo root. The product rules below still apply to both.
+
 This file is the durable instruction set for future coding/agent sessions on Wayfarer Guild.
 
 Before making a meaningful game change, read:

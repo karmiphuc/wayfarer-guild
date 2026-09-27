@@ -8,18 +8,15 @@ Everything you need is in this folder. Follow this file literally; when in doubt
 - Deeper docs: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [docs/RECIPES.md](docs/RECIPES.md) · [docs/ASSETS.md](docs/ASSETS.md) ·
   [docs/TESTING.md](docs/TESTING.md) · [docs/DEPLOY.md](docs/DEPLOY.md) · [docs/DV2_PARITY.md](docs/DV2_PARITY.md) (roadmap)
 
-## 0. Where the source code is (read this if `v2/js/` is missing)
+## 0. Where the source code is
 
-The modular source (`v2/js/`, `v2/tests/`, `v2/tools/`) lives in the owner's local clone
-(`~/Projects/wayfarer-guild-review/src`, branch `feature/opus-rebuild`). GitHub `main` holds the **deployed bundle**:
-`v2/index.html` + `v2/game.js` (all modules concatenated by `tools/bundle.py`) + `v2/assets/`, plus these docs.
-- Working from GitHub and `v2/js/` is missing? Ask the owner for the source tree before starting feature work.
-- The deployed bundle can lag the local source by a few small commits; the source always wins. (The bundle uploaded on
-  2026-09-27 with the replayability layer — happenings, charters, world codes — matches the source at that date.)
-- Never hand-edit `v2/game.js` except for an emergency hotfix — and then port the same fix into `v2/js/` afterwards,
-  because the next bundle overwrites `game.js`.
-- Inside `game.js` each module is wrapped as `__m['<name>'] = (() => { ...module code... })();` in dependency order,
-  so the section for `sim.js` starts at the line `// ---- sim.js ----`.
+Everything is in this repo since 2026-09-27: `v2/js/` (source), `v2/tests/`, `v2/tools/`, `v2/assets/` (all sprite sources +
+the packed atlas), `v2/docs/`. GitHub Pages serves the ES modules directly: `v2/index.html` loads `js/main.js` — no build step.
+- Edit `v2/js/*.js`, run `node v2/tests/check.mjs`, reload the page. That's the whole loop.
+- `v2/game.js` is a LEGACY single-file bundle from the paste-only period; `index.html` no longer loads it. Ignore it (or delete
+  it). `tools/bundle.py` can rebuild one into `dist/v2/` if you ever need a single-file copy.
+- The original dev clone (`~/Projects/wayfarer-guild-review/src`, branch `feature/opus-rebuild`) has the full git history;
+  the GitHub copy was web-uploaded, so its history starts at the upload commits.
 
 ---
 
@@ -129,7 +126,11 @@ v2/
   (zone = distance from the ORIGINAL town rect; south is gentle). The Old Cave entrance is random per world (`cavePos(s)`;
   (36,7) in saves from before world codes).
 - Every village is founded from a world code (the seed): it fixes the monster species per zone (`ROSTER_SIZE`), the cave spot
-  and the 3 charters offered. Weekly happenings are rolled with the same seeded RNG, so code + choices replay identically.
+  and the 3 charters offered. Weekly happenings (`HAPPEN_CHANCE` 0.37 ≈ one every 2.7 weeks) use the same seeded RNG, so code +
+  choices replay identically.
+- Visitors (non-residents) are capped per rank by `VISITOR_CAP` = 5/5/10/15/20/30 for ★0–★5 (owner's play-test call).
+- 72 monster types: 66 creatures + 6 outlaws (`human: true` — human pawns drawn from character sheets with a weapon; they roam
+  zones 3–4 and form the Bandit Raid gang). 6% of wild spawns are Elites (`ELITE_CHANCE`: recoloured, crown, ×2.5 EXP/gold).
 - 1 in-game week = 30 s at 1× speed (`WEEK_SECONDS`), 4 weeks/month, sim step `DT = 0.1 s`, max 40 steps per frame.
 - Job mastery at job level 10 (`MASTERY`), level caps 99 (`LV_CAP`, `JOB_CAP`). Perks stack and are kept forever.
 - Village stars 0–5 via `RANKS` conditions; ★5 requires beating `cyclop`. Post-game bosses need `star: 5`.

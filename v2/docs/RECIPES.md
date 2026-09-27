@@ -104,6 +104,14 @@ Only when no existing key fits.
    `__game.sim.spawnMonster(3, 'frostImp')` in the browser console.
 4. Run `pack_atlas.py`, then verify.
 
+**Outlaw (human enemy) variant** — a monster row with `human: true` uses a CHARACTER sheet instead of a monster sheet:
+```js
+duelist: { name: 'Duelist', spr: 'NinjaGray', human: true, weapon: 'Rapier', hp: 70, atk: 20, def: 8, spd: 1.1, xp: 32, gold: 45, drops: { ore: 0.3 } },
+```
+`spr` = `assets/chars/<Spr>.png` (64×112, needs the attack row) + `.face.png`; `weapon` = an `assets/items/h_<Weapon>.png` in-hand
+sprite. Add `raidOnly: true` if it should only appear in raids (then keep it OUT of `ZONE_MONS`). To join the Bandit Raid gang,
+add its id to the `gang` lists in `startHappening('bandits')` in `sim.js`. Outlaws can't be tamed and are never Elites.
+
 ## 6. Add a boss
 
 1. Files: `assets/bosses/<Dir>/Idle.png` (one row of frames) and `assets/bosses/<Dir>/Faceset.png`.

@@ -8,6 +8,20 @@ The project prefers CC0. Attribution is still welcome for CC0 creators, but not 
 
 ## Assets in use
 
+### v2 (`/v2/`) — single-pack build
+
+| Repo path | Asset / pack | Creator | Source | License | Modified? | Notes |
+|---|---|---|---|---|---|---|
+| `v2/assets/**` (tiles, chars, monsters, bosses, items, fx, ui, font) | Ninja Adventure – Asset Pack | Pixel-boy & AAA | https://pixel-boy.itch.io/ninja-adventure-asset-pack (mirror used: github.com/gainax2k1/godot_adventure) | CC0 1.0 (`v2/assets/NINJA_ADVENTURE_CC0_LICENSE.txt`) | Files copied unmodified; cropped at render time | Attribution not required; credited in-game (System → Credits) |
+| `v2/assets/fx/fog.png`, `v2/assets/fx/pt_Rain.png` | Ninja Adventure – `FX/Environment/Fog.png`, `FX/Particle/Rain.png` | Pixel-boy & AAA | same | CC0 1.0 | Renamed only (byte-identical) | Mysterious Fog and Rainy Week happenings |
+| `v2/assets/audio/music/*.mp3`, `v2/assets/audio/sfx/*.mp3` | Ninja Adventure – music & sounds | Pixel-boy & AAA | same | CC0 1.0 | Transcoded OGG/WAV → MP3 (ffmpeg) for iOS Safari | Tracks: Good Time, Chill, Adventure Begin, Road, The Cave, Fight, Dark Castle, Dream, Lost Village |
+
+| `v2/assets/items/a_*.png`, `v2/assets/items/c_*.png` (26 armor/accessory icons) | 16x16 RPG Item Pack | Alex's Assets | https://alexs-assets.itch.io/16x16-rpg-item-pack (mirror: github.com/series-ai/jam-ready-assets) | CC0 1.0 (`v2/assets/ALEX_RPG_ITEMS_CC0_LICENSE.txt`) | Renamed only | Attribution not required |
+| `v2/assets/tiles/mf_*.png` (fountain, basin, knight statue, castle, tower) | Medieval Fantasy (Superpowers asset packs) | Pixel-boy | https://github.com/sparklinlabs/superpowers-asset-packs | CC0 1.0 (`v2/assets/PIXELBOY_MEDIEVAL_FANTASY_CC0_LICENSE.txt`) | Renamed only | Same artist as Ninja Adventure |
+| `v2/assets/atlas/*` | Packed copies of the files above | — | built by `v2/tools_pack_atlas.py` | inherits CC0 | Repacked into atlases | — |
+
+### v1 (repo root) — legacy build
+
 The v0.5 pixel preview now uses two CC0 Kenney atlases in the live renderer.
 
 | Repo path | Asset / pack | Creator | Source | License | Modified? | Required attribution / notes |

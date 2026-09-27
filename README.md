@@ -1,5 +1,24 @@
 # Wayfarer Guild
 
+## v2 (rebuild, `/v2/`)
+
+A ground-up rebuild of the game as a Dungeon Village 2–style adventurer-village sim, on **one** coherent CC0 art pack (Ninja Adventure: tiles, buildings, 40+ characters, 60+ monsters, bosses, UI, font, music and SFX).
+
+- Village in the middle of a wild field: monsters roam zones, adventurers hunt in view, come home to eat, shop, sleep and train
+- Visitors → satisfaction → move in when a House is free; residents change jobs (Town Points), partner with tamed monsters (mount at bond 50)
+- DV2-style **Town Traits + Titles** instead of adjacency combos; ★ village rank with explicit conditions
+- Quests: monster outbreaks, bosses (King Slime → Demon Cyclops), multi-floor Old Cave dungeon
+- Gear discovered from treasure chests or developed at the Blacksmith with monster materials; shops sell what you've unlocked
+- Events paid in Town Points (festival, hunting contest, sale, recruitment, expand village)
+- Vanilla ES modules, no build step; fixed-step sim with tick budget, seeded RNG, typed-array A*; integer pixel scaling; iPad/phone layouts
+- Plan: [docs/V2_REBUILD_PLAN.md](./docs/V2_REBUILD_PLAN.md) · v1 review: [docs/V1_REVIEW.md](./docs/V1_REVIEW.md) · run locally: `python3 v2/tools/serve.py 8766 .` → http://localhost:8766/v2/?new
+- **Working on v2 (humans and AI agents): start with [v2/AGENTS.md](./v2/AGENTS.md).** One-command check: `node v2/tests/check.mjs` (`--full` for balance).
+- Docs: [architecture](./v2/docs/ARCHITECTURE.md) · [recipes](./v2/docs/RECIPES.md) · [assets](./v2/docs/ASSETS.md) · [testing](./v2/docs/TESTING.md) · [deploy](./v2/docs/DEPLOY.md) · [DV2 parity & roadmap](./v2/docs/DV2_PARITY.md) (tracking issue #44)
+
+---
+
+## v1 (legacy, repo root)
+
 Personal autonomous management RPG / roguelite prototype inspired by the management loops of Dungeon Village and Kingdom Adventurers, with original code, naming and visuals.
 
 Live: https://karmiphuc.github.io/wayfarer-guild/

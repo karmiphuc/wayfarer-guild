@@ -1,7 +1,8 @@
 # Deploy
 
-GitHub Pages serves the `main` branch root of `karmiphuc/wayfarer-guild`. **Current state (2026-09-27): Mode B** —
-GitHub has the bundle (`v2/game.js`) + assets + docs; the modular source is only in the owner's local clone. v1 lives at the repo root, v2 in `v2/`:
+GitHub Pages serves the `main` branch root of `karmiphuc/wayfarer-guild`. **Current state (2026-09-27): Mode A** —
+GitHub has the full source (`v2/js`, `v2/tests`, `v2/tools`, `v2/assets`) and Pages runs the ES modules directly
+(`v2/index.html` → `js/main.js`). `v2/game.js` is a leftover Mode B bundle that nothing loads. v1 lives at the repo root, v2 in `v2/`:
 **https://karmiphuc.github.io/wayfarer-guild/v2/** (Pages updates ~1 minute after a commit to `main`).
 
 Always run `node v2/tests/check.mjs` (and `--full` for balance changes) before deploying.
