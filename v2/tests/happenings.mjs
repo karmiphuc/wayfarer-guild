@@ -12,7 +12,8 @@ for (const H of HAPPENINGS) {
   const before = { gold: s.gold, tp: s.tp, pop: Math.round(s.pop), crystal: s.mats.crystal, unlocked: Object.keys(s.unlocked).length };
   let breach = 0, raiders = s.mons.filter(m => m.raid && m.hp > 0).length, golden = s.mons.some(m => m.golden);
   if (H.id === 'merchant') { const o = sim.happening('merchant').data.offer; if (o[0]) sim.buyMerchant(o[0].id); }
-  for (let i = 0; i < WEEK * (H.weeks + 0.5); i++) sim.step();
+  const duration = sim.happening(H.id)?.weeks || H.weeks;
+  for (let i = 0; i < WEEK * (duration + 0.5); i++) sim.step();
   const after = { gold: s.gold, tp: s.tp, pop: Math.round(s.pop), crystal: s.mats.crystal, unlocked: Object.keys(s.unlocked).length };
   const bad = err || s.happen.some(h => h.id === H.id) ? `still active/err=${err}` : '';
   if (bad) fail++;

@@ -113,6 +113,19 @@ button, input { word-spacing: inherit; }   /* UA styles reset it; the pixel font
 .card:hover { background: #fff0d8; border-color: var(--wood); }
 .card.sel { border-color: #e04a1a; box-shadow: 0 0 0 2px #ffcf3f; }
 .card.locked { opacity: 0.55; cursor: default; }
+button.party-choice { -webkit-appearance: none; appearance: none; width: 100%; min-height: 60px; font: inherit; color: inherit; text-align: left; }
+.party-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.party-choice .name, .party-choice .sub { display: block; }
+.party-choice .party-state {
+  flex: 0 0 auto; min-width: 70px; padding: 4px 5px; border: 2px solid #8b5636; border-radius: 2px;
+  background: #fff8e8; color: #54250f; font-size: 11px; font-weight: bold; text-align: center;
+}
+.party-choice.sel { padding: 5px; border: 3px solid #2b1a10; background: #684026; box-shadow: 0 0 0 3px #ffcf3f; }
+.party-choice.sel:hover { background: #795034; border-color: #2b1a10; }
+.party-choice.sel .name { color: #fff4df; font-weight: bold; }
+.party-choice.sel .sub { color: #ffe4ba; }
+.party-choice.sel .party-state { border-color: #ffcf3f; background: #fff4df; color: #3d1b0c; }
+.party-choice:focus-visible { z-index: 1; outline: 4px solid #0b4f8a; outline-offset: 3px; }
 .card .thumb { flex: 0 0 auto; width: 52px; height: 44px; display: flex; align-items: center; justify-content: center; }
 .card .thumb canvas, .card .thumb img { max-width: 52px; max-height: 44px; }
 .card .meta { min-width: 0; flex: 1; }
@@ -122,6 +135,7 @@ button, input { word-spacing: inherit; }   /* UA styles reset it; the pixel font
 .card .cost.no { color: var(--bad); }
 .tag { display: inline-block; font-size: 10px; padding: 0 4px; border-radius: 2px; background: #c98a5a; color: #fff; margin-right: 2px; }
 .tag.res { background: var(--good); } .tag.vis { background: #6c7ad0; } .tag.ko { background: var(--bad); } .tag.gold { background: #c99a1a; }
+.mastery-status { border: 1px solid #2b1a10; background: #5d3b00 !important; color: #fff8e5; font-weight: bold; }
 
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .spread { justify-content: space-between; }

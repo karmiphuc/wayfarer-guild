@@ -17,6 +17,25 @@ for (const seed of [1, 17, 4242, 81299]) {
 }
 assert.notDeepEqual(newGame(1).banditCamps, newGame(17).banditCamps);
 
+// Legacy four-week cooldowns retain elapsed time, extend once with isolated RNG,
+// and leave already available camps available.
+{
+  const old = newGame(314), week = WEEK_SECONDS / DT;
+  old.tick = 2 * week;
+  for (const c of old.banditCamps) delete c.cooldownWeeks;
+  old.banditCamps[0].clears = 1; old.banditCamps[0].readyAt = 4 * week;
+  old.banditCamps[1].clears = 1; old.banditCamps[1].readyAt = week;
+  const seed = old.seed, copy = structuredClone(old);
+  migrate(old); migrate(copy);
+  const c = old.banditCamps[0];
+  assert(Number.isInteger(c.cooldownWeeks) && c.cooldownWeeks >= 8 && c.cooldownWeeks <= 20);
+  assert.equal(c.readyAt - old.tick, (c.cooldownWeeks - 2) * week);
+  assert.equal(old.banditCamps[1].readyAt, week);
+  assert.equal(old.banditCamps[1].cooldownWeeks, 0);
+  assert.equal(old.seed, seed); assert.deepEqual(old.banditCamps, copy.banditCamps);
+  const once = JSON.stringify(old); migrate(old); assert.equal(JSON.stringify(old), once);
+}
+
 // Older villages gain camps without consuming the simulation RNG or moving buildings/roads.
 {
   const s = newGame(91);
@@ -60,9 +79,11 @@ assert.equal(s.mats.ore, ore + q.reward.materials.ore);
 const after = JSON.stringify({ gold: s.gold, mats: s.mats, clears: c.clears });
 sim.checkQuest(q); assert.equal(JSON.stringify({ gold: s.gold, mats: s.mats, clears: c.clears }), after);
 assert.match(sim.campBlock(c.id), /returns/);
-assert.equal(c.readyAt, s.tick + Math.round(4 * WEEK_SECONDS / DT));
+assert(Number.isInteger(c.cooldownWeeks) && c.cooldownWeeks >= 8 && c.cooldownWeeks <= 20);
+assert.equal(c.readyAt, s.tick + Math.round(c.cooldownWeeks * WEEK_SECONDS / DT));
 const reloaded = migrate(JSON.parse(JSON.stringify(s)));
 assert.equal(reloaded.banditCamps[0].readyAt, c.readyAt);
+assert.equal(reloaded.banditCamps[0].cooldownWeeks, c.cooldownWeeks);
 s.tick = c.readyAt; assert.equal(sim.campBlock(c.id), null);
 assert(!s.mons.some(m => m.camp === c.id && m.hp > 0));
 
