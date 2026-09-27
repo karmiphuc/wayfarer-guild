@@ -13,6 +13,8 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Camp guard patrols no longer rally the village, attract distant defenders or prevent distant pawns from resting. Nearby encounters still use normal combat; real bandit raids and stampedes retain territorial defense.
+
 - Late-game investments: one-time Alpha pets cost 10,000 village gold plus 1,000 of every material at five stars with a Stable, granting +50% assist damage and bonded stat bonuses. Research-only Phoenix Sigils cost 15,000 gold plus materials to unlock; pawns buy one slot-free resurrection charge at a 10,000-gold base price, consumed to return at half health in field or cave battles.
 
 - Empty weapon slots render empty hands across all pawn classes; held sprites come only from actual equipped items. Outlaws retain their explicitly assigned weapons.
