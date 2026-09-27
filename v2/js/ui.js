@@ -13,7 +13,7 @@ const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 export class UI {
   constructor(game) {
     this.game = game; this.panel = null; this.buildCat = 'lodging'; this.pointerDown = false; this.lastHtml = {};
-    this.questPick = null; this.frontierPick = null; this.frontierParty = []; this.relicPick = null;
+    this.questPick = null; this.frontierPick = null; this.frontierParty = []; this.relicPick = null; this.campPick = null; this.campParty = [];
     this.jobPick = false; this.partnerPick = false; this.seenLog = 0;
     this.buildMode = null; this.showNames = false;
     this.bind();
@@ -52,7 +52,7 @@ export class UI {
     const tb = $('#topbar').offsetHeight;                        // the top bar wraps on phones (more when happenings show)
     if (tb !== this.tbH) { this.tbH = tb; for (const id of ['#ticker', '#toast', '#goals']) $(id).style.top = (tb + 2) + 'px'; }
     if (this.pointerDown) return;
-    if (this.panel && ['people', 'quests', 'frontiers', 'village', 'develop', 'jobs'].includes(this.panel)) this.renderPanel();
+    if (this.panel && ['people', 'quests', 'frontiers', 'camps', 'village', 'develop', 'jobs'].includes(this.panel)) this.renderPanel();
     if (this.game.rnd.selected) this.renderInspector();
     if (this.buildMode) this.renderBuildbar();
   }
@@ -90,6 +90,7 @@ export class UI {
   open(name) {
     this.exitBuild(); this.panel = name; this.questPick = null;
     if (name === 'frontiers') { this.frontierPick = null; this.frontierParty = []; this.relicPick = null; }
+    if (name === 'camps') { this.campPick = null; this.campParty = []; }
     document.querySelectorAll('.mbtn').forEach(b => b.classList.toggle('on', b.dataset.panel === name));
     $('#panel').classList.remove('hidden'); $('#panel').className = 'win ' + name; this.lastHtml.panel = null; this.renderPanel();
     $('#panel-body').scrollTop = 0;
@@ -100,7 +101,7 @@ export class UI {
     this.lastHtml[key] = html; el.innerHTML = html; return true;
   }
   renderPanel() {
-    const titles = { jobs: 'Class Hall', build: 'Build', people: 'Adventurers', quests: 'Quest Board', frontiers: 'Frontiers', develop: 'Blacksmith · Develop', village: 'Village', system: 'System' };
+    const titles = { jobs: 'Class Hall', build: 'Build', people: 'Adventurers', quests: 'Quest Board', frontiers: 'Frontiers', camps: 'Bandit Camps', develop: 'Blacksmith · Develop', village: 'Village', system: 'System' };
     $('#panel-title').textContent = titles[this.panel];
     const html = this['panel_' + this.panel]();
     const body = $('#panel-body');
@@ -165,14 +166,20 @@ export class UI {
     return h + '</div>';
   }
   taskLabel(a) {
-    if (a.ko) return 'Knocked out'; if (a.inside) { const b = this.s.buildings.find(o => o.id === a.inside.b); return b ? `At the ${defOf(b.type).name}` : 'Inside'; }
+    if (a.ko) {
+      const rescuer = a.rescueBy && this.s.advs.find(o => o.id === a.rescueBy);
+      return rescuer ? `${rescuer.task?.carrying ? 'Being carried by' : 'Rescue coming from'} ${rescuer.name}` : 'Knocked out · awaiting rescue';
+    }
+    if (a.inside) { const b = this.s.buildings.find(o => o.id === a.inside.b); return b ? `At the ${defOf(b.type).name}` : 'Inside'; }
     const t = a.task; if (!t) return 'Thinking…';
+    if (t.type === 'rescue') { const fallen = this.s.advs.find(o => o.id === t.target); return `${t.carrying ? 'Carrying' : 'Rescuing'} ${fallen ? fallen.name : 'a fallen adventurer'}`; }
     if (a.dungeon) return 'Exploring the Old Cave'; return { visit: 'Heading into town', hunt: 'Hunting monsters', return: 'Returning to town', stroll: 'Strolling', camp: 'Napping outside', leave: 'Leaving the village', quest: 'On a quest!' }[t.type] || t.type;
   }
   panel_quests() {
     const s = this.s; let h = '';
     const captured = FRONTIERS.filter(f => s.frontier?.completed?.[f.id]).length;
-    h += `<div class="row spread"><span class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random capable adventurers.</span><button class="btn" data-act="open" data-k="frontiers">Frontiers ${captured}/${FRONTIERS.length}</button></div>`;
+    const camps = s.banditCamps || [], campReady = camps.filter(c => !this.sim.campBlock(c.id)).length;
+    h += `<div class="row spread"><span class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random capable adventurers.</span><span class="row"><button class="btn" data-act="open" data-k="frontiers">Frontiers ${captured}/${FRONTIERS.length}</button><button class="btn" data-act="open" data-k="camps">Bandit Camps ${campReady}/${camps.length}</button></span></div>`;
     for (const q of s.activeQuests) {
       const alive = s.mons.filter(m => m.quest === q.id && m.hp > 0);
       h += `<div class="section">Underway: ${esc(q.name)}</div><div class="row spread"><span class="muted">${q.kind === 'dungeon' ? `Floor ${q.floor}/${q.floors}` : alive.length + ' foes remain'}</span><button class="btn sm" data-act="watchQuest" data-id="${q.id}">Watch</button></div><div class="grid">`;
@@ -269,6 +276,55 @@ export class UI {
       h += `<div class="card ${this.relicPick === f.relic ? 'sel' : ''}" data-act="pickRelic" data-id="${f.relic}"><div class="thumb"><i data-item="${f.relic}" data-scale="3"></i></div><div class="meta"><div class="name">${esc(it.name)}</div><div class="sub">${esc(statLine(it))}</div><div class="sub">${owner ? 'Equipped by ' + esc(owner.name) : 'In the guild vault'}</div></div></div>`;
     }
     return h + '</div>';
+  }
+  panel_camps() {
+    const s = this.s, camps = s.banditCamps || [];
+    let h = `<div class="row spread"><span class="muted">Strike the outlaw camps beyond the village. Each camp regroups four weeks after a victory.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
+      <p class="muted camp-note">Camps are quiet until a party departs. Winning pays the listed bounty; a cleared camp can be challenged again after its cooldown.</p>`;
+    const picked = camps.find(c => c.id === this.campPick);
+    if (picked) h += this.campDetail(picked);
+    h += '<div class="section">Known camps</div><div class="grid camp-grid">';
+    for (const c of camps) {
+      const q = this.sim.campQuest(c.id), active = s.activeQuests.find(x => x.camp === c.id), block = this.sim.campBlock(c.id), wait = this.campWait(c);
+      const loot = q ? Object.entries(q.reward.materials || {}).map(([k, n]) => `${MATS[k].name}×${n}`).join(', ') : '';
+      const status = active ? '<span class="tag gold">Underway</span>' : wait ? `<span class="tag">${esc(wait)}</span>`
+        : block ? `<span class="tag ko">${esc(block)}</span>` : '<span class="tag vis">Ready</span>';
+      h += `<div class="card camp-card ${this.campPick === c.id ? 'sel' : ''}" data-act="pickCamp" data-id="${c.id}"><div class="thumb"><i data-spr="${c.tier >= 3 ? 'hutB' : 'hutA'}"></i></div><div class="meta">
+        <div class="name">${esc(c.name)}</div><div>${status}</div><div class="sub">Tier ${c.tier} · Suggested Lv${q?.rec || this.sim.questLevel(q)}+ · (${c.x}, ${c.y})</div>
+        <div class="sub">${q ? `Fee ${q.fee}G · Bounty ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop · ${q.n} raiders` : 'No bounty posted'}</div>${loot ? `<div class="sub">Stores: ${esc(loot)}</div>` : ''}
+        <div class="sub">Cleared ${c.clears || 0} time${c.clears === 1 ? '' : 's'}</div><button class="btn sm" data-act="mapCamp" data-id="${c.id}">${active ? 'Watch' : 'Show on map'}</button></div></div>`;
+    }
+    return h + '</div>';
+  }
+  campWait(c) {
+    const seconds = Math.max(0, Math.ceil(((c.readyAt || 0) - this.s.tick) / 10));
+    if (!seconds) return '';
+    const weeks = Math.ceil(seconds / 30);
+    return `Returns in ${weeks} week${weeks === 1 ? '' : 's'}`;
+  }
+  campDetail(c) {
+    const s = this.s, q = this.sim.campQuest(c.id), active = s.activeQuests.find(x => x.camp === c.id), wait = this.campWait(c);
+    const loot = q ? Object.entries(q.reward.materials || {}).map(([k, n]) => `${MATS[k].name}×${n}`).join(', ') : '';
+    let h = `<div class="section">${esc(c.name)}</div><div class="row spread"><span class="muted">Tier ${c.tier} · cleared ${c.clears || 0} time${c.clears === 1 ? '' : 's'}${q ? ` · ${q.n} raiders` : ''}${loot ? ` · stores ${esc(loot)}` : ''}</span><button class="btn sm" data-act="mapCamp" data-id="${c.id}">${active ? 'Watch fight' : 'Show on map'}</button></div>`;
+    if (active) {
+      const alive = s.mons.filter(m => m.quest === active.id && m.hp > 0).length;
+      h += `<p class="muted">Raid underway · ${alive} foe${alive === 1 ? '' : 's'} remain.</p><div class="grid">`;
+      for (const id of active.members) { const a = s.advs.find(x => x.id === id); if (!a) continue;
+        h += `<div class="card" data-act="selAdv" data-id="${a.id}"><div class="thumb"><i data-face="f_${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="bar hp"><i style="width:${a.hp / maxHp(a, s) * 100}%"></i></div><div class="sub">${a.ko ? 'KO' : JOBS[a.job].name + ' Lv' + a.lv}</div></div></div>`; }
+      return h + '</div>';
+    }
+    const block = this.sim.campBlock(c.id);
+    if (block) return h + `<p class="${wait ? 'muted' : 'cross'}">${esc(wait || block)}</p>`;
+    if (!q) return h + '<p class="cross">This camp is unavailable.</p>';
+    const cands = this.sim.questCandidates().sort((a, b) => b.lv - a.lv);
+    this.campParty = (this.campParty || []).filter(id => cands.some(a => a.id === id));
+    const party = this.campParty, extra = Math.max(0, party.length - 4), cost = this.sim.questCost(q, party.length), ready = this.sim.questReady(q).length;
+    h += `<div class="row" style="margin:8px 0"><button class="btn" data-act="startCamp" data-id="${q.id}" ${!party.length || s.gold < cost ? 'disabled' : ''}>Depart (${cost}G)</button>
+      <button class="btn sm" data-act="instantCamp" data-id="${q.id}" ${!ready || s.gold < q.fee ? 'disabled' : ''}>Instant Depart (${q.fee}G)</button><span class="muted">${party.length}/8 selected · ${q.fee}G entry + ${extra * this.sim.questExtraFee(q)}G extras</span></div>
+      <div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected when you choose the camp. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Raiders appear only after departure.</div><div class="grid">`;
+    const rec = this.sim.questLevel(q);
+    for (const a of cands) h += `<div class="card ${party.includes(a.id) ? 'sel' : ''}" data-act="togCampParty" data-id="${a.id}"><div class="thumb"><i data-char="${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv}${a.resident ? '' : ' · visitor'}${a.lv < rec ? ' · below suggested level' : ''}</div></div></div>`;
+    return h + `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
   }
   panel_develop() {
     const s = this.s, smith = s.buildings.some(b => b.type === 'smith'), tab = this.devTab || 'weapon';
@@ -434,12 +490,13 @@ export class UI {
   }
   inspMon(m) {
     if (!m || m.hp <= 0) return '';
-    const M = m.boss ? BOSSES[m.boss] : MONSTERS[m.type];
+    const base = m.boss ? BOSSES[m.boss] : MONSTERS[m.type], M = m.job ? { ...base, spr: m.spr || base.spr, weapon: m.weapon || base.weapon, human: true } : base;
     const frontier = m.frontier && FRONTIERS.find(f => f.id === m.frontier);
+    const camp = m.camp || (typeof m.quest === 'string' && m.quest.startsWith('camp:') ? m.quest.slice(5) : null);
     const face = m.boss ? `bf_${m.boss}` : M.human ? `f_${M.spr}` : `mf_${M.spr}`;
-    const tag = frontier ? `<span class="tag gold">Guardian of ${esc(frontier.name)}</span>` : m.golden ? '<span class="tag gold">Golden — catch it for a fortune!</span>' : m.raid ? `<span class="tag ko">${m.raid === 'bandits' ? 'Bandit' : 'Stampede'} raider</span>`
+    const tag = frontier ? `<span class="tag gold">Guardian of ${esc(frontier.name)}</span>` : camp ? '<span class="tag ko">Bandit camp raider</span>' : m.golden ? '<span class="tag gold">Golden — catch it for a fortune!</span>' : m.raid ? `<span class="tag ko">${m.raid === 'bandits' ? 'Bandit' : 'Stampede'} raider</span>`
       : m.elite ? '<span class="tag gold">Elite — ×2.5 EXP & gold, ×2 drops</span>' : M.human ? '<span class="tag ko">Outlaw</span>' : '';
-    const name = frontier ? frontier.bossName : m.golden ? 'Golden Slime' : (m.elite ? 'Elite ' : '') + M.name;
+    const name = frontier ? frontier.bossName : m.className || (m.golden ? 'Golden Slime' : (m.elite ? 'Elite ' : '') + M.name);
     return `<div class="head"><i data-face="${face}" class="face" ${m.golden ? 'data-gold="1"' : m.elite ? 'data-tint="150"' : ''}></i><div><h3>${esc(name)}</h3><div class="muted">Lv${m.lv}${m.quest ? ' · Quest target' : ''}</div>${tag}</div></div>
       <div class="row"><span style="width:34px">HP</span><div class="bar hp" style="flex:1"><i style="width:${m.hp / m.mhp * 100}%"></i></div><span class="muted">${m.hp}/${m.mhp}</span></div>
       <div class="stats"><div><b>ATK</b> ${m.atk}</div><div><b>DEF</b> ${m.def}</div></div>
@@ -468,9 +525,9 @@ export class UI {
     this.charterRender = render;
     this.game.modal = true; box.classList.remove('hidden'); render();
   }
-  deselect() { this.game.rnd.selected = null; this.game.rnd.frontierFocus = null; this.partnerPick = false; this.game.follow = null; $('#inspector').classList.add('hidden'); this.lastHtml.insp = null; }
+  deselect() { this.game.rnd.selected = null; this.game.rnd.frontierFocus = null; this.game.rnd.campFocus = null; this.partnerPick = false; this.game.follow = null; $('#inspector').classList.add('hidden'); this.lastHtml.insp = null; }
   select(sel) {
-    this.game.rnd.selected = sel; this.game.rnd.frontierFocus = null; this.partnerPick = false; this.lastHtml.insp = null; this.renderInspector(); this.game.audio.sfx('click');
+    this.game.rnd.selected = sel; this.game.rnd.frontierFocus = null; this.game.rnd.campFocus = null; this.partnerPick = false; this.lastHtml.insp = null; this.renderInspector(); this.game.audio.sfx('click');
   }
   showFrontier(id) {
     const f = FRONTIERS.find(x => x.id === id); if (!f) return;
@@ -478,6 +535,14 @@ export class UI {
     this.game.rnd.frontierFocus = id; this.frontierPick = id; this.relicPick = null;
     const q = this.sim.frontierQuest(id), blocked = this.sim.frontierBlock(id);
     this.frontierParty = q && !blocked ? this.sim.autoQuestParty(q.id) : [];
+    this.lastHtml.panel = null; this.renderPanel(); $('#panel-body').scrollTop = 0;
+  }
+  showCamp(id) {
+    const c = (this.s.banditCamps || []).find(x => x.id === id); if (!c) return;
+    if (this.panel !== 'camps') this.open('camps');
+    this.game.rnd.frontierFocus = null; this.game.rnd.campFocus = id; this.campPick = id;
+    const q = this.sim.campQuest(id), blocked = this.sim.campBlock(id);
+    this.campParty = q && !blocked ? this.sim.autoQuestParty(q.id) : [];
     this.lastHtml.panel = null; this.renderPanel(); $('#panel-body').scrollTop = 0;
   }
 
@@ -519,11 +584,16 @@ export class UI {
       case 'instantFrontier': if (err(sim.instantQuest(d.id))) { this.frontierParty = []; audio.sfx('quest'); } this.renderPanel(); break;
       case 'pickRelic': this.relicPick = this.relicPick === d.id ? null : d.id; this.renderPanel(); audio.sfx('click'); break;
       case 'equipRelic': err(sim.equipRelic(d.id, d.pawn === 'none' ? null : +d.pawn)); this.renderPanel(); break;
+      case 'pickCamp': this.showCamp(d.id); audio.sfx('click'); break;
+      case 'mapCamp': { const c = (s.banditCamps || []).find(x => x.id === d.id); if (c) { this.game.rnd.campFocus = c.id; this.close(); this.game.centerOn(c.x, c.y); } break; }
+      case 'togCampParty': { const id = +d.id; if (this.campParty.includes(id)) this.campParty = this.campParty.filter(x => x !== id); else if (this.campParty.length < 8 && sim.questCandidates().some(x => x.id === id)) this.campParty.push(id); else this.toast('A party can have at most 8 available adventurers'); this.renderPanel(); audio.sfx('click'); break; }
+      case 'startCamp': if (err(sim.startQuest(d.id, this.campParty || []))) { this.campParty = []; audio.sfx('quest'); } this.renderPanel(); break;
+      case 'instantCamp': if (err(sim.instantQuest(d.id))) { this.campParty = []; audio.sfx('quest'); } this.renderPanel(); break;
       case 'pickQuest': this.questPick = this.questPick === +d.id ? null : +d.id; this.party = this.questPick ? sim.autoQuestParty(this.questPick) : []; this.renderPanel(); audio.sfx('click'); break;
       case 'togParty': { const id = +d.id; if (this.party.includes(id)) this.party = this.party.filter(x => x !== id); else if (this.party.length < 8 && sim.questCandidates().some(a => a.id === id)) this.party.push(id); else this.toast('A party can have at most 8 available adventurers'); this.renderPanel(); audio.sfx('click'); break; }
       case 'startQuest': if (err(sim.startQuest(+d.id, this.party || []))) { this.questPick = null; this.party = null; this.game.audio.sfx('quest'); } this.renderPanel(); break;
       case 'instantQuest': if (err(sim.instantQuest(+d.id))) { this.questPick = null; this.party = null; audio.sfx('quest'); } this.renderPanel(); break;
-      case 'watchQuest': { const id = d.id.startsWith('frontier:') ? d.id : +d.id, q = s.activeQuests.find(q => q.id === id); if (q) { this.close(); this.game.centerOn(q.spot[0], q.spot[1]); } break; }
+      case 'watchQuest': { const id = d.id.includes(':') ? d.id : +d.id, q = s.activeQuests.find(q => q.id === id); if (q) { this.close(); this.game.centerOn(q.spot[0], q.spot[1]); } break; }
       case 'develop': err(sim.develop(d.id)); this.renderPanel(); break;
       case 'event': err(sim.runEvent(d.id)); this.renderPanel(); break;
       case 'buyMerchant': err(sim.buyMerchant(d.id)); if (this.panel) this.renderPanel(); this.lastHtml.insp = null; this.renderInspector(); break;

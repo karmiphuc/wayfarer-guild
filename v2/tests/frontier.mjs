@@ -210,13 +210,26 @@ if (SOAK) {
   assert(global.gc, 'run frontier soak with node --expose-gc');
   const { s, sim, party } = setup(991), f = FRONTIERS[0];
   const retrySamples = [];
+  // Ambient visitors can acquire burn/double-hit perks while challenges are retried.
+  // Verify every pending callback expires on schedule rather than requiring combat to stop.
+  const step = sim.step.bind(sim);
+  sim.step = () => {
+    const pending = (sim.timers || []).map(timer => ({ timer, remaining: timer.t }));
+    step();
+    const live = sim.timers || [];
+    for (const { timer, remaining } of pending) {
+      if (remaining <= 1) assert(!live.includes(timer), 'expired combat callback retained');
+      else { assert(live.includes(timer)); assert.equal(timer.t, remaining - 1, 'combat callback failed to age'); }
+    }
+    assert(live.length < 64, `retry timer queue grew to ${live.length}`);
+    assert(live.every(timer => timer.t > 0 && timer.t <= 6), 'combat callback exceeded its bounded lifetime');
+  };
   for (let i = 0; i < 240; i++) {
     failChallenge(s, sim, f, party);
     assert.equal(Object.keys(s.frontier.completed).length, 0);
     assert.equal(Object.keys(s.frontier.relics).length, 0);
     assert.equal(s.activeQuests.filter(q => q.frontier).length, 0);
     assert.equal(s.mons.filter(m => m.frontier).length, 0);
-    assert((sim.timers?.length || 0) === 0);
     assert(s.log.length <= 60 && s.happenLog.length <= 24);
     if (i >= 39 && i % 40 === 39) { global.gc(); retrySamples.push(process.memoryUsage().heapUsed); }
   }

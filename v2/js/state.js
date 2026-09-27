@@ -117,7 +117,43 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
   for (const k of ['Chicken', 'Chicken', 'Dog', 'Cat']) s.animals.push({ k, x: R.int(28, 46), y: R.int(20, 36), tx: 0, ty: 0, t: 0, flip: false });
   log(s, 'Welcome, Chief! Build shops, attract adventurers, and grow your village.', 'good');
   expandWorld(s);
+  clearFrontierScenery(s);
+  seedBanditCamps(s);
   return s;
+}
+
+function clearFrontierScenery(s) {
+  s.props = s.props.filter(p => p.k === 'cave' || !FRONTIERS.some(f => !s.frontier?.completed[f.id]
+    && Math.abs(p.x - f.x) <= 7 + p.w && Math.abs(p.y - f.y) <= 7));
+}
+
+export function seedBanditCamps(s) {
+  if (Array.isArray(s.banditCamps)) {
+    for (const c of s.banditCamps) { c.clears ??= 0; c.readyAt ??= 0; }
+    return;
+  }
+  const R = makeRng({ seed: (s.world?.code || 4242) ^ 0x43414d50 });
+  const names = ['Red Banner', 'Broken Spear', 'Crow Watch', 'Dust Fang', 'Iron Talon', 'Black Reed', 'Wolf Moon', 'Ash Viper', 'Storm Blade', 'Ghost Lantern', 'Frost Axe', 'Ember Jackal', 'Scarlet Oath', 'Hollow Crown', 'Night Lotus', 'Last Bastion'];
+  const candidates = [];
+  for (let y = 6; y < MAP_H - 6; y += 8) for (let x = 6; x < MAP_W - 6; x += 8) {
+    const xx = x + R.int(-2, 2), yy = y + R.int(-2, 2);
+    if (xx < HOME_W && yy < HOME_H) continue;
+    if (FRONTIERS.some(f => Math.hypot(xx - f.x, yy - f.y) < 10)) continue;
+    if (s.buildings.some(b => { const [w, h] = defOf(b.type).fp; return xx >= b.x - 5 && xx <= b.x + w + 5 && yy >= b.y - 5 && yy <= b.y + h + 5; })) continue;
+    if ([-2, -1, 0, 1, 2].some(dy => [-2, -1, 0, 1, 2].some(dx => roadAt(s, xx + dx, yy + dy)))) continue;
+    candidates.push([xx, yy]);
+  }
+  const choices = shuffle(R, candidates);
+  // Prefer unclaimed wilderness; never displace an existing building or road on older saves.
+  choices.sort((a, b) => +(townDist(s, a[0], a[1]) === 0) - +(townDist(s, b[0], b[1]) === 0));
+  s.banditCamps = [];
+  for (const [x, y] of choices) {
+    if (s.banditCamps.some(c => Math.hypot(c.x - x, c.y - y) < 9)) continue;
+    const i = s.banditCamps.length;
+    s.banditCamps.push({ id: 'bandit' + (i + 1), name: names[i] + ' Camp', x, y, tier: 1 + Math.floor(i / 4), clears: 0, readyAt: 0 });
+    if (s.banditCamps.length === 16) break;
+  }
+  s.props = s.props.filter(p => p.k === 'cave' || !s.banditCamps.some(c => Math.abs(c.x - p.x) <= 4 + p.w && Math.abs(c.y - p.y) <= 4));
 }
 
 // Preserve every old coordinate and road. Added terrain uses its own RNG, never the simulation's.
@@ -204,7 +240,7 @@ export function makeAdventurer(s, R, jobId = 'villager') {
     persona: [R.pick(personaKeys)], resident: false, home: null, partner: null,
     eq: { weapon: null, armor: null, acc: null }, perks: [], potions: 1,
     x: 0, y: 0, px: 0, py: 0, dir: 0, path: null, task: null, taskT: 0, cool: 0, stay: R.int(3, 6) * 7, days: 0,
-    ko: false, emote: null, emoteT: 0, anim: 0, atkT: 0, bark: null, barkT: 0, kills: 0,
+    ko: false, rescueBy: null, rescueRetry: 0, emote: null, emoteT: 0, anim: 0, atkT: 0, bark: null, barkT: 0, kills: 0,
   };
   if (R.chance(0.35)) { const p = R.pick(personaKeys); if (!a.persona.includes(p)) a.persona.push(p); }
   a.hp = maxHp(a);
@@ -291,6 +327,8 @@ export function migrate(s) {
   s.frontier = s.frontier || { completed: {}, relics: {} };
   s.frontier.completed = s.frontier.completed || {}; s.frontier.relics = s.frontier.relics || {};
   expandWorld(s);
+  clearFrontierScenery(s);
+  seedBanditCamps(s);
   if (s.world.zoneMons) for (const z of Object.keys(s.world.zoneMons)) {  // drop unknown species; an empty roster falls back to ZONE_MONS
     const l = (Array.isArray(s.world.zoneMons[z]) ? s.world.zoneMons[z] : []).filter(id => MONSTERS[id]);
     if (l.length) s.world.zoneMons[z] = l; else delete s.world.zoneMons[z];
@@ -308,12 +346,17 @@ export function migrate(s) {
   const ren = id => (id in ITEM_RENAME ? ITEM_RENAME[id] : id);
   const unl = {}; for (const id in s.unlocked) { const n = ren(id); if (n && ITEMS[n]) unl[n] = true; } s.unlocked = unl;
   for (const a of s.advs) {
+    a.rescueBy ??= null; a.rescueRetry ??= 0;
     a.perks = a.perks || []; a.eq = a.eq || {}; a.eq.acc = a.eq.acc || null;
     for (const k of ['weapon', 'armor']) { const n = a.eq[k] && ren(a.eq[k]); a.eq[k] = n && ITEMS[n] ? n : null; }
     if (JOB_RENAME[a.job]) a.job = JOB_RENAME[a.job];
     for (const j in a.jobLv) { if (JOB_RENAME[j]) { a.jobLv[JOB_RENAME[j]] = a.jobLv[j]; delete a.jobLv[j]; } }
     if (!JOBS[a.job]) a.job = 'villager';
     for (const j in a.jobLv) if (a.jobLv[j] >= MASTERY && JOBS[j] && !a.perks.includes(JOBS[j].perk)) a.perks.push(JOBS[j].perk);
+  }
+  for (const a of s.advs) {
+    if (a.rescueBy != null && !s.advs.some(r => r.id === a.rescueBy && !r.ko && r.task?.type === 'rescue' && r.task.target === a.id)) a.rescueBy = null;
+    if (a.task?.type === 'rescue' && !s.advs.some(f => f.id === a.task.target && f.ko && f.rescueBy === a.id)) { a.task = null; a.path = null; }
   }
   // The reward ledger is authoritative: one relic per completed site, one equipped copy at most.
   for (const f of FRONTIERS) {

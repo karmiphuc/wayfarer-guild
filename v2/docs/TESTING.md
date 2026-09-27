@@ -10,6 +10,9 @@ Run from the repository root.
 | `node v2/tests/quests.mjs` | instant departure, random capable defaults, extra fees/party cap, six concurrent parties including duplicate kinds, independent cave progress, ownership and endings, KO recovery, legacy saves, Depart ordering | final line ends in `passed` |
 | `node v2/tests/frontier.mjs` | dormant sites, prerequisites, one-time land/bonus/relic rewards, failure cleanup, unique ownership, old-map migration and distant paths | final line ends in `passed` |
 | `node v2/tests/palisades.mjs` | eight perimeter openings, blocked movement, gap routing, removal, placement guards, expansion and save/reload | final line ends in `passed` |
+| `node v2/tests/camps.mjs` | 16 deterministic dormant camps, rank gates, generated human classes, parallel attempts, loot, four-week cooldown, migration and bounded retries | final line ends in `passed` |
+| `node v2/tests/raids.mjs` | rank/veteran-scaled raid strength, seeded class composition, range, magic, group healing, rewards and cleanup | final line ends in `passed` |
+| `node v2/tests/rescue.mjs` | stationary KO, exclusive claims, carrying, carrier failure, unreachable-bed fallback, save/load and quest ownership | final line ends in `passed` |
 | `node --expose-gc v2/tests/frontier.mjs --soak` | repeated failed challenges plus a three-hour simulation soak; bounded ledgers, actors, logs, save size and forced-GC heap samples | final line ends in `passed (soak)` |
 | `node v2/tests/validate.mjs` | data integrity: sprites exist and have the right sheet size, perk/item keys valid and consumed by the sim, job prerequisites sane, boss frame math, SPR rects inside images, atlas fresh | `0 error(s)` |
 | `node v2/tests/used-assets.mjs` | every file the code loads exists (`missing: 0`); lists unused files | `missing: 0` |
@@ -31,7 +34,9 @@ Run from the repository root.
    200 more steps; save must stay < 1.5 MB.
 5. `tests/happenings.mjs` (every happening and charter runs and ends; same seed + choices = same state).
 6. `tests/quests.mjs` (parallel parties, fees, lifecycle and save migration).
-7. `tools/bundle.py` into a temp dir + `node --check game.js`.
+7. `tests/frontier.mjs` and `tests/palisades.mjs` (expanded-world conquest, barriers and routing).
+8. `tests/camps.mjs`, `tests/raids.mjs` and `tests/rescue.mjs` (late-game fights and KO recovery).
+9. `tools/bundle.py` into a temp dir + `node --check game.js`.
 
 ## Adding tests
 
@@ -52,6 +57,11 @@ python3 v2/tools/serve.py 8766 .
 # open http://localhost:8766/v2/?new  → Start → watch 1 in-game week at 4× → open every bottom-menu panel
 # open DevTools console: there must be no red errors
 ```
+
+For expanded-map changes, also pan to a captured territory and rapidly drag a long road and palisade: every crossed tile
+should be painted, and no browser image-drag preview should appear. Open Frontiers and Bandit Camps from the Quest Board,
+use Show on map, and tap the full visible landmark at normal and touch zoom. For rescue changes, force one pawn to 0 HP,
+confirm one rescuer claims and carries the opaque fallen body, then repeat with the rescuer disabled and with no reachable bed.
 
 Debug helpers in the console: `__game.s` (state), `__game.sim` (e.g. `__game.sim.build('inn', 30, 20)`),
 `for (let i = 0; i < 3000; i++) __game.sim.step()` to fast-forward, `__game.s.gold += 10000`.

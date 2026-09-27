@@ -48,7 +48,8 @@ Dependency order (also the bundle order in `tools/bundle.py`):
    - camera follow, `rnd.draw(...)`, `ui.tick()` every 0.25 s, autosave when the in-game week changes,
      music choice (boss/cave/battle near the active quest, night, seasonal town theme).
 5. Input: pointer drag = pan, wheel/pinch/+/- = zoom (integer 1–6), tap = select or place, WASD/arrows = pan,
-   Space = pause, 1/2/3 = speed. Road, Palisade and Remove tools paint while dragging.
+   Space = pause, 1/2/3 = speed. Road, Palisade and Remove tools paint while dragging; skipped pointer samples are
+   interpolated into contiguous tile lines. Native image dragging and text selection are suppressed on the play surface.
 
 ### Palisades and village openings
 
@@ -80,14 +81,15 @@ not stored as extra perimeter buildings or timers; no new top-level save fields 
 | `mats {wood, hide, herb, ore, crystal}` | village materials (monster drops) used to develop gear |
 | `town {x0,y0,x1,y1}` | buildable rectangle (grows with the Expand event) |
 | `mapWidth, mapHeight`, `frontier {completed, relics}` | 152x112 map; completed site IDs grant additional buildable rectangles and bonuses; relic item IDs map to one resident owner ID or `null` in the vault |
+| `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt}`; `readyAt` is the simulation tick when a cleared camp can be challenged again |
 | `ground` (string), `roads` (string of '0'/'1'), `props[]` | terrain detail per cell · road flags · trees/rocks/cave `{k,x,y,w,block,soft?}` |
 | `buildings[]` | `{id, type, x, y, lv, sales, visits, occ[], v?, free?}` — `type` is a key of `FAC` or `DECOR`; `free` = charter gift (refunds 0 G) |
-| `advs[]` | adventurers (below) |
-| `mons[]` | wild/quest monsters `{id, type|boss, zone, lv, x, y, hp, mhp, atk, def, target, quest?, ...}`; happenings add `raid: 'stampede'|'bandits'`, `charge {x,y}`, `delay`, `golden`, `flee` |
+| `advs[]` | adventurers (below); a fallen pawn may carry `rescueBy` while another pawn owns its rescue task |
+| `mons[]` | wild/quest monsters `{id, type|boss, zone, lv, x, y, hp, mhp, atk, def, target, quest?, ...}`; human raiders can override `job,spr,weapon,className,range`; happenings add `raid: 'stampede'|'bandits'`, `charge {x,y}`, `delay`, `golden`, `flee` |
 | `monsters[]` | befriended village monsters `{id, type, name, bond, x, y, riding?}` |
 | `folk[]`, `animals[]` | ambient townsfolk (spend small change) and farm animals |
 | `unlocked {itemId:true}` | gear the shops can sell |
-| `quests[]`, `activeQuests[]` | quest board and active quests without a count/type cap `{kind: outbreak|boss|dungeon, zone, members[], spot, mobs[], floor...}`; old `quest` saves migrate into this array |
+| `quests[]`, `activeQuests[]` | quest board and active quests without a count/type cap `{kind: outbreak|boss|dungeon|camp, zone, members[], spot, mobs[], floor...}`; old `quest` saves migrate into this array |
 | `cleared, bossesBeaten {id:true}` | progression counters |
 | `titles {id:true}`, `traits {Name:n}` | earned titles · town trait totals — rebuilt from buildings + village monsters by `recomputeTraits()` on every build/upgrade/tame, so **never write `s.traits` directly** (anything you add there is lost on the next build) |
 | `events [{id, weeks}]` | running timed events |
@@ -116,11 +118,11 @@ then × (1 + `titleBonus(s, k)`) — e.g. the Iron Fortress title gives `def: 0.
 | Traits & titles | `recomputeTraits, bonus(key), eventOn(id)` | traits = sum of `FAC_TRAITS` × (1 + 0.5·(lv-1)); titles fire once; `bonus('visitors')` etc. sums earned title bonuses |
 | Calendar | `calendar, monthEnd, taxes, starProgress, checkStars` | every week: `tickHappenings()` then `rollHappening()`. Month end: upkeep 1.5%·cost·lv (× charter), TP = 3 + kills/4 (× charter) + residents, new quest board, star check. April W1 taxes. |
 | Spawning | `spawner, edgeSpawn, spawnMonster, spawnBoss, randomCellInZone, zoneMons` | visitors arrive from the south edge: at most `VISITOR_CAP[stars]` (5/5/10/15/20/30) at once, fewer while popularity and inn beds are low; arrival chance per 0.5 s tick = min(0.1, 0.015 + pop/80000) × bonuses. Wild spawns roll `ELITE_CHANCE` (6%) for an Elite (hp ×1.8, atk ×1.4, def ×1.3; rewards ×2.5, drops ×2, treasure ×3). Zones keep `ZONE_POP` monsters (× charter) picked from `zoneMons(z)` = this world's roster (falls back to `ZONE_MONS` in `data.js`), levels from `ZONE_LV` |
-| Adventurer AI | `decide, advStep, insideStep, settleVisit, addSat, tryMoveIn` | utility scores (hunger, energy, HP, gear upgrade on sale, potions, training, hunting, fun, leaving) × personality multipliers (`pmul`). Tasks: `visit, hunt, return, stroll, camp, leave, quest`. Visits hide the adventurer inside for `dur` seconds, then `settleVisit` charges money (village income) and adds satisfaction. Satisfaction ≥ 60 + free home → moves in. |
+| Adventurer AI | `decide, advStep, insideStep, settleVisit, addSat, tryMoveIn, rescueTarget, rescueStep, releaseRescue` | utility scores (hunger, energy, HP, gear upgrade on sale, potions, training, hunting, fun, leaving) × personality multipliers (`pmul`). Tasks: `visit, hunt, return, stroll, camp, leave, quest, rescue`. Visits hide the adventurer inside for `dur` seconds, then `settleVisit` charges money (village income) and adds satisfaction. Satisfaction ≥ 60 + free home → moves in. |
 | Movement | `walkTo, speed, stepToward` | A* path cached per goal + grid version; monsters/pets use straight steps with collision |
-| Combat | `huntStep, fight, hitMonster, killMonster, treasure, hurtAdv, koStep` | adventurers hunt in the zone their power allows (`zoneFor`); healers heal first; perks applied here (see §5). Kills: XP shared with adventurers within 5 tiles, gold to the killer, materials to the village, 2.5% treasure chest (unlocks gear), taming chance if a Stable exists. HP 0 → KO → walks home at half speed. |
-| Monsters | `monStep, petStep, towerStep, fleeStep, chargeStep` | outlaws (`MONSTERS[x].human`) use the same AI but slash with their weapon (`atkT` drives the attack pose) and can't be tamed; the Bandit Raid gang is picked by rank and scaled by `f` (0.55–1.0) in `startHappening('bandits')`. Aggro radius 2.2 (boss 4), leash 9 tiles, never enter town — except raiders: stampede monsters `chargeStep` straight at the town edge (a breach costs popularity/gold), bandits may chase into town; the Golden Slime `fleeStep`s away from adventurers. Pets follow their partner, become mounts at bond ≥ 50. Towers credit kills to `s.advs[0]` (known bug, #17). |
-| Quests | `refreshQuests, autoQuestParty, questCandidates, questReady, questCost, instantQuest, startQuest, questStep, questCheck, checkQuest, dungeonTick, endDungeon` | any available quests concurrently; each owns its party, targets and completion. Outbreak: kill N mobs; boss: next 2 undefeated and inactive bosses with `star ≤ stars`; dungeon: cave at `cavePos(s)`, floors every 7 s |
+| Combat | `huntStep, fight, hitMonster, killMonster, treasure, hurtAdv, koStep` | adventurers hunt in the zone their power allows (`zoneFor`); healers heal first; perks applied here (see §5). Kills: XP shared with adventurers within 5 tiles, gold to the killer, materials to the village, 2.5% treasure chest (unlocks gear), taming chance if a Stable exists. At 0 HP a pawn stays fallen; one free healthy pawn claims it, carries it to a usable bed, or stabilizes it in the field after 60 seconds when no bed is reachable. Rescue claims release safely if the carrier becomes invalid. |
+| Monsters | `monStep, petStep, towerStep, fleeStep, chargeStep, raidStrength, spawnRaider` | ordinary outlaws and generated raiders use human sheets and visible weapons and cannot be tamed. Raid strength follows village rank and, at ★5, the leading party's average level; generated classes can use melee, range, magic or healing. Aggro radius 2.2 (boss 4), leash 9 tiles, never enter town — except raiders: stampedes charge the town edge and bandits may chase into town. The Golden Slime flees adventurers. Pets follow their partner and become mounts at bond ≥ 50. Towers credit kills to `s.advs[0]` (known bug, #17). |
+| Quests | `refreshQuests, frontierQuest, campQuest, autoQuestParty, questCandidates, questReady, questCost, instantQuest, startQuest, questStep, questCheck, checkQuest, dungeonTick, endDungeon` | any available quests concurrently; each owns its party, targets and completion. Outbreak: kill N mobs; boss: next 2 undefeated and inactive bosses with `star ≤ stars`; dungeon: cave at `cavePos(s)`, floors every 7 s; frontier and camp entries are virtual quests resolved by string ID |
 | Happenings & charters | `rollHappening, startHappening, tickHappenings, endHappening, happening(id), merchantOffer, rally, npcStep, charter(key), charterHappen(id), chooseCharter, placeFree, refund` | see §4b |
 | Player actions | `build, upgrade, demolish, develop, runEvent, startQuest, changeJob, gift, chooseCharter, buyMerchant` | return `null` on success or an error string (shown as a toast) |
 | Jobs | `canChangeJob, jobCost, changeJob, gainXp, master` | change needs current job mastered (or target already learned) + `req` jobs mastered + TP (`TIER_TP`). Reaching job Lv10 calls `master()` → perk added, fanfare. |
@@ -169,6 +171,24 @@ native-resolution ground canvas (about 16.6 MiB), rebuilding only when roads or 
 a new full-map surface every frame. A* has a map-sized search budget. Neither the world size nor inactive sites
 increase monster population or create recurring boss timers.
 
+Each frontier uses a distinct 2x landmark assembled from the existing licensed atlas: forest den, grotto, ruined fort,
+torii hollow, caldera, storm shrine, frozen cavern or crown vault. Decorative side pieces disappear and the anchor returns
+to 1x after capture so the landmark does not imply a larger blocked footprint on newly buildable land. The visible composition, not only its ground
+tile, is clickable.
+
+### Bandit camps
+
+`seedBanditCamps()` deterministically places 16 dormant camps from the world code with an isolated RNG, so migration does
+not advance the running simulation seed. Each site reserves a 3x3 core and stores its tier, clear count and cooldown tick.
+`campQuest()` exposes a virtual `camp:<site>` quest with a rank-scaled recommended level, 5/7/9/11 generated human raiders,
+entry fee and gold/TP/popularity/material rewards. Dormant camps never spawn actors; departure uses the
+normal 1-8 pawn party rules and creates the raiders. Victory increments `clears`, awards the stores and starts a four-week
+(1200-tick) cooldown. Failure removes that attempt's raiders and permits another attempt without changing the ledger.
+
+The Bandit Camps panel is reached from the Quest Board or by tapping the camp's visible ±3-tile landmark. It shows all 16
+sites, rank locks, cooldown, reward, clear count, party controls and Watch/Show on map. The renderer draws dormant camps
+without live actors; tier changes the existing hut, fence, cart and supply composition.
+
 ## 4b. Replayability layer — happenings, charters, seeded world (`happenings.js` + `sim.js`)
 
 Not in DV2; our own. Everything is driven by the seeded RNG, so **the same world code + the same player choices replay identically**
@@ -181,9 +201,11 @@ Not in DV2; our own. Everything is driven by the seeded RNG, so **the same world
   `startHappening(id)` sets it up (a `case` per id), `tickHappenings()` counts `weeks` down and calls `endHappening(h)` for
   rewards/penalties and clean-up (NPCs removed, leftover raiders despawned). Passive ones (`rain sunny harvest fog`) are just
   read where they apply with `this.happening('rain')`.
-- **Raids**: `stampede` (monsters charge the edge; breach = −3 popularity and a little gold, max 5 penalties; zero breaches =
-  TP + popularity) and `bandits` (beat them within the week or they steal ≤ 10% gold; win = gold + 3 TP). `rally()` sends every
-  free, healthy adventurer to defend; `decide()` also scores a defend task while raiders live. Charter `raidReward` multiplies rewards.
+- **Raids**: `raidStrength()` derives count and level from village rank, then also considers the top four adventurers at ★5.
+  `stampede` monsters charge the edge (breach = −3 popularity and gold, max 5 penalties); the bandit company is built by
+  `spawnRaider()` from eligible job classes, including ranged, magic and healing roles. `rally()` sends free, healthy,
+  non-rescuing adventurers to defend; `decide()` also scores a defend task while raiders live. Rewards and theft scale with
+  strength, then charter `raidReward` applies.
 - **Charters** (`CHARTERS` table): `chooseCharter(id)` applies `start` once (gold, free buildings/decor via `placeFree` — marked
   `free`, refund 0 — and an optional starting adventurer) and stores the id. `charter(key)` returns the numeric mod (0 if none);
   every key is read exactly where it applies:
@@ -240,12 +262,15 @@ Not in DV2; our own. Everything is driven by the seeded RNG, so **the same world
 - Device pixel ratio capped at 2; `scale = round(zoom × dpr)` device pixels per source pixel (always an integer).
 - Static layer (`buildStatic`): ground tiles + road autotiles (47-tile blob set in `ROAD_TILES`, signature N,E,S,W,NE,SE,SW,NW),
   cached until `s.roads`, `s.town` or captured territories change.
-- Each frame: collect visible props, buildings, adventurers, folk, animals, village monsters, wild monsters, happening NPCs → sort by
-  foot y → draw. Then build ghost, FX, quest marker, seasonal particles (rain during a Rainy Week), night tint (multiply),
+- Each frame: draw frontier/camp landmarks, then collect visible props, buildings, palisades, adventurers, folk, animals,
+  village monsters, wild monsters and happening NPCs → sort by foot y → draw. Then build ghost, FX, quest marker,
+  seasonal particles (rain during a Rainy Week), night tint (multiply),
   `drawSky` (rain gloom, pixel fog from `fog.png`, warm sun, meteor streaks at night), then screen-space overlays (damage
   numbers, coins, emotes, barks, names, HP bars, building level stars, `drawEdgeArrows`: red = off-screen raider, gold = Golden Slime).
 - Outlaws (`drawHuman`): character sheet + in-hand weapon through the same `drawWeapon` as adventurers (a stand-in object
-  carries `x, y, dir, atkT, spr`). Elites: `tinted(sheet, 150)` + `crown()` + purple HP bar.
+  carries `x, y, dir, atkT, spr, job`). Generated raiders override their sheet, weapon and class label. Fallen adventurers
+  are drawn opaque and horizontal; carried bodies remain visible beside the rescuer. Elites use `tinted(sheet, 150)` +
+  `crown()` + a purple HP bar.
 - Happenings: raiders get a red marker; the Golden Slime is drawn with `goldified()` (luminance → gold ramp) plus `sparkle()`;
   the merchant sits by a rug showing his three licences (`drawNpc`), the bard strolls with a music note.
 - Sheets: characters 64×112 = 4 columns (down, up, left, right) × 7 rows (0–3 walk, 4 attack, 5 jump, 6 misc);
@@ -257,7 +282,7 @@ Not in DV2; our own. Everything is driven by the seeded RNG, so **the same world
 
 ## 7. UI (`ui.js`, class `UI`)
 
-- Panels: `open(name)` renders `panel_<name>()` (build, people, quests, develop, village, system, jobs) into `#panel-body`.
+- Panels: `open(name)` renders `panel_<name>()` (build, people, quests, frontiers, camps, develop, village, system, jobs) into `#panel-body`.
   Live panels re-render every 0.25 s but only when the HTML string changed (`setBody` diff) and **never while the
   pointer is down** on a panel (prevents lost clicks).
 - All clicks go through one delegated handler: elements with `data-act="<name>"` call `act(name, dataset)`.

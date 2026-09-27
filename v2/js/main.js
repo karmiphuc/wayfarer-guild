@@ -86,11 +86,14 @@ function frame(now) {
 // ---------- input: drag pan, wheel/pinch zoom, tap select/place ----------
 function bindInput() {
   const cv = document.getElementById('view'), rnd = game.rnd;
-  const pts = new Map(); let drag = null, pinch = null, moved = false, painting = false;
+  const pts = new Map(); let drag = null, pinch = null, moved = false, painting = false, paintLast = null;
   const tileAt = e => { const r = cv.getBoundingClientRect(); return rnd.toTile(e.clientX - r.left, e.clientY - r.top); };
+  document.addEventListener('dragstart', e => e.preventDefault());
+  cv.addEventListener('contextmenu', e => e.preventDefault());
   cv.addEventListener('pointerdown', e => {
+    e.preventDefault();
     cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    moved = false;
+    moved = false; paintLast = null;
     if (pts.size === 1) {
       drag = { x: e.clientX, y: e.clientY, cx: rnd.cam.x, cy: rnd.cam.y };
       const mode = game.ui.buildMode;
@@ -108,10 +111,10 @@ function bindInput() {
       const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
       rnd.cam.zoom = Math.max(1, Math.min(6, Math.round(pinch.z * d / pinch.d))); return;
     }
-    if (painting) { paint(e); return; }
+    if (drag && Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 6) moved = true;
+    if (painting) { e.preventDefault(); paint(e); return; }
     if (drag) {
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      if (Math.abs(dx) + Math.abs(dy) > 6) moved = true;
       if (moved) { const k = 16 * rnd.cam.zoom; rnd.cam.x = drag.cx - dx / k; rnd.cam.y = drag.cy - dy / k; game.follow = null; }
     }
   });
@@ -119,9 +122,9 @@ function bindInput() {
     const wasTap = pts.size === 1 && !moved && !pinch;
     pts.delete(e.pointerId); if (pts.size < 2) pinch = null;
     if (wasTap && !painting) tap(e);
-    if (!pts.size) { drag = null; painting = false; }
+    if (!pts.size) { drag = null; painting = false; paintLast = null; }
   };
-  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', e => { pts.delete(e.pointerId); drag = null; pinch = null; painting = false; });
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', e => { pts.delete(e.pointerId); drag = null; pinch = null; painting = false; paintLast = null; });
   cv.addEventListener('wheel', e => {
     e.preventDefault();
     const before = tileAt(e); rnd.cam.zoom = Math.max(1, Math.min(6, rnd.cam.zoom + (e.deltaY < 0 ? 1 : -1)));
@@ -147,11 +150,25 @@ function bindInput() {
   }
   function paint(e) {
     const [tx, ty] = tileAt(e), x = Math.floor(tx), y = Math.floor(ty), mode = game.ui.buildMode;
+    if (!mode) return;
+    let x0 = paintLast ? paintLast.x : x, y0 = paintLast ? paintLast.y : y;
+    const dx = Math.abs(x - x0), sx = x0 < x ? 1 : -1, dy = -Math.abs(y - y0), sy = y0 < y ? 1 : -1;
+    let er = dx + dy;
+    while (true) {
+      paintTile(mode, x0, y0);
+      if (x0 === x && y0 === y) break;
+      const e2 = er * 2;
+      if (e2 >= dy) { er += dy; x0 += sx; }
+      if (e2 <= dx) { er += dx; y0 += sy; }
+    }
+    paintLast = { x, y };
+  }
+  function paintTile(mode, x, y) {
     if (mode === 'bulldoze') {
       if (roadAt(game.s, x, y)) { game.sim.removeRoad(x, y); game.audio.sfx('click'); return; }
       const b = buildingAt(game.s, x, y);
       if (b && !FAC[b.type]) { game.sim.demolish(b); game.audio.sfx('click'); }
-      else if (b && FAC[b.type] && !moved) { painting = false; game.ui.select({ kind: 'b', id: b.id }); }
+      else if (b && FAC[b.type] && !moved && !paintLast) { painting = false; game.ui.select({ kind: 'b', id: b.id }); }
       return;
     }
     if (!game.sim.canPlace(mode, x, y)) game.sim.build(mode, x, y);
@@ -173,9 +190,11 @@ function bindInput() {
       const d = Math.hypot(n.x + 0.5 - tx, n.y + 0.3 - ty), rug = n.kind === 'merchant' && tx >= n.x + 1 && tx <= n.x + 3.3 && ty >= n.y && ty <= n.y + 1.2;
       if (d < bd || rug) { bd = rug ? 0 : d; best = { kind: 'npc', id: n.kind }; }
     }
-    // The 48 px den sprite spans x−1..x+2 tiles and rises about 2 tiles above its ground point.
-    if (!best) { const f = FRONTIERS.find(f => tx >= f.x - 1 && tx <= f.x + 2 && ty >= f.y - 2 && ty <= f.y + 1.5); if (f) { game.ui.showFrontier(f.id); return; } }
+    // Camps and frontier landmarks rise above their reserved ground tiles; their whole visible marker is clickable.
+    if (!best) { const c = (s.banditCamps || []).find(c => tx >= c.x - 3 && tx <= c.x + 3 && ty >= c.y - 3 && ty <= c.y + 2); if (c) { game.ui.showCamp(c.id); return; } }
+    if (!best) { const f = FRONTIERS.find(f => !s.frontier?.completed?.[f.id] && tx >= f.x - 6 && tx <= f.x + 6 && ty >= f.y - 6.5 && ty <= f.y + 2.5); if (f) { game.ui.showFrontier(f.id); return; } }
     if (!best) { const b = buildingAt(s, Math.floor(tx), Math.floor(ty)) || buildingAt(s, Math.floor(tx), Math.floor(ty + 1)); if (b && !defOf(b.type).road) best = { kind: 'b', id: b.id }; }
+    if (!best) { const f = FRONTIERS.find(f => s.frontier?.completed?.[f.id] && tx >= f.x - 3.5 && tx <= f.x + 3.5 && ty >= f.y - 3.5 && ty <= f.y + 1.5); if (f) { game.ui.showFrontier(f.id); return; } }
     if (best) game.ui.select(best); else game.ui.deselect();
   }
 }
