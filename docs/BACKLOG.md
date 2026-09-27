@@ -29,6 +29,8 @@ Legend:
 
 - Empty weapon slots render empty hands across all pawn classes; held sprites come only from actual equipped items. Outlaws retain their explicitly assigned weapons.
 
+- World pawns, monsters, bosses and pets render 30% larger, including held weapons and projectiles. A shared foot anchor preserves weapon grips and mounted proportions; Alpha pets retain their additional 25% size. Buildings and gameplay distances stay unchanged.
+
 - Weapon affinity: class changes retain all equipped gear. Any weapon remains usable with normal stats; preferred class types grant +10% damage and +1 combat speed. The class screen and pawn inspector explain the bonus, and shopping/cave combat account for it.
 
 - Weapon attacks follow equipment: any class can shoot an equipped bow; bow specialists need a bow and save for available bow stock before optional purchases. Melee reach and effects no longer turn into projectiles through mastery perks. Innate spells and throwing attacks remain class abilities; bows override them with physical arrows. Defenders and classed raiders share the same attack profile.

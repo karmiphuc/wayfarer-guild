@@ -1,8 +1,10 @@
-// Canvas renderer. Reads state, never mutates it. Integer pixel scale only.
+// Canvas renderer. Reads state, never mutates it. Integer world zoom; nearest-neighbor actor enlargement.
 import { T, MAP_W, MAP_H, FRONTIERS, SPR, TILE, ROAD_TILES, FAC, DECOR, MONSTERS, BOSSES, MATS, JOBS, ITEMS } from './data.js';
 import { IMG, EMOTE, HANDS, tinted, goldified } from './assets.js';
 import { roadAt, defOf, maxHp, buildAreas, townDist } from './state.js';
 import { WEEK_SECONDS } from './sim.js';
+
+const ACTOR_SCALE = 1.3;
 
 export function palisadeConnections(x, y, barriers) {
   const at = (xx, yy) => !!(barriers && xx >= 0 && yy >= 0 && xx < MAP_W && yy < MAP_H && barriers[yy * MAP_W + xx]);
@@ -104,6 +106,8 @@ export class Renderer {
     for (const n of s.npcs || []) if (vis(n.x, n.y)) list.push([n.y + 0.55, 7, n]);
     list.sort((p, q) => p[0] - q[0]);
     for (const [, k, o] of list) {
+      const actor = k >= 2 && k <= 5;
+      if (actor) this.beginActor(o);
       if (k === 0) this.drawProp(o);
       else if (k === 1) this.drawBuilding(s, o, ui);
       else if (k === 2) this.drawAdv(s, o);
@@ -113,6 +117,7 @@ export class Renderer {
       else if (k === 6) this.drawAnimal(o);
       else if (k === 8) this.drawPalisade(o.x, o.y, palisadeConnections(o.x, o.y, ui.barriers));
       else this.drawNpc(s, o);
+      if (actor) g.restore();
     }
     if (this.ghost) this.drawGhost(s, ui);
     this.drawFx(s);
@@ -187,6 +192,11 @@ export class Renderer {
     const rowsAvail = im.height / 16;
     const r = Math.min(row, rowsAvail - 1);
     this.g.drawImage(im, dir * 16, (r + (row < 4 ? frame % Math.min(4, rowsAvail) : 0)) * 16, 16, 16, Math.round(x * T), Math.round(y * T) - 4, 16, 16);
+  }
+  beginActor(a) {
+    // One foot-anchored transform keeps bodies, held weapons and mounts together.
+    const g = this.g, x = Math.round(a.x * T) + 8, y = Math.round(a.y * T) + 13;
+    g.save(); g.translate(x, y); g.scale(ACTOR_SCALE, ACTOR_SCALE); g.translate(-x, -y);
   }
   drawShadow(x, y, w = 12) { const im = IMG.shadow; if (im) this.g.drawImage(im, Math.round(x * T + (16 - w) / 2), Math.round(y * T + 9), w, 7); }
   drawAdv(s, a) {
@@ -494,11 +504,13 @@ export class Renderer {
         if (im) g.drawImage(im, 0, 0, Math.min(16, im.width), Math.min(16, im.height), rx + 1 + i * 11, ry, 10, 10);
       });
     }
+    this.beginActor(n);
     this.drawShadow(n.x, n.y);
     this.drawChar('c_' + n.spr, n.x, n.y, n.dir, n.path ? Math.floor(n.anim * 6) % 4 : 0, 0);
     const bob = Math.round(Math.sin(this.time * 3) * 1.5);
     if (n.kind === 'merchant' && IMG.coin) g.drawImage(IMG.coin, 0, 0, IMG.coin.width, IMG.coin.height, Math.round(n.x * T + 3), Math.round(n.y * T - 16 + bob), 10, 10);
     if (n.kind === 'bard' && IMG.e11 && Math.floor(this.time * 0.8) % 3 !== 2) g.drawImage(IMG.e11, Math.round(n.x * T + 1), Math.round(n.y * T - 18 + bob), 14, 13);
+    g.restore();
   }
   sheetFx(key, n, fw, fh, x, y, p, rot = 0) {
     const im = IMG[key]; if (!im) return; const f = Math.min(n - 1, Math.floor(p * n));
@@ -517,7 +529,7 @@ export class Renderer {
         case 'lvl': this.sheetFx('fx_aura', 4, 32, 32, f.x, f.y, (p * 2) % 1); break;
         case 'proj': {
           const x = f.x + (f.tx - f.x) * p, y = f.y + (f.ty - f.y) * p, ang = Math.atan2(f.ty - f.y, f.tx - f.x);
-          g.save(); g.translate(x * T + 8, y * T + 4); g.rotate(ang);
+          g.save(); g.translate(x * T + 8, y * T + 4); g.rotate(ang); g.scale(ACTOR_SCALE, ACTOR_SCALE);
           if (f.p === 'arrow' && IMG.p_arrow) g.drawImage(IMG.p_arrow, -6, -2);
           else if (f.p === 'fire' && IMG.p_fire) g.drawImage(IMG.p_fire, (Math.floor(p * 4) % 4) * 16, 0, 16, 16, -8, -8, 16, 16);
           else if (IMG.p_shuriken) g.drawImage(IMG.p_shuriken, (Math.floor(p * 8) % 2) * 16, 0, 16, 16, -8, -8, 16, 16);
@@ -554,7 +566,8 @@ export class Renderer {
     for (const [i, cave] of caves.entries()) { const [qx, qy] = this.toScreen(cave.spot[0] + 0.5, cave.spot[1] - 3.8 - i); const t = `B${Math.min(cave.floors, cave.floor + 1)}F`; g.fillStyle = '#fff'; g.strokeText(t, qx, qy); g.fillText(t, qx, qy); }
     for (const a of s.advs) {
       if (a.inside || a.dungeon) continue;
-      const [sx, sy] = this.toScreen(a.x + 0.5, a.y - 0.4);
+      const headRise = (ACTOR_SCALE - 1) * 17 / T;
+      const [sx, sy] = this.toScreen(a.x + 0.5, a.y - 0.4 - headRise);
       if (sx < -40 || sy < -40 || sx > this.cssW + 40 || sy > this.cssH + 40) continue;
       if (a.emoteT > 0 && EMOTE[a.emote]) { const im = IMG['e' + EMOTE[a.emote]]; if (im) { const k = z * 1; g.imageSmoothingEnabled = false; g.drawImage(im, Math.round(sx - 7 * k / 1), Math.round(sy - 14 * k - 4), 14 * k, 13 * k); } }
       else if (a.barkT > 0 && a.bark) {
@@ -568,7 +581,7 @@ export class Renderer {
         const [nx, ny] = this.toScreen(a.x + 0.5, a.y + 1.05); g.strokeText(a.name, nx, ny); g.fillText(a.name, nx, ny);
       }
       const hpR = a.hp / maxHp(a, s);
-      if (hpR < 0.999 && !a.ko) { const w = 8 * z, [hx, hy] = this.toScreen(a.x + 0.5, a.y - 0.35); g.fillStyle = '#111'; g.fillRect(hx - w / 2 - 1, hy - 1, w + 2, 4); g.fillStyle = hpR > 0.5 ? '#6ee06e' : hpR > 0.25 ? '#ffd34a' : '#ff5a5a'; g.fillRect(hx - w / 2, hy, w * hpR, 2); }
+      if (hpR < 0.999 && !a.ko) { const w = 8 * z, [hx, hy] = this.toScreen(a.x + 0.5, a.y - 0.35 - headRise); g.fillStyle = '#111'; g.fillRect(hx - w / 2 - 1, hy - 1, w + 2, 4); g.fillStyle = hpR > 0.5 ? '#6ee06e' : hpR > 0.25 ? '#ffd34a' : '#ff5a5a'; g.fillRect(hx - w / 2, hy, w * hpR, 2); }
     }
     this.drawEdgeArrows(s);
   }
