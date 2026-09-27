@@ -131,7 +131,7 @@ Hooks passed to `new Sim(s, hooks)`: `sfx(name)`, `fanfare(title, subtitle)`, `r
 
 Body armor uses `eq.armor`; one helmet OR shield uses `eq.offhand`. Both contribute stats independently alongside
 the weapon and accessory. Migration moves old helmets/shields out of `armor` exactly once. The Armor Shop stocks both
-armor slots; the starter Iron Cap gives residents a cheap first helm. There are 85 ordinary items and eight unique relics.
+armor slots; the starter Iron Cap gives residents a cheap first helm. There are 86 ordinary items and eight unique relics.
 
 The 37-job roster includes an Archer -> Ranger -> Sharpshooter -> Wildwarden line and dedicated Shogun, Grandmaster,
 Empress, Golden Sovereign and Nightblade promotions. Every tier-3 class has at least one tier-4 successor; validation
@@ -153,6 +153,22 @@ At dusk (70% through the week), `nightRest()` prioritizes home, affordable inn o
 below 95. It respects basic-gear savings and urgent hunger, injury, nearby foes, active quests and rescue. Routine
 hunts/strolls reconsider bedtime once per second; existing visits finish, including long journeys to captured land.
 Distant patrols do not keep the village awake; approaching patrols trigger territorial defense.
+
+### Late-game investments
+
+At five stars with a Stable, each pet can become Alpha once through `alphaPet(id)`: 10,000 village gold and
+1,000 each wood, hide, herb, ore and crystal. Alpha preserves species and bond, multiplies assist damage and bonded
+passive stat contributions by 1.5, and uses cached gold sprites with a crown (including mounts). The Adventurers panel
+shows costs, benefits and blocking reasons before an in-game confirmation. Pet `alpha` defaults to false on creation
+and migration; upgrade validation happens before any deduction, so repeat/stale clicks cannot charge twice.
+
+Phoenix Sigils require five stars and a Blacksmith: Develop charges 15,000 village gold, 200 each wood/hide/ore and
+500 each herb/crystal once. `researchOnly` excludes the recipe from treasure and merchant licences. Item Shops then
+sell a single stored charge for a base 10,000 pawn gold, with existing shop price modifiers. Autonomous purchases
+respect basic gear reserves and urgent needs; checkout revalidates unlock, rank, funds and ownership. The boolean
+`a.reviveCharge` defaults to false and takes no equipment slot. `tryRevive()` handles field and cave lethal damage:
+use an available Undying perk first, otherwise consume the charge and restore half maximum HP. Rest never refills
+the paid charge; the pawn may buy a replacement after using it.
 
 Quest selection calls `autoQuestParty()` once from the UI action, never during rendering. It shuffles available pawns
 with the seeded RNG, selecting up to four at the suggested level and at least half HP. The player can adjust the party

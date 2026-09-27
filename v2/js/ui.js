@@ -2,13 +2,16 @@
 import { FAC, DECOR, SPR, JOBS, ITEMS, SHOP_SLOTS, MATS, MONSTERS, BOSSES, FRONTIERS, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
 import { IMG, iconCanvas, itemIcon, keyIcon, goldified, tinted } from './assets.js';
 import { defOf, maxHp, stat, save, wipeSave, valid, migrate, newGame, seedCode, parseSeed, MASTERY } from './state.js';
+import { ALPHA_PET_COST } from './sim.js';
 
 const $ = sel => document.querySelector(sel);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const CATS = [['lodging', 'Lodging'], ['food', 'Food'], ['shop', 'Shops'], ['training', 'Training'], ['defense', 'Defense'], ['special', 'Special'], ['decor', 'Decor']];
 const statLine = it => ['atk', 'mag', 'def', 'hp', 'heal'].filter(k => it[k]).map(k => `${k.toUpperCase()}${it[k] > 0 ? '+' : ''}${it[k]}`)
-  .concat(it.crit ? [`CRIT+${Math.round(it.crit * 100)}%`] : [], it.spd ? [`SPD+${Math.round(it.spd * 100)}%`] : []).join(' ');
+  .concat(it.crit ? [`CRIT+${Math.round(it.crit * 100)}%`] : [], it.spd ? [`SPD+${Math.round(it.spd * 100)}%`] : [], it.revive ? [`One revival at ${Math.round(it.revive * 100)}% HP`] : []).join(' ');
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ALPHA_COST_TEXT = `${ALPHA_PET_COST.gold.toLocaleString('en-US')}G · ${['wood', 'hide', 'herb', 'ore', 'crystal'].map(k => `${MATS[k].name}×${ALPHA_PET_COST[k].toLocaleString('en-US')}`).join(' · ')}`;
+const ALPHA_BENEFIT_TEXT = '+50% pet assist hit damage · +50% bonded passive stat contribution';
 
 export class UI {
   constructor(game) {
@@ -136,7 +139,12 @@ export class UI {
     });
     root.querySelectorAll('[data-key]').forEach(el => { const c = keyIcon(el.dataset.key, +el.dataset.px || 16); if (el.className) c.className += ' ' + el.className; el.replaceWith(c); });
     root.querySelectorAll('[data-char]').forEach(el => { const c = iconCanvas('c_' + el.dataset.char, 0, 0, 16, 16, +el.dataset.scale || 2); el.replaceWith(c); });
-    root.querySelectorAll('[data-mon]').forEach(el => { const c = iconCanvas('m_' + el.dataset.mon, 0, 0, 16, 16, +el.dataset.scale || 2); el.replaceWith(c); });
+    root.querySelectorAll('[data-mon]').forEach(el => {
+      const key = 'm_' + el.dataset.mon, c = iconCanvas(key, 0, 0, 16, 16, +el.dataset.scale || 2);
+      const alt = el.dataset.gold ? goldified(key) : null;
+      if (alt) { const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, c.width, c.height); g.drawImage(alt, 0, 0, 16, 16, 0, 0, c.width, c.height); }
+      el.replaceWith(c);
+    });
   }
 
   panel_build() {
@@ -168,9 +176,11 @@ export class UI {
         <div class="sub">${this.taskLabel(a)}</div></div></div>`;
     }
     for (const m of s.monsters) {
-      const owner = s.advs.find(a => a.partner === m.id);
-      h += `<div class="card"><div class="thumb"><i data-mon="${MONSTERS[m.type].spr}" data-scale="3"></i></div><div class="meta"><div class="name">${esc(m.name)}</div>
-        <div class="sub">Bond ${m.bond}/100 ${m.bond >= 50 ? '· Mount' : ''}</div><div class="sub">${owner ? 'Partner of ' + esc(owner.name) : 'Free in the Stable'}</div></div></div>`;
+      const owner = s.advs.find(a => a.partner === m.id), block = this.sim.alphaPetBlock(m.id);
+      h += `<div class="card" style="grid-column:1/-1"><div class="thumb"><i data-mon="${MONSTERS[m.type].spr}" data-scale="3" ${m.alpha ? 'data-gold="1"' : ''}></i></div><div class="meta"><div class="name">${m.alpha ? '<span class="tag gold">Alpha</span> ' : ''}${esc(m.name)}</div>
+        <div class="sub">Bond ${m.bond}/100 ${m.bond >= 50 ? '· Mount' : ''}</div><div class="sub">${owner ? 'Partner of ' + esc(owner.name) : 'Free in the Stable'}</div>
+        <div class="sub">${m.alpha ? 'Alpha pet · ' : 'Alpha upgrade · '}${ALPHA_BENEFIT_TEXT}</div>
+        ${m.alpha ? '<div class="check">One-time Alpha upgrade complete</div>' : `<div class="sub">${ALPHA_COST_TEXT}</div><div class="${block ? 'cross' : 'check'}">${esc(block || 'Ready to upgrade')}</div><button class="btn sm" data-act="alphaPet" data-id="${m.id}" ${block ? 'disabled' : ''}>Make Alpha</button>`}</div></div>`;
     }
     return h + '</div>';
   }
@@ -364,7 +374,9 @@ export class UI {
       const costs = dev ? Object.entries(dev).map(([k, n]) => `<span class="${(s.mats[k] || 0) >= n ? '' : 'cross'}">${MATS[k].name}×${n}</span>`).join(' ') : 'Starter';
       h += `<div class="card"><div class="thumb"><i data-item="${id}" data-scale="3"></i></div><div class="meta"><div class="name">${it.name}</div>
         <div class="sub">${st} · ${it.price}G${it.type ? ` · ${it.type}` : ''}</div>${users.length ? `<div class="sub" title="${users.join(', ')}">Class bonus: ${esc(users.slice(0, 4).join(', '))}${users.length > 4 ? '…' : ''}</div>` : ''}
-        ${have ? '<div class="sub check">In stock</div>' : `<div class="sub">${costs} · ${Math.round(it.price * 1.5)}G</div><button class="btn sm" data-act="develop" data-id="${id}" ${smith ? '' : 'disabled'}>Develop</button>`}</div></div>`;
+        ${it.revive ? '<div class="sub">One stored charge per pawn, consumed on a lethal hit. No equipment slot. Sold at Item Shops after research.</div>' : ''}
+        ${it.star ? `<div class="sub ${s.stars < it.star ? 'cross' : ''}">Requires ${it.star} stars${it.researchOnly ? ' · Research only' : ''}</div>` : ''}
+        ${have ? '<div class="sub check">In stock</div>' : `<div class="sub">${costs} · ${Math.round(it.price * 1.5)}G</div><button class="btn sm" data-act="develop" data-id="${id}" ${smith && s.stars >= (it.star || 0) ? '' : 'disabled'}>Develop</button>`}</div></div>`;
     }
     return h + '</div>';
   }
@@ -479,6 +491,7 @@ export class UI {
       <div class="row"><span style="width:34px">Joy</span><div class="bar sat" style="flex:1"><i style="width:${Math.min(100, a.sat / (a.resident ? 3 : 0.6))}%"></i></div><span class="muted">${Math.round(a.sat)}</span></div>
       <div class="stats"><div><b>ATK</b> ${stat(a, 'atk', s)}</div><div><b>DEF</b> ${stat(a, 'def', s)}</div><div><b>MAG</b> ${stat(a, 'mag', s)}</div><div><b>Work</b> ${Math.round(a.work)}</div></div>
       <div class="row muted"><span>💰 ${a.gold}G</span><span>Potions ${a.potions}</span><span>Kills ${a.kills}</span><span>Hunger ${Math.round(a.hunger)}</span><span>Energy ${Math.round(a.energy)}</span></div>
+      ${a.reviveCharge || s.unlocked.phoenixSigil ? `<div class="${a.reviveCharge ? 'check' : 'muted'}">Phoenix Sigil: ${a.reviveCharge ? '1 charge ready · revives at half HP · no slot used' : 'not carried'}</div>` : ''}
       <div class="muted">${this.taskLabel(a)}</div>
       <div class="row" style="margin:6px 0">${['weapon', 'armor', 'offhand', 'acc'].map(sl => { const it = a.eq[sl] && ITEMS[a.eq[sl]], label = { weapon: 'Weapon', armor: 'Body armor', offhand: 'Helm / shield', acc: 'Accessory' }[sl]; return `<span class="chip">${label}: ${it ? `<i data-item="${a.eq[sl]}" data-scale="1"></i>${it.name}` : 'None'}</span>`; }).join('')}</div>
       ${a.eq.weapon ? `<div class="${this.sim.weaponMatch(a) ? 'check' : 'muted'}">${this.sim.weaponMatch(a) ? 'Class match: +10% damage · +1 combat speed' : 'Weapon usable · normal stats, no class bonus'}</div>` : ''}
@@ -486,7 +499,7 @@ export class UI {
       ${a.perks.length ? `<div class="muted">Mastered perks:</div><div class="row">${a.perks.map(p => `<span class="tag gold" title="${esc(PERKS[p].desc)}">★ ${PERKS[p].name}</span>`).join('')}</div>` : ''}
       <div class="muted">Job Lv${a.jobLv[a.job] || 1}/99 · ${(a.jobLv[a.job] || 1) >= MASTERY ? 'mastered' : `${MASTERY - (a.jobLv[a.job] || 1)} to mastery`} · Lv${a.lv}/99</div>`;
     const pet = a.partner && s.monsters.find(m => m.id === a.partner);
-    h += `<div class="muted">Partner: ${pet ? `${esc(pet.name)} (bond ${pet.bond}${pet.bond >= 50 ? ', riding' : ''})` : 'none'}</div>`;
+    h += `<div class="muted">Partner: ${pet ? `${pet.alpha ? '<span class="tag gold">Alpha</span> ' : ''}${esc(pet.name)} (bond ${pet.bond}${pet.bond >= 50 ? ', riding' : ''})` : 'none'}</div>`;
     h += `<div class="row" style="margin-top:6px"><button class="btn sm" data-act="gift" data-id="${a.id}" ${s.gold < 50 ? 'disabled' : ''}>Gift 50G</button>
       ${a.resident ? `<button class="btn sm" data-act="jobs" data-id="${a.id}">Change job</button>` : ''}
       ${a.resident && s.monsters.length ? `<button class="btn sm" data-act="partners">Partner</button>` : ''}
@@ -495,7 +508,7 @@ export class UI {
       h += `<div class="section">Choose a partner</div><div class="grid" style="grid-template-columns:1fr 1fr">`;
       h += `<div class="card" data-act="setPartner" data-id="${a.id}" data-m="0"><div class="meta"><div class="name">None</div></div></div>`;
       for (const m of s.monsters) { const o = s.advs.find(x => x.partner === m.id && x !== a);
-        h += `<div class="card ${o ? 'locked' : ''}" ${o ? '' : `data-act="setPartner" data-id="${a.id}" data-m="${m.id}"`}><div class="thumb"><i data-mon="${MONSTERS[m.type].spr}"></i></div><div class="meta"><div class="name">${esc(m.name)}</div><div class="sub">${o ? 'with ' + esc(o.name) : 'bond ' + m.bond}</div></div></div>`; }
+        h += `<div class="card ${o ? 'locked' : ''}" ${o ? '' : `data-act="setPartner" data-id="${a.id}" data-m="${m.id}"`}><div class="thumb"><i data-mon="${MONSTERS[m.type].spr}" ${m.alpha ? 'data-gold="1"' : ''}></i></div><div class="meta"><div class="name">${m.alpha ? '<span class="tag gold">Alpha</span> ' : ''}${esc(m.name)}</div><div class="sub">${o ? 'with ' + esc(o.name) : 'bond ' + m.bond}</div></div></div>`; }
       h += '</div>';
     }
     return h;
@@ -601,6 +614,14 @@ export class UI {
       case 'jobs': this.jobFor = +d.id; this.open('jobs'); break;
       case 'devTab': this.devTab = d.k; this.renderPanel(); audio.sfx('click'); break;
       case 'partners': this.partnerPick = !this.partnerPick; this.lastHtml.insp = null; this.renderInspector(); break;
+      case 'alphaPet': {
+        const pet = s.monsters.find(m => m.id === +d.id);
+        if (!pet) { err('Pet not found'); break; }
+        this.ask(`Make ${pet.name} an Alpha pet? Cost: ${ALPHA_COST_TEXT}. Benefits: ${ALPHA_BENEFIT_TEXT}. Species and bond are preserved.`, 'Make Alpha', () => {
+          err(sim.alphaPet(pet.id)); this.lastHtml.insp = null; this.renderPanel(); this.renderInspector();
+        });
+        break;
+      }
       case 'setJob': err(sim.changeJob(s.advs.find(o => o.id === +d.id), d.job)); this.lastHtml.insp = null; this.renderInspector(); if (this.panel) this.renderPanel(); break;
       case 'setPartner': { const adv = s.advs.find(o => o.id === +d.id); adv.partner = +d.m || null; this.partnerPick = false; audio.sfx('accept'); this.lastHtml.insp = null; this.renderInspector(); break; }
       case 'follow': this.game.follow = this.game.follow === +d.id ? null : +d.id; this.lastHtml.insp = null; this.renderInspector(); break;

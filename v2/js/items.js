@@ -114,6 +114,7 @@ export const ITEMS = {
   // ---- consumables ----
   potion:      { name: 'Life Potion', slot: 'item', icon: 'LifePot', heal: 30, price: 25, dev: null },
   medipack:    { name: 'Medipack', slot: 'item', icon: 'Medipack', heal: 80, price: 70, dev: { herb: 6 } },
+  phoenixSigil: { name: 'Phoenix Sigil', slot: 'item', icon: 'c_crest', revive: 0.5, price: 10000, star: 5, researchOnly: true, dev: { wood: 200, hide: 200, ore: 200, herb: 500, crystal: 500 } },
 };
 
 // Which shop sells which slot
