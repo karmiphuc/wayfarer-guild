@@ -1,7 +1,7 @@
 // DOM UI: top bar, ticker, bottom menu panels, inspector, fanfares. Uses event delegation via data-act.
 import { FAC, DECOR, SPR, JOBS, ITEMS, SHOP_SLOTS, MATS, MONSTERS, BOSSES, FRONTIERS, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
 import { IMG, iconCanvas, itemIcon, keyIcon, goldified, tinted } from './assets.js';
-import { defOf, maxHp, stat, save, wipeSave, valid, migrate, newGame, seedCode, parseSeed, MASTERY } from './state.js';
+import { defOf, maxHp, stat, save, valid, migrate, newGame, legacyGame, seedCode, parseSeed, MASTERY } from './state.js';
 import { CAMP_PATROLS } from './data.js';
 
 const $ = sel => document.querySelector(sel);
@@ -105,7 +105,7 @@ export class UI {
     this.lastHtml[key] = html; el.innerHTML = html; return true;
   }
   renderPanel() {
-    const titles = { jobs: 'Class Hall', build: 'Build', people: 'Adventurers', quests: 'Quest Board', frontiers: 'Frontiers', camps: 'Bandit Camps', develop: 'Blacksmith · Develop', village: 'Village', system: 'System' };
+    const titles = { jobs: 'Class Hall', build: 'Build', people: 'Adventurers', quests: 'Quest Board', frontiers: 'Frontiers', camps: 'Bandit Camps', develop: 'Blacksmith · Develop', village: 'Village', system: 'System', newgame: 'New Game' };
     $('#panel-title').textContent = titles[this.panel];
     const body = $('#panel-body');
     const active = document.activeElement, focusKey = body.contains(active) ? active.dataset.focusKey : null;
@@ -206,7 +206,7 @@ export class UI {
     const s = this.s; let h = '';
     const captured = FRONTIERS.filter(f => s.frontier?.completed?.[f.id]).length;
     const camps = s.banditCamps || [], campReady = camps.filter(c => !this.sim.campBlock(c.id)).length;
-    h += `<div class="row spread"><span class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random capable adventurers.</span><span class="row"><button class="btn" data-act="open" data-k="frontiers">Frontiers ${captured}/${FRONTIERS.length}</button><button class="btn" data-act="open" data-k="camps">Bandit Camps ${campReady}/${camps.length}</button></span></div>`;
+    h += `<div class="row spread"><span class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random healthy adventurers. Suggested levels are advice, not a selection limit.</span><span class="row"><button class="btn" data-act="open" data-k="frontiers">Frontiers ${captured}/${FRONTIERS.length}</button><button class="btn" data-act="open" data-k="camps">Bandit Camps ${campReady}/${camps.length}</button></span></div>`;
     for (const q of s.activeQuests) {
       const alive = s.mons.filter(m => m.quest === q.id && m.hp > 0);
       h += `<div class="section">Underway: ${esc(q.name)}</div><div class="row spread"><span class="muted">${q.kind === 'dungeon' ? `Floor ${q.floor}/${q.floors}` : alive.length + ' foes remain'}</span><button class="btn sm" data-act="watchQuest" data-id="${q.id}">Watch</button></div><div class="grid">`;
@@ -222,13 +222,13 @@ export class UI {
       h += `<div class="card ${this.questPick === q.id ? 'sel' : ''}" data-act="pickQuest" data-id="${q.id}"><div class="thumb">${face}</div><div class="meta">
         <div class="name">${esc(q.name)}</div><div class="sub">${esc(q.desc)}</div>
         <div class="sub">Fee <b>${q.fee}G</b> · Reward ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop · Suggested Lv${rec}+</div>
-        <button class="btn sm" data-act="instantQuest" data-id="${q.id}" ${!ready || s.gold < q.fee ? 'disabled' : ''}>Instant Depart (${q.fee}G)</button>${!ready ? '<div class="sub">No capable adventurers available</div>' : s.gold < q.fee ? '<div class="sub">Not enough gold</div>' : ''}</div></div>`;
+        <button class="btn sm" data-act="instantQuest" data-id="${q.id}" ${!ready || s.gold < q.fee ? 'disabled' : ''}>Instant Depart (${q.fee}G)</button>${!ready ? '<div class="sub">No healthy adventurers available</div>' : s.gold < q.fee ? '<div class="sub">Not enough gold</div>' : ''}</div></div>`;
       if (this.questPick === q.id) {
         const cands = this.sim.questCandidates().sort((a, b) => b.lv - a.lv);
         this.party = (this.party || []).filter(id => cands.some(a => a.id === id));
         const extra = Math.max(0, this.party.length - 4), cost = this.sim.questCost(q, this.party.length);
         h += `<div class="row" style="margin:8px 0"><button class="btn" data-act="startQuest" data-id="${q.id}" ${!this.party.length || s.gold < cost ? 'disabled' : ''}>Depart (${cost}G)</button><span class="muted">${this.party.length}/8 selected · ${q.fee}G entry + ${extra * this.sim.questExtraFee(q)}G extras</span></div>`;
-        h += `<div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Pawns on other quests are unavailable.</div><div class="grid party-grid">`;
+        h += `<div class="muted" style="margin:4px 0">Up to 4 random available adventurers with at least 50% HP are selected, regardless of level. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Pawns on other quests are unavailable.</div><div class="grid party-grid">`;
         for (const a of cands) h += this.partyChoice(a, this.party.includes(a.id), 'togParty', rec);
         h += `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
       }
@@ -283,7 +283,7 @@ export class UI {
     const extra = Math.max(0, party.length - 4), cost = this.sim.questCost(q, party.length), ready = this.sim.questReady(q).length;
     h += `<div class="row" style="margin:8px 0"><button class="btn" data-act="startFrontier" data-id="${q.id}" ${!party.length || s.gold < cost ? 'disabled' : ''}>Depart (${cost}G)</button>
       <button class="btn sm" data-act="instantFrontier" data-id="${q.id}" ${!ready || s.gold < q.fee ? 'disabled' : ''}>Instant Depart (${q.fee}G)</button><span class="muted">${party.length}/8 selected · ${q.fee}G entry + ${extra * this.sim.questExtraFee(q)}G extras</span></div>
-      <div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected when you choose the site. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. The boss appears only after departure.</div><div class="grid party-grid">`;
+      <div class="muted" style="margin:4px 0">Up to 4 random available adventurers with at least 50% HP are selected, regardless of level. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. The boss appears only after departure.</div><div class="grid party-grid">`;
     const rec = this.sim.questLevel(q);
     for (const a of cands) h += this.partyChoice(a, party.includes(a.id), 'togFrontierParty', rec);
     return h + `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
@@ -357,7 +357,7 @@ export class UI {
     const party = this.campParty, extra = Math.max(0, party.length - 4), cost = this.sim.questCost(q, party.length), ready = this.sim.questReady(q).length;
     h += `<div class="row" style="margin:8px 0"><button class="btn" data-act="startCamp" data-id="${q.id}" ${!party.length || s.gold < cost ? 'disabled' : ''}>Depart (${cost}G)</button>
       <button class="btn sm" data-act="instantCamp" data-id="${q.id}" ${!ready || s.gold < q.fee ? 'disabled' : ''}>Instant Depart (${q.fee}G)</button><span class="muted">${party.length}/8 selected · ${q.fee}G entry + ${extra * this.sim.questExtraFee(q)}G extras</span></div>
-      <div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected when you choose the camp. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Raiders appear only after departure.</div><div class="grid party-grid">`;
+      <div class="muted" style="margin:4px 0">Up to 4 random available adventurers with at least 50% HP are selected, regardless of level. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Raiders appear only after departure.</div><div class="grid party-grid">`;
     const rec = this.sim.questLevel(q);
     for (const a of cands) h += this.partyChoice(a, party.includes(a.id), 'togCampParty', rec);
     return h + `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
@@ -468,6 +468,47 @@ export class UI {
       <p class="muted">The game autosaves every in-game week. Controls: drag or WASD/arrows to pan · wheel/pinch or +/- to zoom · tap adventurers or buildings to inspect · Space pauses · 1/2/3 set speed.</p>
       <div class="section">Credits</div>
       <p class="muted">Art, music and sound: <b>Ninja Adventure</b> asset pack by Pixel-boy &amp; AAA (CC0) — pixel-boy.itch.io. Armor and accessory icons: <b>16x16 RPG Item Pack</b> by Alex's Assets (CC0). Masterwork equipment: <b>16x16 RPG Items (DB32)</b> by ARoachIFoundOnMyPillow (CC0) — OpenGameArt.org. Fountain, statue and castle: <b>Medieval Fantasy</b> by Pixel-boy (CC0). Game design inspired by the adventurer-village genre (Kairosoft's Dungeon Village); no Kairosoft assets are used. Code: original.</p>`;
+  }
+
+  openNewGame(seed = null) {
+    this.newGameSeed = seed;
+    this.pioneerPick = (this.s.advs.find(a => a.resident) || this.s.advs[0])?.id ?? null;
+    this.pickPioneer(this.pioneerPick); this.open('newgame');
+  }
+  pickPioneer(id) {
+    this.pioneerPick = id;
+    const a = this.s.advs.find(a => a.id === id), pets = this.s.monsters.filter(p => p.frontier && p.id !== a?.partner);
+    if (!pets.some(p => p.id === this.pioneerPetPick)) this.pioneerPetPick = pets[0]?.id ?? null;
+  }
+  panel_newgame() {
+    const s = this.s, pawn = s.advs.find(a => a.id === this.pioneerPick);
+    const partner = s.monsters.find(p => p.id === pawn?.partner), pets = s.monsters.filter(p => p.frontier && p.id !== partner?.id);
+    let h = `<p>Start a new village in ${this.newGameSeed == null ? 'a random world' : `world <b>${seedCode(this.newGameSeed)}</b>`}. Your current village will be replaced only after confirmation.</p>
+      <button class="btn" data-act="freshStart">Fresh start · carry nothing</button>
+      <div class="section">Roguelite start · carry a pioneer</div>
+      <p>Choose one pawn. They restart as a level 1 Villager with up to five randomly kept masteries and their perks. Equipment, money, work and other run progress reset. Name, appearance and personality stay.</p>
+      <p>Their bonded pet comes too, plus one extra legendary companion earned from a world camp if available. Pets retain bond and Alpha status.</p>
+      <button class="btn gold" data-act="legacyStart" ${pawn ? '' : 'disabled'}>Begin with ${pawn ? esc(pawn.name) : 'a pioneer'}</button>
+      <div class="section">Choose one pawn</div><div class="grid party-grid">`;
+    for (const a of s.advs) {
+      const selected = a.id === this.pioneerPick, n = Object.keys(JOBS).filter(id => (a.jobLv[id] || 0) >= MASTERY).length;
+      h += `<button class="card relic-choice ${selected ? 'sel' : ''}" data-act="pickPioneer" data-id="${a.id}" data-focus-key="pioneer:${a.id}" aria-pressed="${selected}"><span class="thumb"><i data-face="f_${a.spr}"></i></span><span class="meta"><span class="name">${selected ? '✓ Selected · ' : ''}${esc(a.name)}</span><span class="sub">${JOBS[a.job].name} Lv${a.lv} → Villager Lv1</span><span class="sub">Keep ${Math.min(5, n)} of ${n} masteries</span></span></button>`;
+    }
+    h += `</div><p>Bonded pet: <b>${partner ? esc(partner.name) : 'None'}</b>${partner?.alpha ? ' · Alpha' : ''}</p><div class="section">One extra legendary pet</div>`;
+    if (!pets.length) return h + `<p class="muted">${partner?.frontier ? 'Your only legendary companion is already coming with the pawn.' : 'No extra legendary companions in this village.'}</p>`;
+    h += '<div class="grid party-grid">';
+    for (const p of pets) h += `<button class="card relic-choice ${p.id === this.pioneerPetPick ? 'sel' : ''}" data-act="pickPioneerPet" data-id="${p.id}" data-focus-key="pioneer-pet:${p.id}" aria-pressed="${p.id === this.pioneerPetPick}"><span class="thumb"><i data-mon="${MONSTERS[p.type].spr}" data-scale="3"></i></span><span class="meta"><span class="name">${p.id === this.pioneerPetPick ? '✓ Selected · ' : ''}${esc(p.name)}</span><span class="sub">Bond ${p.bond}${p.alpha ? ' · Alpha' : ''}</span></span></button>`;
+    return h + '</div>';
+  }
+  beginNewGame(carry) {
+    const a = this.s.advs.find(a => a.id === this.pioneerPick);
+    if (carry && !a) { this.toast('Choose a pawn first'); return; }
+    this.ask(carry ? `Replace this village and begin again with ${a.name}, up to five random masteries and the selected pets? Equipment, money and village progress will reset.` : 'Start a fresh village carrying nothing? Your current village will be replaced.', 'Start new village', () => {
+      const next = carry ? legacyGame(this.s, a.id, this.pioneerPetPick, this.newGameSeed ?? undefined) : newGame(this.newGameSeed ?? undefined);
+      if (!next) { this.toast('The selected pawn or pet is no longer available'); return; }
+      if (!save(next)) { this.toast('Could not save the new village. Your current game is still open.'); return; }
+      this.game.noSave = true; location.href = location.pathname;
+    });
   }
 
   // ---------- inspector ----------
@@ -652,10 +693,10 @@ export class UI {
       case 'event': err(sim.runEvent(d.id)); this.renderPanel(); break;
       case 'buyMerchant': err(sim.buyMerchant(d.id)); if (this.panel) this.renderPanel(); this.lastHtml.insp = null; this.renderInspector(); break;
       case 'charter': if (err(sim.chooseCharter(d.id)) && this.charterDone) this.charterDone(); break;
-      case 'reroll': this.game.replaceState(newGame(sim.R.int(1, 0x7fffffff))); save(this.s); this.charterRender && this.charterRender(); audio.sfx('click'); break;
+      case 'reroll': { const seed = sim.R.int(1, 0x7fffffff); this.game.replaceState(s.flags.pioneer ? legacyGame(s, s.flags.pioneer, s.flags.pioneerPet, seed) || newGame(seed) : newGame(seed)); save(this.s); this.charterRender && this.charterRender(); audio.sfx('click'); break; }
       case 'seedGame': { const code = ($('#seed-in') || {}).value, seed = parseSeed(code);
         if (seed === null) { this.toast('A world code is 1–6 letters or digits'); audio.sfx('cancel'); break; }
-        this.ask(`Found a new village in world ${seedCode(seed)}? Your current save will be erased.`, 'Found it', () => { this.game.noSave = true; wipeSave(); location.href = location.pathname + '?seed=' + seedCode(seed); }); break; }
+        this.openNewGame(seed); break; }
       case 'save': this.toast(save(s) ? 'Saved!' : 'Save failed'); break;
       case 'export': {
         const blob = new Blob([JSON.stringify(s)], { type: 'application/json' }), url = URL.createObjectURL(blob);
@@ -667,7 +708,11 @@ export class UI {
         inp.onchange = async () => { try { const o = JSON.parse(await inp.files[0].text()); if (!valid(o)) throw new Error('bad'); this.game.replaceState(migrate(o)); this.toast('Save imported'); } catch { this.toast('That file is not a Wayfarer save'); } };
         inp.click(); break;
       }
-      case 'newgame': this.ask('Start a new village? Your current save will be erased.', 'Start over', () => { this.game.noSave = true; wipeSave(); location.reload(); }); break;
+      case 'newgame': this.openNewGame(); break;
+      case 'pickPioneer': this.pickPioneer(+d.id); this.renderPanel(); break;
+      case 'pickPioneerPet': this.pioneerPetPick = +d.id; this.renderPanel(); break;
+      case 'freshStart': this.beginNewGame(false); break;
+      case 'legacyStart': this.beginNewGame(true); break;
     }
   }
 

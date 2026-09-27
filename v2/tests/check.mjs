@@ -75,7 +75,7 @@ try {
 { const r = run('node', ['tests/rendering.mjs']);
   r.status ? fail('rendering regression checks', r.stdout + (r.stderr || '')) : ok('rendering', r.stdout.trim()); }
 
-for (const name of ['camps', 'raids', 'rescue', 'economy', 'relic-ui', 'equipment', 'weapon-affinity', 'blessings', 'patrols', 'night-rest', 'resurrection', 'alpha-pets', 'boss-quests', 'frontier-pets']) {
+for (const name of ['camps', 'raids', 'rescue', 'economy', 'relic-ui', 'equipment', 'weapon-affinity', 'blessings', 'patrols', 'night-rest', 'resurrection', 'alpha-pets', 'boss-quests', 'frontier-pets', 'legacy']) {
   const r = run('node', [`tests/${name}.mjs`]);
   r.status ? fail(`${name} regression checks`, r.stdout + (r.stderr || '')) : ok(name, r.stdout.trim());
 }
