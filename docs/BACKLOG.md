@@ -13,7 +13,7 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
-- Quest parties and parallel types (#25): random capable defaults (up to four), paid extras up to eight, one active outbreak/cave/boss each, and Depart before the pawn list. Legacy active quests migrate without losing their party or progress. The broader volunteer-personality, Counterattack and autonomous-quest slices remain pending.
+- Quest parties and parallel quests (#25): random capable defaults (up to four), paid extras up to eight, no concurrent quest cap while pawns are available, Instant Depart on quest cards, and Depart before the pawn list. Legacy active quests migrate without losing their party or progress. The broader volunteer-personality, Counterattack and autonomous-quest slices remain pending.
 
 ## Now — live prototype priorities
 

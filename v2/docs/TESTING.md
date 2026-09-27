@@ -7,7 +7,7 @@ Run from the repository root.
 |---|---|---|
 | `node v2/tests/check.mjs` | everything below in one go (fast part) | last line `all checks passed` |
 | `node v2/tests/check.mjs --full` | + 30-month bot soak + boss ladder | last line `all checks passed (full)` |
-| `node v2/tests/quests.mjs` | random capable party defaults, extra fees/cap, parallel quest ownership and endings, KO recovery, legacy saves, Depart ordering | final line ends in `passed` |
+| `node v2/tests/quests.mjs` | instant departure, random capable defaults, extra fees/party cap, six concurrent parties including duplicate kinds, independent cave progress, ownership and endings, KO recovery, legacy saves, Depart ordering | final line ends in `passed` |
 | `node v2/tests/validate.mjs` | data integrity: sprites exist and have the right sheet size, perk/item keys valid and consumed by the sim, job prerequisites sane, boss frame math, SPR rects inside images, atlas fresh | `0 error(s)` |
 | `node v2/tests/used-assets.mjs` | every file the code loads exists (`missing: 0`); lists unused files | `missing: 0` |
 | `node v2/tests/headless.mjs 6` | a scripted 6-month game; prints one economy line per month | no exception; residents > 0 by month 3 |

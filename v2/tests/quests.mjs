@@ -65,12 +65,64 @@ for (const count of [1, 4, 5, 8, 9]) {
   assert.equal(s.activeQuests[0].members.length, 8);
 }
 
-// Three kinds can coexist. Monthly refresh, saves and all termination paths preserve ownership.
+// Instant departure uses the same seeded defaults and entry fee; failures do not even reroll RNG.
+{
+  const { s, sim } = setup(), other = setup(), q = s.quests[0], gold = s.gold;
+  const expected = other.sim.autoQuestParty(q.id);
+  assert.equal(sim.instantQuest(q.id), null);
+  assert.deepEqual([...s.activeQuests[0].members].sort(), expected.sort());
+  assert.equal(gold - s.gold, q.fee);
+  for (const reason of ['gone', 'gold', 'pawns']) {
+    const { s, sim } = setup(), q = s.quests[0];
+    if (reason === 'gold') s.gold = q.fee - 1;
+    if (reason === 'pawns') s.advs.forEach(a => { a.hp = 1; });
+    const before = JSON.stringify(s);
+    assert(sim.instantQuest(reason === 'gone' ? -1 : q.id));
+    assert.equal(JSON.stringify(s), before);
+    const ui = Object.create(UI.prototype); ui.game = { s, sim };
+    if (reason !== 'gone') assert(ui.panel_quests().includes(`data-act="instantQuest" data-id="${q.id}" disabled`));
+  }
+  const next = s.quests[0];
+  s.advs = s.advs.filter(a => !s.activeQuests[0].members.includes(a.id)).slice(0, 2);
+  assert.equal(sim.instantQuest(next.id), null);
+  assert.equal(s.activeQuests[1].members.length, 2);
+}
+
+// Six parties, including two of each kind, own separate pawns and cave progress.
+{
+  const { s, sim } = setup();
+  for (let i = 0; i < 2; i++) {
+    if (i) sim.refreshQuests();
+    for (const kind of ['outbreak', 'dungeon', 'boss']) {
+      assert.equal(sim.instantQuest(s.quests.find(q => q.kind === kind).id), null);
+    }
+  }
+  assert.equal(s.activeQuests.length, 6);
+  assert.equal(new Set(s.activeQuests.flatMap(q => q.members)).size, 24);
+  assert.equal(sim.questCandidates().length, 0);
+  const roundTrip = migrate(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(roundTrip.activeQuests, s.activeQuests);
+  const caves = s.activeQuests.filter(q => q.kind === 'dungeon');
+  for (const a of s.advs) if (caves.some(q => q.members.includes(a.id))) a.dungeon = true;
+  sim.questCheck();
+  assert(caves.every(q => q.ft > 0));
+  const other = JSON.stringify(caves[1]), otherParty = s.advs.filter(a => caves[1].members.includes(a.id));
+  const tasks = otherParty.map(a => JSON.stringify(a.task));
+  sim.endDungeon(caves[0], s.advs.filter(a => caves[0].members.includes(a.id)), true);
+  assert.equal(s.activeQuests.length, 5);
+  assert.equal(JSON.stringify(caves[1]), other);
+  assert(otherParty.every(a => a.dungeon));
+  assert.deepEqual(otherParty.map(a => JSON.stringify(a.task)), tasks);
+  const outbreaks = s.activeQuests.filter(q => q.kind === 'outbreak');
+  s.mons.filter(m => m.quest === outbreaks[0].id).forEach(m => { m.hp = 0; });
+  sim.checkQuest(outbreaks[0]);
+  assert(s.activeQuests.includes(outbreaks[1]));
+  assert(s.mons.some(m => m.quest === outbreaks[1].id && m.hp > 0));
+}
+
+// Monthly refresh, saves and all termination paths preserve ownership.
 for (const outcome of ['clear', 'timeout', 'ko', 'dungeon-win', 'dungeon-fail']) {
   const { s, sim, quests: [outbreak, cave, boss] } = startThree();
-  const second = s.quests.find(q => q.kind === 'outbreak');
-  let before = JSON.stringify(s);
-  assert(sim.startQuest(second.id, ids(s, 12, 4))); assert.equal(JSON.stringify(s), before);
   assert.equal(s.activeQuests.length, 3);
   sim.refreshQuests();
   assert(!s.quests.some(q => q.boss === boss.boss));
@@ -96,7 +148,7 @@ for (const outcome of ['clear', 'timeout', 'ko', 'dungeon-win', 'dungeon-fail'])
   assert.deepEqual(s.mons.filter(m => others.some(q => q.id === m.quest)).map(m => [m.id, m.hp]), savedMobs);
   if (outcome !== 'dungeon-win') assert.equal(s.gold - gold, outcome === 'clear' ? target.reward.gold : 0);
   const available = s.quests.find(q => q.kind === target.kind);
-  before = JSON.stringify(s);
+  const before = JSON.stringify(s);
   assert(sim.startQuest(available.id, others[0].members)); assert.equal(JSON.stringify(s), before);
 }
 
@@ -137,4 +189,4 @@ for (const kind of ['outbreak', 'dungeon', 'boss']) {
   const s = newGame(1); delete s.activeQuests; s.quest = null;
   assert.deepEqual(migrate(s).activeQuests, []);
 }
-console.log('quests: random parties, fees, cap, parallel lifecycle, UI ordering and save migration passed');
+console.log('quests: instant departure, random parties, fees, party cap, unlimited parallel lifecycle, UI ordering and save migration passed');
