@@ -11,7 +11,7 @@ function fight(bossId, lv, seed) {
     a.eq.weapon = sim.bestGearFor({ ...a, gold: 1e9 })?.id || null; a.eq.armor = lv >= 15 ? 'plate' : lv >= 8 ? 'chain' : 'leather'; a.hp = maxHp(a, s); s.advs.push(a); }
   s.quests = [{ id: 1, kind: 'boss', zone: 1, boss: bossId, fee: 0, reward: { gold: 0, tp: 0, pop: 0 }, name: 'x', desc: '' }];
   sim.startQuest(1, s.advs.map(a => a.id));
-  for (let i = 0; i < 4000 && s.quest; i++) sim.step();
+  for (let i = 0; i < 4000 && s.activeQuests.length; i++) sim.step();
   return !!s.bossesBeaten[bossId];
 }
 for (const b of Object.keys(BOSSES)) {

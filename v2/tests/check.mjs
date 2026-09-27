@@ -59,6 +59,10 @@ try {
 { const r = run('node', ['tests/happenings.mjs']);
   r.status ? fail('happenings + charters (tests/happenings.mjs)', r.stdout + (r.stderr || '')) : ok('happenings + charters', r.stdout.trim().split('\n').pop()); }
 
+// Quest parties, parallel lifecycle and legacy-save migration.
+{ const r = run('node', ['tests/quests.mjs']);
+  r.status ? fail('quest regression checks', r.stdout + (r.stderr || '')) : ok('quests', r.stdout.trim()); }
+
 // 5. bundle builds and parses
 { const out = fs.mkdtempSync(path.join(os.tmpdir(), 'wg-bundle-'));
   const r = run('python3', ['tools/bundle.py', '--out', out]);

@@ -168,9 +168,10 @@ export class UI {
   }
   panel_quests() {
     const s = this.s; let h = '';
-    if (s.quest) {
-      const q = s.quest, alive = s.mons.filter(m => m.quest === q.id && m.hp > 0);
-      h += `<div class="section">Underway: ${esc(q.name)}</div><div class="row spread"><span class="muted">${q.kind === 'dungeon' ? `Floor ${q.floor}/${q.floors}` : alive.length + ' foes remain'}</span><button class="btn sm" data-act="watchQuest">Watch</button></div><div class="grid">`;
+    h += `<p class="muted">One Outbreak, one Cave and one Boss quest can run at the same time.</p>`;
+    for (const q of s.activeQuests) {
+      const alive = s.mons.filter(m => m.quest === q.id && m.hp > 0);
+      h += `<div class="section">Underway: ${esc(q.name)}</div><div class="row spread"><span class="muted">${q.kind === 'dungeon' ? `Floor ${q.floor}/${q.floors}` : alive.length + ' foes remain'}</span><button class="btn sm" data-act="watchQuest" data-id="${q.id}">Watch</button></div><div class="grid">`;
       for (const id of q.members) { const a = s.advs.find(o => o.id === id); if (!a) continue;
         h += `<div class="card" data-act="selAdv" data-id="${a.id}"><div class="thumb"><i data-face="f_${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="bar hp"><i style="width:${a.hp / maxHp(a, s) * 100}%"></i></div><div class="sub">${a.ko ? 'KO' : JOBS[a.job].name + ' Lv' + a.lv}</div></div></div>`; }
       h += '</div>';
@@ -179,17 +180,19 @@ export class UI {
     if (!s.quests.length) h += `<p class="muted">New quests are posted at the start of each month.</p>`;
     for (const q of s.quests) {
       const face = q.boss ? `<i data-face="bf_${q.boss}"></i>` : q.kind === 'dungeon' ? `<i data-spr="cave"></i>` : MONSTERS[q.mon].human ? `<i data-char="${MONSTERS[q.mon].spr}" data-scale="3"></i>` : `<i data-mon="${MONSTERS[q.mon].spr}" data-scale="3"></i>`;
-      const rec = q.boss ? BOSSES[q.boss].rec : [0, 1, 5, 10, 16][q.zone];
+      const rec = this.sim.questLevel(q), busy = s.activeQuests.some(o => o.kind === q.kind);
       h += `<div class="card ${this.questPick === q.id ? 'sel' : ''}" data-act="pickQuest" data-id="${q.id}"><div class="thumb">${face}</div><div class="meta">
         <div class="name">${esc(q.name)}</div><div class="sub">${esc(q.desc)}</div>
         <div class="sub">Fee <b>${q.fee}G</b> · Reward ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop · Suggested Lv${rec}+</div></div></div>`;
       if (this.questPick === q.id) {
-        const cands = s.advs.filter(a => !a.ko).sort((a, b) => b.lv - a.lv);
-        if (!this.party) this.party = cands.filter(a => a.resident).slice(0, 4).map(a => a.id);
-        if (!this.party.length) this.party = cands.slice(0, 3).map(a => a.id);
-        h += `<div class="muted" style="margin:4px 0">Choose up to 4 (tap to toggle):</div><div class="grid">`;
-        for (const a of cands) h += `<div class="card ${this.party.includes(a.id) ? 'sel' : ''}" data-act="togParty" data-id="${a.id}"><div class="thumb"><i data-char="${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv}${a.resident ? '' : ' · visitor'}</div></div></div>`;
-        h += `</div><div class="row" style="margin:8px 0"><button class="btn" data-act="startQuest" data-id="${q.id}" ${s.quest || s.gold < q.fee ? 'disabled' : ''}>Depart (${q.fee}G)</button>${s.quest ? '<span class="muted">Another quest is underway.</span>' : ''}</div>`;
+        if (busy) { h += `<p class="muted">A quest of this type is already underway.</p>`; continue; }
+        const cands = this.sim.questCandidates().sort((a, b) => b.lv - a.lv);
+        this.party = (this.party || []).filter(id => cands.some(a => a.id === id));
+        const extra = Math.max(0, this.party.length - 4), cost = this.sim.questCost(q, this.party.length);
+        h += `<div class="row" style="margin:8px 0"><button class="btn" data-act="startQuest" data-id="${q.id}" ${!this.party.length || s.gold < cost ? 'disabled' : ''}>Depart (${cost}G)</button><span class="muted">${this.party.length}/8 selected · ${q.fee}G entry + ${extra * this.sim.questExtraFee(q)}G extras</span></div>`;
+        h += `<div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. Pawns on other quests are unavailable.</div><div class="grid">`;
+        for (const a of cands) h += `<div class="card ${this.party.includes(a.id) ? 'sel' : ''}" data-act="togParty" data-id="${a.id}"><div class="thumb"><i data-char="${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv}${a.resident ? '' : ' · visitor'}${a.lv < rec ? ' · below suggested level' : ''}</div></div></div>`;
+        h += `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
       }
     }
     return h;
@@ -425,10 +428,10 @@ export class UI {
       case 'demolish': { const b = s.buildings.find(o => o.id === +d.id); if (b) this.ask(`Remove the ${defOf(b.type).name}? You get back ${sim.refund(b)}G.`, 'Remove', () => { err(sim.demolish(b)); this.deselect(); }); break; }
       case 'open': this.open(d.k); break;
       case 'classes': this.jobFor = null; this.open('jobs'); break;
-      case 'pickQuest': this.questPick = this.questPick === +d.id ? null : +d.id; this.party = null; this.renderPanel(); audio.sfx('click'); break;
-      case 'togParty': { const id = +d.id; if (this.party.includes(id)) this.party = this.party.filter(x => x !== id); else if (this.party.length < 4) this.party.push(id); this.renderPanel(); audio.sfx('click'); break; }
+      case 'pickQuest': this.questPick = this.questPick === +d.id ? null : +d.id; this.party = this.questPick ? sim.autoQuestParty(this.questPick) : []; this.renderPanel(); audio.sfx('click'); break;
+      case 'togParty': { const id = +d.id; if (this.party.includes(id)) this.party = this.party.filter(x => x !== id); else if (this.party.length < 8 && sim.questCandidates().some(a => a.id === id)) this.party.push(id); else this.toast('A party can have at most 8 available adventurers'); this.renderPanel(); audio.sfx('click'); break; }
       case 'startQuest': if (err(sim.startQuest(+d.id, this.party || []))) { this.questPick = null; this.party = null; this.game.audio.sfx('quest'); } this.renderPanel(); break;
-      case 'watchQuest': if (s.quest) { this.close(); this.game.centerOn(s.quest.spot[0], s.quest.spot[1]); } break;
+      case 'watchQuest': { const q = s.activeQuests.find(q => q.id === +d.id); if (q) { this.close(); this.game.centerOn(q.spot[0], q.spot[1]); } break; }
       case 'develop': err(sim.develop(d.id)); this.renderPanel(); break;
       case 'event': err(sim.runEvent(d.id)); this.renderPanel(); break;
       case 'buyMerchant': err(sim.buyMerchant(d.id)); if (this.panel) this.renderPanel(); this.lastHtml.insp = null; this.renderInspector(); break;

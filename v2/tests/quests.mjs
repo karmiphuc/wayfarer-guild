@@ -1,0 +1,140 @@
+import assert from 'node:assert/strict';
+import { newGame, makeAdventurer, maxHp, migrate } from '../js/state.js';
+import { Sim, WEEK_SECONDS } from '../js/sim.js';
+import { UI } from '../js/ui.js';
+
+function setup(seed = 4242) {
+  const s = newGame(seed), sim = new Sim(s);
+  s.stars = 2; s.gold = 100000; s.advs = [];
+  for (let i = 0; i < 24; i++) {
+    const a = makeAdventurer(s, sim.R, 'warrior');
+    a.lv = 20 + i; a.hp = maxHp(a, s); a.resident = true; a.x = 38; a.y = 36;
+    s.advs.push(a);
+  }
+  sim.refreshQuests();
+  return { s, sim };
+}
+const ids = (s, start, count) => s.advs.slice(start, start + count).map(a => a.id);
+function startThree() {
+  const { s, sim } = setup(), quests = [];
+  for (const [i, kind] of ['outbreak', 'dungeon', 'boss'].entries()) {
+    const q = s.quests.find(q => q.kind === kind);
+    assert.equal(sim.startQuest(q.id, ids(s, i * 4, 4)), null);
+    quests.push(s.activeQuests.find(o => o.id === q.id));
+  }
+  return { s, sim, quests };
+}
+
+// Random defaults are reproducible, not top-four selection; rendering never rerolls them.
+{
+  const { s, sim } = setup(), other = setup(), q = s.quests.find(q => q.kind === 'boss');
+  s.advs[0].ko = true; other.s.advs[0].ko = true;
+  s.advs[1].hp = 1; other.s.advs[1].hp = 1;
+  s.advs[2].lv = 1; other.s.advs[2].lv = 1;
+  const party = sim.autoQuestParty(q.id);
+  assert.deepEqual(party, other.sim.autoQuestParty(q.id));
+  assert.equal(new Set(party).size, 4);
+  assert(party.every(id => !ids(s, 0, 3).includes(id)));
+  assert.notDeepEqual([...party].sort(), ids(s, 20, 4).sort());
+  const ui = Object.create(UI.prototype); ui.game = { s, sim }; ui.questPick = q.id; ui.party = party;
+  const before = JSON.stringify(s), html = ui.panel_quests();
+  assert.equal(ui.panel_quests(), html);
+  assert.equal(JSON.stringify(s), before);
+  assert(html.indexOf('data-act="startQuest"') < html.indexOf('data-act="togParty"'));
+  assert(html.includes('4/8 selected'));
+  s.advs = s.advs.slice(3, 5);
+  assert.equal(sim.autoQuestParty(q.id).length, 2);
+}
+
+// Charge only validated unique members; failed departures are completely atomic.
+for (const count of [1, 4, 5, 8, 9]) {
+  const { s, sim } = setup(), q = s.quests.find(q => q.kind === 'outbreak'), gold = s.gold;
+  const before = JSON.stringify(s), result = sim.startQuest(q.id, ids(s, 0, count));
+  if (count > 8) { assert(result); assert.equal(JSON.stringify(s), before); }
+  else { assert.equal(result, null); assert.equal(gold - s.gold, q.fee + Math.max(0, count - 4) * Math.ceil(q.fee / 4)); }
+}
+{
+  const { s, sim } = setup(), q = s.quests[0], party = ids(s, 0, 8);
+  s.gold = sim.questCost(q, 8) - 1;
+  let before = JSON.stringify(s);
+  assert(sim.startQuest(q.id, party)); assert.equal(JSON.stringify(s), before);
+  s.gold = 100000; s.advs[0].ko = true; before = JSON.stringify(s);
+  assert(sim.startQuest(q.id, party)); assert.equal(JSON.stringify(s), before);
+  s.advs[0].ko = false;
+  assert.equal(sim.startQuest(q.id, [...party, party[0]]), null);
+  assert.equal(s.activeQuests[0].members.length, 8);
+}
+
+// Three kinds can coexist. Monthly refresh, saves and all termination paths preserve ownership.
+for (const outcome of ['clear', 'timeout', 'ko', 'dungeon-win', 'dungeon-fail']) {
+  const { s, sim, quests: [outbreak, cave, boss] } = startThree();
+  const second = s.quests.find(q => q.kind === 'outbreak');
+  let before = JSON.stringify(s);
+  assert(sim.startQuest(second.id, ids(s, 12, 4))); assert.equal(JSON.stringify(s), before);
+  assert.equal(s.activeQuests.length, 3);
+  sim.refreshQuests();
+  assert(!s.quests.some(q => q.boss === boss.boss));
+  const roundTrip = migrate(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(roundTrip.activeQuests, s.activeQuests);
+  assert.deepEqual(migrate(JSON.parse(JSON.stringify(roundTrip))), roundTrip);
+  const target = outcome.startsWith('dungeon') ? cave : outbreak;
+  const others = s.activeQuests.filter(q => q.id !== target.id);
+  const otherMembers = s.advs.filter(a => others.some(q => q.members.includes(a.id)));
+  const savedTasks = otherMembers.map(a => JSON.stringify(a.task));
+  const savedMobs = s.mons.filter(m => others.some(q => q.id === m.quest)).map(m => [m.id, m.hp]);
+  const gold = s.gold;
+  if (outcome === 'clear') {
+    s.mons.filter(m => m.quest === target.id).forEach(m => { m.hp = 0; });
+    sim.checkQuest(target);
+  } else if (outcome === 'timeout' || outcome === 'ko') {
+    if (outcome === 'timeout') target.t = WEEK_SECONDS * 8;
+    else s.advs.filter(a => target.members.includes(a.id)).forEach(a => { a.ko = true; });
+    sim.checkQuest(target);
+  } else sim.endDungeon(target, s.advs.filter(a => target.members.includes(a.id)), outcome === 'dungeon-win');
+  assert.deepEqual(s.activeQuests.map(q => q.id), others.map(q => q.id));
+  assert.deepEqual(otherMembers.map(a => JSON.stringify(a.task)), savedTasks);
+  assert.deepEqual(s.mons.filter(m => others.some(q => q.id === m.quest)).map(m => [m.id, m.hp]), savedMobs);
+  if (outcome !== 'dungeon-win') assert.equal(s.gold - gold, outcome === 'clear' ? target.reward.gold : 0);
+  const available = s.quests.find(q => q.kind === target.kind);
+  before = JSON.stringify(s);
+  assert(sim.startQuest(available.id, others[0].members)); assert.equal(JSON.stringify(s), before);
+}
+
+// All quests advance on the same check, even if earlier entries finish.
+{
+  const { s, sim, quests: [outbreak, cave, boss] } = startThree();
+  s.mons.filter(m => m.quest === outbreak.id || m.quest === boss.id).forEach(m => { m.hp = 0; });
+  sim.questCheck();
+  assert.deepEqual(s.activeQuests.map(q => q.id), [cave.id]);
+  assert.equal(cave.t, 1);
+  assert.equal(s.cleared, 2);
+}
+
+// Recovered members remain reserved even after the inn replaces their quest task.
+{
+  const { s, sim } = setup(), q = s.quests.find(q => q.kind === 'outbreak');
+  assert.equal(sim.startQuest(q.id, ids(s, 0, 4)), null);
+  const a = s.advs[0]; a.task = null; a.ko = false; a.hp = maxHp(a, s);
+  assert(!sim.questCandidates().includes(a));
+  sim.rally(); assert.equal(a.task, null);
+  sim.advStep(a); assert.equal(a.task.qid, q.id);
+  const cave = s.quests.find(q => q.kind === 'dungeon'), before = JSON.stringify(s);
+  assert(sim.startQuest(cave.id, [a.id])); assert.equal(JSON.stringify(s), before);
+}
+
+// Legacy single-quest saves keep the exact ongoing quest and migrate only once.
+for (const kind of ['outbreak', 'dungeon', 'boss']) {
+  const { s, sim } = setup(), q = s.quests.find(q => q.kind === kind);
+  assert.equal(sim.startQuest(q.id, ids(s, 0, 4)), null);
+  s.quest = s.activeQuests[0]; delete s.activeQuests;
+  const legacy = JSON.parse(JSON.stringify(s)), expected = legacy.quest;
+  migrate(legacy);
+  assert.deepEqual(legacy.activeQuests, [expected]); assert(!('quest' in legacy));
+  const once = JSON.stringify(legacy); migrate(legacy); assert.equal(JSON.stringify(legacy), once);
+  const loaded = new Sim(legacy); for (let i = 0; i < 200; i++) loaded.step();
+}
+{
+  const s = newGame(1); delete s.activeQuests; s.quest = null;
+  assert.deepEqual(migrate(s).activeQuests, []);
+}
+console.log('quests: random parties, fees, cap, parallel lifecycle, UI ordering and save migration passed');

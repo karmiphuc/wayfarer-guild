@@ -9,7 +9,7 @@ const stepsPerMonth = WEEK_SECONDS * 4 / DT;
 for (let m = 0; m < months; m++) {
   for (let i = 0; i < stepsPerMonth; i++) { sim.step(); steps++; }
   const sc = script.shift(); if (sc) { const err = sim.build(...sc); if (err) console.log('build', sc[0], 'ERR', err); }
-  if (!s.quest && s.quests.length && s.advs.length) { const q = s.quests[0]; const ids = s.advs.slice().sort((a, b) => b.lv - a.lv).slice(0, 3).map(a => a.id); const e = sim.startQuest(q.id, ids); if (e) console.log('quest', e); }
+  if (!s.activeQuests.length && s.quests.length && s.advs.length) { const q = s.quests[0]; const ids = s.advs.slice().sort((a, b) => b.lv - a.lv).slice(0, 3).map(a => a.id); const e = sim.startQuest(q.id, ids); if (e) console.log('quest', e); }
   const r = s.advs.filter(a => a.resident).length;
   console.log(`Y${s.time.year}M${s.time.month} gold=${s.gold} tp=${s.tp} pop=${s.pop.toFixed(0)} stars=${s.stars} advs=${s.advs.length} res=${r} mons=${s.mons.filter(m=>m.hp>0).length} kills=${s.stats.kills} lastInc=${s.stats.lastIncome} cleared=${s.cleared} unlocked=${Object.keys(s.unlocked).length} titles=${Object.keys(s.titles).join(',')}`);
 }

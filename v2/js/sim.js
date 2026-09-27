@@ -339,7 +339,7 @@ export class Sim {
     if (a.ko) return this.koStep(a);
     if (a.hunger >= 100 && s.tick % 50 === 0) { a.sat = Math.max(0, a.sat - 2); this.emote(a, 'hungry'); }
     if (a.task && a.task.type === 'quest') return this.questStep(a);
-    if (!a.task) { a.task = this.decide(a); a.taskT = 0; a.path = null; }
+    if (!a.task) { const q = this.questForPawn(a.id); a.task = q ? { type: 'quest', qid: q.id } : this.decide(a); a.taskT = 0; a.path = null; if (q) return this.questStep(a); }
     a.taskT += DT;
     const t = a.task;
     switch (t.type) {
@@ -895,7 +895,7 @@ export class Sim {
   // Everyone who is free drops what they are doing and defends the village (stampedes, bandits).
   rally() {
     for (const a of this.s.advs) {
-      if (a.inside || a.ko || a.dungeon || (a.task && a.task.type === 'quest') || a.hp < maxHp(a, this.s) * 0.4) continue;
+      if (a.inside || a.ko || a.dungeon || this.questForPawn(a.id) || (a.task && a.task.type === 'quest') || a.hp < maxHp(a, this.s) * 0.4) continue;
       a.task = { type: 'hunt', zone: 9, defend: true, dur: 90 }; a.taskT = 0; a.path = null; this.emote(a, 'exclaim');
     }
   }
@@ -935,30 +935,48 @@ export class Sim {
         name: `Old Cave · ${floors} floors`, desc: 'Delve into the cave north of town. Treasure waits at the bottom.' });
     }
     // the next two undefeated bosses whose star requirement is met
-    const next = Object.entries(BOSSES).filter(([id, B]) => !s.bossesBeaten[id] && B.star <= s.stars).sort((p, q) => p[1].rec - q[1].rec).slice(0, 2);
+    const next = Object.entries(BOSSES).filter(([id, B]) => !s.bossesBeaten[id] && !s.activeQuests.some(q => q.boss === id) && B.star <= s.stars).sort((p, q) => p[1].rec - q[1].rec).slice(0, 2);
     for (const [id, B] of next) s.quests.push({ id: s.nextId++, kind: 'boss', zone: B.zone, boss: id, fee: Math.round(B.gold * 0.3), reward: { gold: B.gold, tp: 8 + Math.round(B.rec * 1.5), pop: 40 + B.rec * 12 },
       name: `Defeat ${B.name}`, desc: `${B.name} terrorises the ${BIOMES[ZONE_BIOME[B.zone]].name}. Assemble your best!` });
   }
+  questLevel(q) { return q.boss ? BOSSES[q.boss].rec : [0, 1, 5, 10, 16][q.zone]; }
+  questForPawn(id) { return this.s.activeQuests.find(q => q.members.includes(id)); }
+  questCandidates() {
+    const s = this.s;
+    return s.advs.filter(a => !a.ko && a.hp > 0 && !a.dungeon && a.task?.type !== 'quest' && !this.questForPawn(a.id));
+  }
+  autoQuestParty(qid) {
+    const q = this.s.quests.find(q => q.id === qid); if (!q) return [];
+    const cands = this.questCandidates().filter(a => a.lv >= this.questLevel(q) && a.hp >= maxHp(a, this.s) * 0.5);
+    return shuffle(this.R, cands).slice(0, 4).map(a => a.id);
+  }
+  questExtraFee(q) { return Math.ceil(q.fee * 0.25); }
+  questCost(q, count) { return q.fee + Math.max(0, count - 4) * this.questExtraFee(q); }
   startQuest(qid, memberIds) {
     const s = this.s, q = s.quests.find(q => q.id === qid); if (!q) return 'Quest gone';
-    if (s.quest) return 'A quest is already underway';
-    if (s.gold < q.fee) return 'Not enough gold for the fee';
-    const members = s.advs.filter(a => memberIds.includes(a.id) && !a.ko); if (!members.length) return 'Pick at least one adventurer';
-    s.gold -= q.fee;
+    if (s.activeQuests.some(o => o.kind === q.kind)) return 'A quest of this type is already underway';
+    const ids = [...new Set(memberIds)];
+    if (!ids.length) return 'Pick at least one adventurer';
+    if (ids.length > 8) return 'A party can have at most 8 adventurers';
+    const members = this.questCandidates().filter(a => ids.includes(a.id));
+    if (members.length !== ids.length) return 'A selected adventurer is unavailable. Check your party';
+    const cost = this.questCost(q, members.length);
+    if (s.gold < cost) return 'Not enough gold for the quest and extra adventurers';
+    s.gold -= cost;
     const cv = cavePos(s), spot = q.kind === 'dungeon' ? [cv.x + 1, cv.y + 1] : (this.randomCellInZone(q.zone) || [38, 50]);
     q.spot = spot; q.mobs = []; q.floor = 0; q.ft = 0;
     if (q.kind === 'dungeon') { /* no field mobs */ }
     else if (q.kind === 'outbreak') for (let i = 0; i < q.n; i++) { const c = this.grid.nearestWalkable(spot[0] + this.R.int(-2, 2), spot[1] + this.R.int(-2, 2)) || spot; const m = this.spawnMonster(q.zone, q.mon, c, { quest: q.id, lvBonus: 1 }); if (m) q.mobs.push(m.id); }
     else { const m = this.spawnBoss(q.boss, spot, { quest: q.id }); q.mobs.push(m.id); }
     for (const a of members) { if (a.inside) { const b = s.buildings.find(o => o.id === a.inside.b); if (b) b.occ = b.occ.filter(i => i !== a.id); a.inside = null; } a.task = { type: 'quest', qid: q.id }; a.path = null; }
-    s.quest = { ...q, members: members.map(a => a.id), t: 0 };
+    s.activeQuests.push({ ...q, members: members.map(a => a.id), t: 0 });
     s.quests = s.quests.filter(o => o.id !== q.id);
     log(s, `Quest started: ${q.name}. ${members.map(a => a.name).join(', ')} set out!`, 'title');
     this.emit('sfx', 'quest');
     return null;
   }
   questStep(a) {
-    const s = this.s, q = s.quest;
+    const s = this.s, q = s.activeQuests.find(q => q.id === a.task.qid);
     if (!q || q.id !== a.task.qid) { a.task = null; return; }
     const hpR = a.hp / maxHp(a, s);
     if (hpR < 0.3 && a.potions > 0) { a.potions--; a.hp = Math.min(maxHp(a, s), Math.round(a.hp + this.potion().heal * (1 + this.bonus('heal') + perkSum(a, 'healPct')))); this.emote(a, 'heart'); }
@@ -967,7 +985,10 @@ export class Sim {
     if (m) this.fight(a, m); else this.walkTo(a, q.spot[0], q.spot[1] + 1);
   }
   questCheck() {
-    const s = this.s, q = s.quest; if (!q) return;
+    for (const q of this.s.activeQuests) this.checkQuest(q);
+  }
+  checkQuest(q) {
+    const s = this.s;
     q.t += DT * 10;
     const party = s.advs.filter(a => q.members.includes(a.id));
     if (q.kind === 'dungeon') return this.dungeonTick(q, party);
@@ -975,16 +996,18 @@ export class Sim {
     if (!alive.length) {
       s.gold += q.reward.gold; s.tp += q.reward.tp; s.pop += q.reward.pop; s.cleared++;
       if (q.boss) s.bossesBeaten[q.boss] = true;
-      for (const a of party) { a.task = null; a.work += 5; this.addSat(a, 20); }
+      for (const a of party) { if (a.task?.qid === q.id) { a.task = null; a.path = null; } a.work += 5; this.addSat(a, 20); }
       log(s, `Quest cleared: ${q.name}! +${q.reward.gold}G +${q.reward.tp}TP +${q.reward.pop} popularity`, 'title');
       this.emit('fanfare', 'Quest Cleared!', q.name);
-      s.quest = null; this.checkStars(); return;
+      s.activeQuests = s.activeQuests.filter(o => o.id !== q.id);
+      if (q.boss) s.quests = s.quests.filter(o => o.boss !== q.boss);
+      this.checkStars(); return;
     }
     if (party.every(a => a.ko) || q.t > WEEK_SECONDS * 8) {
       for (const m of alive) m.hp = 0;
-      for (const a of party) if (a.task && a.task.type === 'quest') a.task = null;
+      for (const a of party) if (a.task?.qid === q.id) { a.task = null; a.path = null; }
       log(s, `Quest failed: ${q.name}. The party retreated.`, 'bad'); this.emit('sfx', 'fail');
-      s.quest = null;
+      s.activeQuests = s.activeQuests.filter(o => o.id !== q.id);
     }
   }
 
@@ -1013,14 +1036,17 @@ export class Sim {
   }
   endDungeon(q, party, win) {
     const s = this.s;
-    for (const a of party) { a.dungeon = false; a.x = q.spot[0]; a.y = q.spot[1] + 0.5; a.path = null; if (a.task && a.task.type === 'quest') a.task = null; if (win) { a.work += 5; this.addSat(a, 20); } }
+    for (const a of party) {
+      if (a.dungeon || a.task?.qid === q.id) { a.dungeon = false; a.x = q.spot[0]; a.y = q.spot[1] + 0.5; a.path = null; if (a.task?.qid === q.id) a.task = null; }
+      if (win) { a.work += 5; this.addSat(a, 20); }
+    }
     if (win) {
       s.gold += q.reward.gold; s.tp += q.reward.tp; s.pop += q.reward.pop; s.cleared++;
       this.treasure({ x: q.spot[0], y: q.spot[1], lv: 5 + q.floors * 2 }, party[0]);
       log(s, `Dungeon cleared! +${q.reward.gold}G +${q.reward.tp}TP`, 'title'); this.emit('fanfare', 'Dungeon Cleared!', q.name);
       this.checkStars();
     } else this.emit('sfx', 'fail');
-    s.quest = null;
+    s.activeQuests = s.activeQuests.filter(o => o.id !== q.id);
   }
 
   // ---------- events & jobs ----------
