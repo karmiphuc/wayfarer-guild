@@ -2,6 +2,15 @@
 // Sprite rects are pixel rects into Ninja Adventure (CC0) sheets.
 
 export const T = 16;               // tile size in source pixels
+// Camp guard waves by village stars; level caps never inherit visiting veterans.
+export const CAMP_PATROLS = [
+  { count: [0, 0], weeks: [7, 9], level: [1, 1] },
+  { count: [1, 1], weeks: [6, 8], level: [1, 3] },
+  { count: [1, 1], weeks: [5, 7], level: [3, 5] },
+  { count: [1, 1], weeks: [4, 6], level: [5, 8] },
+  { count: [2, 2], weeks: [3, 5], level: [8, 12] },
+  { count: [2, 3], weeks: [2, 4], level: [12, 20] },
+];
 // The village sits in the middle of a wild field (DV2 style): monsters roam outside and adventurers hunt in view.
 export const HOME_W = 76, HOME_H = 56;
 export const MAP_W = HOME_W * 2, MAP_H = HOME_H * 2;

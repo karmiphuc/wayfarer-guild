@@ -3,6 +3,7 @@ import { FAC, DECOR, SPR, JOBS, ITEMS, SHOP_SLOTS, MATS, MONSTERS, BOSSES, FRONT
 import { IMG, iconCanvas, itemIcon, keyIcon, goldified, tinted } from './assets.js';
 import { defOf, maxHp, stat, save, wipeSave, valid, migrate, newGame, seedCode, parseSeed, MASTERY } from './state.js';
 import { ALPHA_PET_COST } from './sim.js';
+import { CAMP_PATROLS } from './data.js';
 
 const $ = sel => document.querySelector(sel);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -314,7 +315,7 @@ export class UI {
   panel_camps() {
     const s = this.s, camps = s.banditCamps || [];
     let h = `<div class="row spread"><span class="muted">Strike the outlaw camps beyond the village. A cleared camp regroups after a random 8–20 weeks.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
-      <p class="muted camp-note">Live camps at your village tier send 2–4 guards every 2–4 weeks, with at most 12 patrol guards active across the map. Clearing a camp recalls its patrols and stops new attacks for 8–20 weeks. Larger village raids can also come from live camps.</p>`;
+      <p class="muted camp-note">${s.stars ? `At ${s.stars} stars, camp patrols send ${CAMP_PATROLS[s.stars].count[0] === CAMP_PATROLS[s.stars].count[1] ? CAMP_PATROLS[s.stars].count[0] : CAMP_PATROLS[s.stars].count.join('–')} guard${CAMP_PATROLS[s.stars].count[1] === 1 ? '' : 's'} of level ${CAMP_PATROLS[s.stars].level.join('–')} every ${CAMP_PATROLS[s.stars].weeks.join('–')} weeks across all camps.` : 'Camp patrols begin at one star.'} Nearby pawns fight back without rallying the village. Clearing a camp recalls its patrols and stops its attacks for 8–20 weeks. Larger village raids can also come from live camps.</p>`;
     const picked = camps.find(c => c.id === this.campPick);
     if (picked) h += this.campDetail(picked);
     h += '<div class="section">Known camps</div><div class="grid camp-grid">';

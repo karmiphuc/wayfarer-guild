@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { newGame, migrate, maxHp } from '../js/state.js';
+import { newGame, migrate, maxHp, townDist } from '../js/state.js';
 import { Sim, WEEK_SECONDS, DT } from '../js/sim.js';
-import { FRONTIERS } from '../js/data.js';
+import { FRONTIERS, CAMP_PATROLS, JOBS } from '../js/data.js';
 
 const week = WEEK_SECONDS / DT;
 function setup() {
@@ -14,14 +14,14 @@ function setup() {
   const { s, sim } = setup(), other = setup();
   sim.campPatrols(); other.sim.campPatrols();
   assert.deepEqual(s.mons, other.s.mons, 'patrol classes and counts must replay from the seed');
-  assert(s.mons.length >= 2 && s.mons.length <= 4);
+  assert(s.mons.length >= 2 && s.mons.length <= 3);
   const c = s.banditCamps.find(c => c.id === s.mons[0].sourceCamp);
   assert(s.mons.every(m => m.job && m.raid === 'patrol' && m.x === c.x && m.y === c.y && m.expiresAt > s.tick));
   assert(c.patrolAt - s.tick >= 2 * week && c.patrolAt - s.tick <= 4 * week);
   const before = s.mons.length; sim.campPatrols(); assert.equal(s.mons.length, before, 'waves must be staggered');
   for (let i = 0; i < 80; i++) { s.tick += week / 2; sim.campPatrols(); }
   assert(s.mons.length <= 12);
-  for (const camp of s.banditCamps) assert(s.mons.filter(m => m.sourceCamp === camp.id).length <= 4);
+  for (const camp of s.banditCamps) assert(s.mons.filter(m => m.sourceCamp === camp.id).length <= 3);
   const copy = migrate(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(copy.mons, s.mons); assert.deepEqual(copy.banditCamps, s.banditCamps);
   s.tick = Math.max(...s.mons.map(m => m.expiresAt));
@@ -88,4 +88,51 @@ for (const block of ['new-village', 'cooldown', 'challenge', 'tier']) {
   const seed = s.seed; migrate(s); assert.equal(s.seed, seed);
   const once = JSON.stringify(s); migrate(s); assert.equal(JSON.stringify(s), once);
 }
-console.log('patrols: seeded 2-4 guard waves, eligibility, staggering, population/lifetime bounds, capture recall and save migration passed');
+// Rank bounds apply even with level-99 visitors, and no other camp can bypass the global cooldown.
+for (let rank = 1; rank <= 5; rank++) {
+  const { s, sim } = setup(); s.stars = rank; for (const a of s.advs) a.lv = 99;
+  const rules = CAMP_PATROLS[rank]; sim.campPatrols();
+  assert(s.mons.length >= rules.count[0] && s.mons.length <= Math.max(1, rank - 2));
+  assert(s.mons.every(m => m.lv >= rules.level[0] && m.lv <= rules.level[1]));
+  assert(s.flags.nextCampPatrol - s.tick >= (7 - rank) * week);
+  assert(s.flags.nextCampPatrol - s.tick <= (9 - rank) * week);
+  const before = s.mons.length; s.tick = s.flags.nextCampPatrol - 1;
+  sim.campPatrols(); assert.equal(s.mons.length, before);
+  s.tick++; sim.campPatrols(); assert(s.mons.length > before, 'another eligible camp can dispatch after the interval');
+}
+// Local self-defense actually damages attackers while preserving the interrupted routine.
+for (const type of ['visit', 'stroll', 'camp', 'hunt', 'return']) {
+  const { s, sim } = setup(), a = s.advs[0]; s.advs = [a];
+  Object.assign(a, { x: 38, y: 28, job: 'warrior', cool: 0, energy: 80, hunger: 0, task: { type, zone: 1, dur: 20 } });
+  a.hp = maxHp(a, s); const task = a.task;
+  const guard = sim.spawnRaider([39, 28], 3, { raid: 'patrol', expiresAt: s.tick + week });
+  const hp = guard.hp; sim.advStep(a);
+  assert(guard.hp < hp, type + ' must fight back'); assert.equal(a.task, task); assert(!a.task.defend);
+  guard.hp = 0; a.task = { type: 'camp', dur: 20 }; const energy = a.energy;
+  sim.advStep(a); assert(a.energy > energy, 'routine resumes when danger ends');
+}
+// Melee pawns close the gap to ranged attackers inside town, without chasing beyond its boundary.
+{
+  const { s, sim } = setup(), a = s.advs[0]; s.advs = [a];
+  Object.assign(a, { x: 38, y: 32, job: 'warrior', cool: 0, task: { type: 'camp', dur: 50 }, energy: 80 });
+  a.hp = maxHp(a, s);
+  const guard = sim.spawnRaider([41, 32], 3, { raid: 'patrol', job: 'archer', expiresAt: s.tick + week });
+  const hp = guard.hp;
+  for (let i = 0; i < 50; i++) { s.tick++; sim.advStep(a); }
+  assert(guard.hp < hp, 'melee pawn must approach and hit a ranged attacker');
+  a.x = 28; a.y = 20; a.path = null; guard.x = 25; guard.y = 20;
+  a.task = { type: 'camp', dur: 50 };
+  for (let i = 0; i < 50; i++) { s.tick++; sim.advStep(a); assert.equal(townDist(s, Math.round(a.x), Math.round(a.y)), 0); }
+}
+// Existing overpowering guards and rapid schedules are corrected once, without rerolling on each load.
+{
+  const { s, sim } = setup(); s.stars = 3; delete s.flags.patrolScaling;
+  const guard = sim.spawnRaider([40, 28], 55, { raid: 'patrol', job: 'samurai' }); guard.hp = Math.round(guard.mhp / 2);
+  const raid = sim.spawnRaider([42, 28], 55, { raid: 'bandits' });
+  const seed = s.seed; migrate(s);
+  assert.equal(guard.lv, 8); assert(JOBS[guard.job].tier <= 2); assert(guard.hp > 0 && guard.hp < guard.mhp);
+  assert.equal(raid.lv, 55, 'migration must not change unrelated quest or raid enemies');
+  assert.equal(s.seed, seed); assert(s.flags.nextCampPatrol >= s.tick + 4 * week);
+  const once = JSON.stringify(s); migrate(s); assert.equal(JSON.stringify(s), once);
+}
+console.log('patrols: rank-scaled guard waves, shared cooldown, local self-defense, bounds, capture recall and migration passed');
