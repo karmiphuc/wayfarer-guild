@@ -7,6 +7,7 @@ Run from the repository root.
 |---|---|---|
 | `node v2/tests/check.mjs` | everything below in one go (fast part) | last line `all checks passed` |
 | `node v2/tests/check.mjs --full` | + 30-month bot soak + boss ladder | last line `all checks passed (full)` |
+| `node v2/tests/quests.mjs` | random capable party defaults, extra fees/cap, parallel quest ownership and endings, KO recovery, legacy saves, Depart ordering | final line ends in `passed` |
 | `node v2/tests/validate.mjs` | data integrity: sprites exist and have the right sheet size, perk/item keys valid and consumed by the sim, job prerequisites sane, boss frame math, SPR rects inside images, atlas fresh | `0 error(s)` |
 | `node v2/tests/used-assets.mjs` | every file the code loads exists (`missing: 0`); lists unused files | `missing: 0` |
 | `node v2/tests/headless.mjs 6` | a scripted 6-month game; prints one economy line per month | no exception; residents > 0 by month 3 |
@@ -26,7 +27,8 @@ Run from the repository root.
    popularity, adventurer and monster numbers, a non-empty quest board; then JSON round-trip → `migrate()` → new `Sim` →
    200 more steps; save must stay < 1.5 MB.
 5. `tests/happenings.mjs` (every happening and charter runs and ends; same seed + choices = same state).
-6. `tools/bundle.py` into a temp dir + `node --check game.js`.
+6. `tests/quests.mjs` (parallel parties, fees, lifecycle and save migration).
+7. `tools/bundle.py` into a temp dir + `node --check game.js`.
 
 ## Adding tests
 

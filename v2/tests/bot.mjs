@@ -2,7 +2,7 @@
 // Usage: node tests/bot.mjs [months=24] [seed=1] [charter=first offered]
 import { newGame, maxHp, defOf } from '../js/state.js';
 import { Sim, DT, WEEK_SECONDS } from '../js/sim.js';
-import { FAC, DECOR, ITEMS, JOBS, EVENTS, BOSSES } from '../js/data.js';
+import { FAC, DECOR, ITEMS, JOBS, EVENTS } from '../js/data.js';
 
 const months = +(process.argv[2] || 24), seed = +(process.argv[3] || 1);
 const s = newGame(seed), sim = new Sim(s, {});
@@ -32,11 +32,17 @@ for (let w = 0; w < months * 4; w++) {
   // develop gear
   for (const id in ITEMS) if (!s.unlocked[id] && ITEMS[id].dev && s.gold > ITEMS[id].price * 1.5 + 500) sim.develop(id);
   // quests
-  if (!s.quest && s.quests.length) {
-    const party = s.advs.filter(a => !a.ko).sort((a, b) => b.lv - a.lv).slice(0, 4);
-    const avg = party.reduce((n, a) => n + a.lv, 0) / Math.max(1, party.length);
-    const q = s.quests.filter(q => q.fee < s.gold - 200).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0) || a.zone - b.zone).find(q => avg >= (q.boss ? BOSSES[q.boss].rec : [0, 2, 6, 11, 17][q.zone]));
-    if (q) sim.startQuest(q.id, party.map(a => a.id));
+  if (s.quests.length) {
+    const choices = s.quests.filter(q => q.fee < s.gold - 200 && !s.activeQuests.some(o => o.kind === q.kind)).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0) || a.zone - b.zone);
+    for (const q of choices) {
+      if (s.activeQuests.some(o => o.kind === q.kind)) continue;
+      const party = sim.autoQuestParty(q.id);
+      if (party.length < 4) continue;
+      const extra = sim.questCandidates().filter(a => !party.includes(a.id) && a.lv >= sim.questLevel(q)).slice(0, 4);
+      if (s.gold > sim.questCost(q, party.length + extra.length) + 1500) party.push(...extra.map(a => a.id));
+      if (s.gold < sim.questCost(q, party.length) + 200) continue;
+      const e = sim.startQuest(q.id, party); if (e) throw new Error('quest: ' + e);
+    }
   }
   // events and jobs
   if (s.tp >= 40 && s.buildings.length > 18) sim.runEvent('expand');

@@ -37,7 +37,7 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     ground: [], roads: '', props: [],
     buildings: [], advs: [], mons: [], monsters: [], fx: [], folk: [], animals: [],
     unlocked: { woodSword: true, cloth: true, potion: true },
-    quests: [], quest: null, cleared: 0, bossesBeaten: {},
+    quests: [], activeQuests: [], cleared: 0, bossesBeaten: {},
     titles: {}, events: [], log: [],
     stats: { income: 0, lastIncome: 0, kills: 0, monthKills: 0, visitorsTotal: 0, spentBuild: 0 },
     flags: { tutorial: 0 },
@@ -235,6 +235,9 @@ const ITEM_RENAME = { wand: 'oakWand', bow: 'shortBow', axe: 'battleAxe', book: 
 const JOB_RENAME = { princess: 'royal' };
 export function migrate(s) {
   s.fx = []; s.folk = s.folk || []; s.animals = s.animals || [];
+  if (!Array.isArray(s.activeQuests)) s.activeQuests = [];
+  if (s.quest && !s.activeQuests.some(q => q.id === s.quest.id)) s.activeQuests.push(s.quest);
+  delete s.quest;
   s.world = s.world && typeof s.world === 'object' ? s.world : { code: null, zoneMons: null, cave: { ...CAVE } };   // old saves: full rosters, original cave spot
   if (s.world.code === undefined) s.world.code = null;                // unknown for saves made before world codes
   if (!(s.world.cave && Number.isInteger(s.world.cave.x) && Number.isInteger(s.world.cave.y))) s.world.cave = { ...CAVE };

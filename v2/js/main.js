@@ -76,7 +76,8 @@ function frame(now) {
   const wk = s.time.year * 100 + s.time.month * 5 + s.time.week;
   if (wk !== lastWeek) { if (lastWeek !== -1 && !game.noSave) save(s); lastWeek = wk; }
   // music follows the action
-  const q = s.quest, near = q && q.spot && Math.hypot(rnd.cam.x - q.spot[0], rnd.cam.y - q.spot[1]) < 14;
+  const q = s.activeQuests.filter(q => q.spot).sort((a, b) => Math.hypot(rnd.cam.x - a.spot[0], rnd.cam.y - a.spot[1]) - Math.hypot(rnd.cam.x - b.spot[0], rnd.cam.y - b.spot[1]))[0];
+  const near = q && Math.hypot(rnd.cam.x - q.spot[0], rnd.cam.y - q.spot[1]) < 14;
   const summer = s.time.month >= 6 && s.time.month <= 9;
   game.audio.music(near ? (q.kind === 'boss' ? 'boss' : q.kind === 'dungeon' ? 'cave' : 'battle') : rnd.night > 0.5 ? 'night' : summer ? 'town2' : 'town');
   requestAnimationFrame(frame);
