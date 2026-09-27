@@ -1,5 +1,5 @@
 // DOM UI: top bar, ticker, bottom menu panels, inspector, fanfares. Uses event delegation via data-act.
-import { FAC, DECOR, SPR, JOBS, ITEMS, MATS, MONSTERS, BOSSES, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
+import { FAC, DECOR, SPR, JOBS, ITEMS, MATS, MONSTERS, BOSSES, FRONTIERS, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
 import { IMG, iconCanvas, itemIcon, keyIcon, goldified, tinted } from './assets.js';
 import { defOf, maxHp, stat, save, wipeSave, valid, migrate, newGame, seedCode, parseSeed, MASTERY } from './state.js';
 
@@ -13,7 +13,8 @@ const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 export class UI {
   constructor(game) {
     this.game = game; this.panel = null; this.buildCat = 'lodging'; this.pointerDown = false; this.lastHtml = {};
-    this.questPick = null; this.jobPick = false; this.partnerPick = false; this.seenLog = 0;
+    this.questPick = null; this.frontierPick = null; this.frontierParty = []; this.relicPick = null;
+    this.jobPick = false; this.partnerPick = false; this.seenLog = 0;
     this.buildMode = null; this.showNames = false;
     this.bind();
   }
@@ -51,7 +52,7 @@ export class UI {
     const tb = $('#topbar').offsetHeight;                        // the top bar wraps on phones (more when happenings show)
     if (tb !== this.tbH) { this.tbH = tb; for (const id of ['#ticker', '#toast', '#goals']) $(id).style.top = (tb + 2) + 'px'; }
     if (this.pointerDown) return;
-    if (this.panel && ['people', 'quests', 'village', 'develop', 'jobs'].includes(this.panel)) this.renderPanel();
+    if (this.panel && ['people', 'quests', 'frontiers', 'village', 'develop', 'jobs'].includes(this.panel)) this.renderPanel();
     if (this.game.rnd.selected) this.renderInspector();
     if (this.buildMode) this.renderBuildbar();
   }
@@ -88,6 +89,7 @@ export class UI {
   toggle(name) { if (this.panel === name) this.close(); else this.open(name); }
   open(name) {
     this.exitBuild(); this.panel = name; this.questPick = null;
+    if (name === 'frontiers') { this.frontierPick = null; this.frontierParty = []; this.relicPick = null; }
     document.querySelectorAll('.mbtn').forEach(b => b.classList.toggle('on', b.dataset.panel === name));
     $('#panel').classList.remove('hidden'); $('#panel').className = 'win ' + name; this.lastHtml.panel = null; this.renderPanel();
     $('#panel-body').scrollTop = 0;
@@ -98,7 +100,7 @@ export class UI {
     this.lastHtml[key] = html; el.innerHTML = html; return true;
   }
   renderPanel() {
-    const titles = { jobs: 'Class Hall', build: 'Build', people: 'Adventurers', quests: 'Quest Board', develop: 'Blacksmith · Develop', village: 'Village', system: 'System' };
+    const titles = { jobs: 'Class Hall', build: 'Build', people: 'Adventurers', quests: 'Quest Board', frontiers: 'Frontiers', develop: 'Blacksmith · Develop', village: 'Village', system: 'System' };
     $('#panel-title').textContent = titles[this.panel];
     const html = this['panel_' + this.panel]();
     const body = $('#panel-body');
@@ -168,7 +170,8 @@ export class UI {
   }
   panel_quests() {
     const s = this.s; let h = '';
-    h += `<p class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random capable adventurers.</p>`;
+    const captured = FRONTIERS.filter(f => s.frontier?.completed?.[f.id]).length;
+    h += `<div class="row spread"><span class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random capable adventurers.</span><button class="btn" data-act="open" data-k="frontiers">Frontiers ${captured}/${FRONTIERS.length}</button></div>`;
     for (const q of s.activeQuests) {
       const alive = s.mons.filter(m => m.quest === q.id && m.hp > 0);
       h += `<div class="section">Underway: ${esc(q.name)}</div><div class="row spread"><span class="muted">${q.kind === 'dungeon' ? `Floor ${q.floor}/${q.floors}` : alive.length + ' foes remain'}</span><button class="btn sm" data-act="watchQuest" data-id="${q.id}">Watch</button></div><div class="grid">`;
@@ -197,13 +200,82 @@ export class UI {
     }
     return h;
   }
+  panel_frontiers() {
+    const s = this.s, completed = s.frontier?.completed || {};
+    let h = `<div class="row spread"><span class="muted">Conquer each den once to claim its land, permanent village bonus and unique legendary relic.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
+      <p class="muted frontier-note">Dormant sites have no boss waiting on the map. Choose a party and depart to begin the fight. A failed conquest can be retried; a captured site never repeats.</p>`;
+    const picked = FRONTIERS.find(f => f.id === this.frontierPick);
+    if (picked) h += this.frontierDetail(picked);
+    h += '<div class="section">Territories</div><div class="grid frontier-grid">';
+    for (const f of FRONTIERS) {
+      const active = s.activeQuests.find(q => q.frontier === f.id), captured = !!completed[f.id], block = this.sim.frontierBlock(f.id);
+      const req = f.requires.length ? f.requires.map(id => FRONTIERS.find(x => x.id === id)?.name || id).join(', ') : 'None';
+      const status = captured ? '<span class="tag res">Captured</span>' : active ? '<span class="tag gold">Underway</span>'
+        : block ? `<span class="tag ko">${esc(block)}</span>` : '<span class="tag vis">Ready</span>';
+      const relic = ITEMS[f.relic], q = this.sim.frontierQuest(f.id);
+      h += `<div class="card frontier-card ${this.frontierPick === f.id ? 'sel' : ''}" data-act="pickFrontier" data-id="${f.id}"><div class="thumb"><i data-face="bf_${f.boss}"></i></div><div class="meta">
+        <div class="name">${esc(f.name)}</div><div>${status}</div><div class="sub">${esc(f.bossName)} · Suggested Lv${f.rec}+ · (${f.x}, ${f.y})</div>
+        <div class="sub">Fee ${q.fee}G · Victory ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop</div>
+        <div class="sub">Land bonus: ${esc(f.benefit)}</div><div class="sub">Legendary: ${esc(relic.name)} · ${esc(statLine(relic))}</div><div class="sub">Requires: ${esc(req)}</div>
+        <button class="btn sm" data-act="mapFrontier" data-id="${f.id}">${active ? 'Watch' : 'Show on map'}</button></div></div>`;
+    }
+    h += '</div>';
+    h += this.frontierRelics();
+    return h;
+  }
+  frontierDetail(f) {
+    const s = this.s, q = this.sim.frontierQuest(f.id), active = s.activeQuests.find(x => x.frontier === f.id), captured = !!s.frontier?.completed?.[f.id];
+    let h = `<div class="section">${esc(f.name)}</div><div class="row spread"><span class="muted">${esc(f.bossName)} · ${esc(f.benefit)} · ${esc(ITEMS[f.relic].name)}</span><button class="btn sm" data-act="mapFrontier" data-id="${f.id}">${active ? 'Watch fight' : 'Show on map'}</button></div>`;
+    if (active) {
+      const alive = s.mons.filter(m => m.quest === active.id && m.hp > 0).length;
+      h += `<p class="muted">Conquest underway · ${alive} foe${alive === 1 ? '' : 's'} remain.</p><div class="grid">`;
+      for (const id of active.members) { const a = s.advs.find(x => x.id === id); if (!a) continue;
+        h += `<div class="card" data-act="selAdv" data-id="${a.id}"><div class="thumb"><i data-face="f_${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="bar hp"><i style="width:${a.hp / maxHp(a, s) * 100}%"></i></div><div class="sub">${a.ko ? 'KO' : JOBS[a.job].name + ' Lv' + a.lv}</div></div></div>`; }
+      return h + '</div>';
+    }
+    if (captured) return h + `<p class="check">Captured permanently. This land bonus is active and its legendary reward cannot be earned again.</p>`;
+    const block = this.sim.frontierBlock(f.id);
+    if (block) return h + `<p class="cross">${esc(block)}</p>`;
+    if (!q) return h + '<p class="cross">This frontier is unavailable.</p>';
+    const cands = this.sim.questCandidates().sort((a, b) => b.lv - a.lv);
+    this.frontierParty = (this.frontierParty || []).filter(id => cands.some(a => a.id === id));
+    const party = this.frontierParty;
+    const extra = Math.max(0, party.length - 4), cost = this.sim.questCost(q, party.length), ready = this.sim.questReady(q).length;
+    h += `<div class="row" style="margin:8px 0"><button class="btn" data-act="startFrontier" data-id="${q.id}" ${!party.length || s.gold < cost ? 'disabled' : ''}>Depart (${cost}G)</button>
+      <button class="btn sm" data-act="instantFrontier" data-id="${q.id}" ${!ready || s.gold < q.fee ? 'disabled' : ''}>Instant Depart (${q.fee}G)</button><span class="muted">${party.length}/8 selected · ${q.fee}G entry + ${extra * this.sim.questExtraFee(q)}G extras</span></div>
+      <div class="muted" style="margin:4px 0">Up to 4 random capable adventurers are selected when you choose the site. Tap to adjust; slots 5–8 cost ${this.sim.questExtraFee(q)}G each. The boss appears only after departure.</div><div class="grid">`;
+    const rec = this.sim.questLevel(q);
+    for (const a of cands) h += `<div class="card ${party.includes(a.id) ? 'sel' : ''}" data-act="togFrontierParty" data-id="${a.id}"><div class="thumb"><i data-char="${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv}${a.resident ? '' : ' · visitor'}${a.lv < rec ? ' · below suggested level' : ''}</div></div></div>`;
+    return h + `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
+  }
+  frontierRelics() {
+    const s = this.s, relics = s.frontier?.relics || {}, earned = FRONTIERS.filter(f => Object.prototype.hasOwnProperty.call(relics, f.relic));
+    let h = '<div class="section">Legendary relics</div>';
+    if (!earned.length) return h + '<p class="muted">Captured frontiers add their one-of-a-kind relic here.</p>';
+    const itemId = earned.some(f => f.relic === this.relicPick) ? this.relicPick : null;
+    if (itemId) {
+      const ownerId = relics[itemId], owner = s.advs.find(a => a.id === ownerId), ownerAway = owner && (owner.ko || this.sim.questForPawn(owner.id));
+      h += `<div class="relic-transfer"><div class="row"><button class="btn sm" data-act="equipRelic" data-id="${itemId}" data-pawn="none" ${ownerId == null || ownerAway ? 'disabled' : ''}>Return to vault</button><span class="muted">Choose a resident to equip or transfer this single relic.${ownerAway ? ' Its owner must return and recover first.' : ''}</span></div><div class="grid" style="margin-top:6px">`;
+      for (const a of s.advs.filter(a => a.resident).sort((a, b) => b.lv - a.lv)) {
+        const unavailable = ownerAway || a.ko || a.task?.type === 'quest' || !!this.sim.questForPawn(a.id), current = ownerId === a.id;
+        h += `<div class="card ${current ? 'sel' : ''} ${unavailable ? 'locked' : ''}" ${unavailable ? '' : `data-act="equipRelic" data-id="${itemId}" data-pawn="${a.id}"`}><div class="thumb"><i data-face="f_${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv}${current ? ' · equipped' : unavailable ? a.ko ? ' · KO' : ' · away on quest' : ''}</div></div></div>`;
+      }
+      h += '</div></div>';
+    }
+    h += '<div class="grid" style="margin-top:6px">';
+    for (const f of earned) {
+      const it = ITEMS[f.relic], owner = s.advs.find(a => a.id === relics[f.relic]);
+      h += `<div class="card ${this.relicPick === f.relic ? 'sel' : ''}" data-act="pickRelic" data-id="${f.relic}"><div class="thumb"><i data-item="${f.relic}" data-scale="3"></i></div><div class="meta"><div class="name">${esc(it.name)}</div><div class="sub">${esc(statLine(it))}</div><div class="sub">${owner ? 'Equipped by ' + esc(owner.name) : 'In the guild vault'}</div></div></div>`;
+    }
+    return h + '</div>';
+  }
   panel_develop() {
     const s = this.s, smith = s.buildings.some(b => b.type === 'smith'), tab = this.devTab || 'weapon';
     let h = `<div class="row">${Object.entries(MATS).map(([k, m]) => `<span class="chip"><i data-icon="i_${m.icon}" data-scale="1"></i>${m.name} ${s.mats[k] || 0}</span>`).join('')}</div>`;
     if (!smith) h += `<p class="muted">Build a <b>Blacksmith</b> to develop new gear. Monsters drop materials; treasure chests can also reveal new gear.</p>`;
     const tabs = [['weapon', 'Weapons'], ['armor', 'Armor'], ['acc', 'Accessories'], ['item', 'Items']];
-    h += `<div class="tabs" style="margin-top:6px">${tabs.map(([k, n]) => `<button class="btn sm ${tab === k ? 'on' : ''}" data-act="devTab" data-k="${k}">${n} ${Object.keys(ITEMS).filter(id => ITEMS[id].slot === k && s.unlocked[id]).length}/${Object.values(ITEMS).filter(i => i.slot === k).length}</button>`).join('')}</div><div class="grid">`;
-    const list = Object.entries(ITEMS).filter(([, it]) => it.slot === tab).sort((p, q) => p[1].price - q[1].price);
+    h += `<div class="tabs" style="margin-top:6px">${tabs.map(([k, n]) => `<button class="btn sm ${tab === k ? 'on' : ''}" data-act="devTab" data-k="${k}">${n} ${Object.keys(ITEMS).filter(id => !ITEMS[id].legendary && ITEMS[id].slot === k && s.unlocked[id]).length}/${Object.values(ITEMS).filter(i => !i.legendary && i.slot === k).length}</button>`).join('')}</div><div class="grid">`;
+    const list = Object.entries(ITEMS).filter(([, it]) => !it.legendary && it.slot === tab).sort((p, q) => p[1].price - q[1].price);
     for (const [id, it] of list) {
       const have = s.unlocked[id], dev = it.dev;
       const st = statLine(it);
@@ -284,8 +356,9 @@ export class UI {
   }
   merchantCards(offer) {
     const s = this.s;
-    if (!offer.length) return `<p class="muted">The merchant is sold out.</p>`;
-    return `<div class="grid">` + offer.map(o => { const it = ITEMS[o.id];
+    const sale = offer.filter(o => ITEMS[o.id] && !ITEMS[o.id].legendary);
+    if (!sale.length) return `<p class="muted">The merchant is sold out.</p>`;
+    return `<div class="grid">` + sale.map(o => { const it = ITEMS[o.id];
       return `<div class="card"><div class="thumb"><i data-item="${o.id}" data-scale="3"></i></div><div class="meta"><div class="name">${esc(it.name)}</div><div class="sub">${statLine(it)}</div><div class="sub">Shops sell it for ${it.price}G</div>
         <button class="btn sm" data-act="buyMerchant" data-id="${o.id}" ${s.gold < o.price ? 'disabled' : ''}>Licence ${o.price}G</button></div></div>`; }).join('') + `</div>`;
   }
@@ -352,7 +425,7 @@ export class UI {
       h += `<table class="t"><tr><td>Appeal</td><td>${this.sim.appeal(b)}</td></tr>${F.price ? `<tr><td>Price</td><td>${this.sim.price(b)}G</td></tr>` : ''}
         ${F.kind === 'home' ? `<tr><td>Residents</td><td>${s.advs.filter(a => a.home === b.id).map(a => esc(a.name)).join(', ') || 'Vacant'} (${this.sim.capOf(b)} max)</td></tr>` : ''}
         <tr><td>Visits</td><td>${b.visits}</td></tr><tr><td>Total sales</td><td>${b.sales}G</td></tr><tr><td>Inside now</td><td>${occ.map(a => esc(a.name)).join(', ') || '—'}</td></tr></table>`;
-      if (F.kind === 'shop') h += `<div class="muted">Stock: ${Object.keys(s.unlocked).filter(id => ITEMS[id].slot === F.slot).map(id => ITEMS[id].name).join(', ') || 'nothing yet'}</div>`;
+      if (F.kind === 'shop') h += `<div class="muted">Stock: ${Object.keys(s.unlocked).filter(id => ITEMS[id] && !ITEMS[id].legendary && ITEMS[id].slot === F.slot).map(id => ITEMS[id].name).join(', ') || 'nothing yet'}</div>`;
       h += `<div class="row" style="margin-top:6px">${b.lv < 5 ? `<button class="btn sm" data-act="upgrade" data-id="${b.id}" ${s.gold < this.sim.upgradeCost(b) ? 'disabled' : ''}>Upgrade ${this.sim.upgradeCost(b)}G</button>` : '<span class="muted">Max level</span>'}
         ${b.type !== 'guild' ? `<button class="btn sm" data-act="demolish" data-id="${b.id}">Remove (+${this.sim.refund(b)}G)</button>` : `<button class="btn sm" data-act="open" data-k="quests">Quests</button><button class="btn sm" data-act="classes">Classes</button>`}</div>`;
     } else h += `<div class="row"><button class="btn sm" data-act="demolish" data-id="${b.id}">Remove (+${this.sim.refund(b)}G)</button></div>`;
@@ -361,10 +434,12 @@ export class UI {
   inspMon(m) {
     if (!m || m.hp <= 0) return '';
     const M = m.boss ? BOSSES[m.boss] : MONSTERS[m.type];
+    const frontier = m.frontier && FRONTIERS.find(f => f.id === m.frontier);
     const face = m.boss ? `bf_${m.boss}` : M.human ? `f_${M.spr}` : `mf_${M.spr}`;
-    const tag = m.golden ? '<span class="tag gold">Golden — catch it for a fortune!</span>' : m.raid ? `<span class="tag ko">${m.raid === 'bandits' ? 'Bandit' : 'Stampede'} raider</span>`
+    const tag = frontier ? `<span class="tag gold">Guardian of ${esc(frontier.name)}</span>` : m.golden ? '<span class="tag gold">Golden — catch it for a fortune!</span>' : m.raid ? `<span class="tag ko">${m.raid === 'bandits' ? 'Bandit' : 'Stampede'} raider</span>`
       : m.elite ? '<span class="tag gold">Elite — ×2.5 EXP & gold, ×2 drops</span>' : M.human ? '<span class="tag ko">Outlaw</span>' : '';
-    return `<div class="head"><i data-face="${face}" class="face" ${m.golden ? 'data-gold="1"' : m.elite ? 'data-tint="150"' : ''}></i><div><h3>${m.golden ? 'Golden Slime' : (m.elite ? 'Elite ' : '') + M.name}</h3><div class="muted">Lv${m.lv}${m.quest ? ' · Quest target' : ''}</div>${tag}</div></div>
+    const name = frontier ? frontier.bossName : m.golden ? 'Golden Slime' : (m.elite ? 'Elite ' : '') + M.name;
+    return `<div class="head"><i data-face="${face}" class="face" ${m.golden ? 'data-gold="1"' : m.elite ? 'data-tint="150"' : ''}></i><div><h3>${esc(name)}</h3><div class="muted">Lv${m.lv}${m.quest ? ' · Quest target' : ''}</div>${tag}</div></div>
       <div class="row"><span style="width:34px">HP</span><div class="bar hp" style="flex:1"><i style="width:${m.hp / m.mhp * 100}%"></i></div><span class="muted">${m.hp}/${m.mhp}</span></div>
       <div class="stats"><div><b>ATK</b> ${m.atk}</div><div><b>DEF</b> ${m.def}</div></div>
       <div class="muted">Drops: ${Object.keys(M.drops || {}).map(k => MATS[k].name).join(', ')}</div>`;
@@ -392,9 +467,17 @@ export class UI {
     this.charterRender = render;
     this.game.modal = true; box.classList.remove('hidden'); render();
   }
-  deselect() { this.game.rnd.selected = null; this.partnerPick = false; this.game.follow = null; $('#inspector').classList.add('hidden'); this.lastHtml.insp = null; }
+  deselect() { this.game.rnd.selected = null; this.game.rnd.frontierFocus = null; this.partnerPick = false; this.game.follow = null; $('#inspector').classList.add('hidden'); this.lastHtml.insp = null; }
   select(sel) {
-    this.game.rnd.selected = sel; this.partnerPick = false; this.lastHtml.insp = null; this.renderInspector(); this.game.audio.sfx('click');
+    this.game.rnd.selected = sel; this.game.rnd.frontierFocus = null; this.partnerPick = false; this.lastHtml.insp = null; this.renderInspector(); this.game.audio.sfx('click');
+  }
+  showFrontier(id) {
+    const f = FRONTIERS.find(x => x.id === id); if (!f) return;
+    if (this.panel !== 'frontiers') this.open('frontiers');
+    this.game.rnd.frontierFocus = id; this.frontierPick = id; this.relicPick = null;
+    const q = this.sim.frontierQuest(id), blocked = this.sim.frontierBlock(id);
+    this.frontierParty = q && !blocked ? this.sim.autoQuestParty(q.id) : [];
+    this.lastHtml.panel = null; this.renderPanel(); $('#panel-body').scrollTop = 0;
   }
 
   // ---------- build mode ----------
@@ -428,11 +511,18 @@ export class UI {
       case 'demolish': { const b = s.buildings.find(o => o.id === +d.id); if (b) this.ask(`Remove the ${defOf(b.type).name}? You get back ${sim.refund(b)}G.`, 'Remove', () => { err(sim.demolish(b)); this.deselect(); }); break; }
       case 'open': this.open(d.k); break;
       case 'classes': this.jobFor = null; this.open('jobs'); break;
+      case 'pickFrontier': this.showFrontier(d.id); audio.sfx('click'); break;
+      case 'mapFrontier': { const f = FRONTIERS.find(x => x.id === d.id); if (f) { this.game.rnd.frontierFocus = f.id; this.close(); this.game.centerOn(f.x, f.y); } break; }
+      case 'togFrontierParty': { const id = +d.id; if (this.frontierParty.includes(id)) this.frontierParty = this.frontierParty.filter(x => x !== id); else if (this.frontierParty.length < 8 && sim.questCandidates().some(x => x.id === id)) this.frontierParty.push(id); else this.toast('A party can have at most 8 available adventurers'); this.renderPanel(); audio.sfx('click'); break; }
+      case 'startFrontier': if (err(sim.startQuest(d.id, this.frontierParty || []))) { this.frontierParty = []; audio.sfx('quest'); } this.renderPanel(); break;
+      case 'instantFrontier': if (err(sim.instantQuest(d.id))) { this.frontierParty = []; audio.sfx('quest'); } this.renderPanel(); break;
+      case 'pickRelic': this.relicPick = this.relicPick === d.id ? null : d.id; this.renderPanel(); audio.sfx('click'); break;
+      case 'equipRelic': err(sim.equipRelic(d.id, d.pawn === 'none' ? null : +d.pawn)); this.renderPanel(); break;
       case 'pickQuest': this.questPick = this.questPick === +d.id ? null : +d.id; this.party = this.questPick ? sim.autoQuestParty(this.questPick) : []; this.renderPanel(); audio.sfx('click'); break;
       case 'togParty': { const id = +d.id; if (this.party.includes(id)) this.party = this.party.filter(x => x !== id); else if (this.party.length < 8 && sim.questCandidates().some(a => a.id === id)) this.party.push(id); else this.toast('A party can have at most 8 available adventurers'); this.renderPanel(); audio.sfx('click'); break; }
       case 'startQuest': if (err(sim.startQuest(+d.id, this.party || []))) { this.questPick = null; this.party = null; this.game.audio.sfx('quest'); } this.renderPanel(); break;
       case 'instantQuest': if (err(sim.instantQuest(+d.id))) { this.questPick = null; this.party = null; audio.sfx('quest'); } this.renderPanel(); break;
-      case 'watchQuest': { const q = s.activeQuests.find(q => q.id === +d.id); if (q) { this.close(); this.game.centerOn(q.spot[0], q.spot[1]); } break; }
+      case 'watchQuest': { const id = d.id.startsWith('frontier:') ? d.id : +d.id, q = s.activeQuests.find(q => q.id === id); if (q) { this.close(); this.game.centerOn(q.spot[0], q.spot[1]); } break; }
       case 'develop': err(sim.develop(d.id)); this.renderPanel(); break;
       case 'event': err(sim.runEvent(d.id)); this.renderPanel(); break;
       case 'buyMerchant': err(sim.buyMerchant(d.id)); if (this.panel) this.renderPanel(); this.lastHtml.insp = null; this.renderInspector(); break;

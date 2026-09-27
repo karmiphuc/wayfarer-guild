@@ -64,6 +64,7 @@ Dependency order (also the bundle order in `tools/bundle.py`):
 | `gold, tp, pop, stars` | money · Town Points · popularity (float) · village rank 0–5 |
 | `mats {wood, hide, herb, ore, crystal}` | village materials (monster drops) used to develop gear |
 | `town {x0,y0,x1,y1}` | buildable rectangle (grows with the Expand event) |
+| `mapWidth, mapHeight`, `frontier {completed, relics}` | 152x112 map; completed site IDs grant additional buildable rectangles and bonuses; relic item IDs map to one resident owner ID or `null` in the vault |
 | `ground` (string), `roads` (string of '0'/'1'), `props[]` | terrain detail per cell · road flags · trees/rocks/cave `{k,x,y,w,block,soft?}` |
 | `buildings[]` | `{id, type, x, y, lv, sales, visits, occ[], v?, free?}` — `type` is a key of `FAC` or `DECOR`; `free` = charter gift (refunds 0 G) |
 | `advs[]` | adventurers (below) |
@@ -121,6 +122,37 @@ Active quest membership reserves a pawn even while recovering in the inn; it can
 After recovery it resumes its original quest. Each ending removes only that quest and its own matching pawn tasks.
 Every active quest has a separate Watch button and map marker; cave bars and floor labels stack for concurrent parties.
 Music follows the nearest active quest.
+
+### Frontier conquests
+
+The world is 152x112 tiles (four times the original area). `expandWorld()` preserves the original 76x56 coordinates,
+buildings, actors and roads, padding each terrain/road row rather than reinterpreting its stride. Added terrain uses a
+separate deterministic RNG; migration leaves the running simulation seed untouched and is idempotent. The frontier
+extends east and south, with sparse scenery and cleared den approaches. Ordinary spawns, visitor arrival/departure
+and raids retain the original home-region bounds and population caps.
+
+`FRONTIERS` defines eight connected one-time challenges, prerequisites, rank/level guidance, land, bonuses and relics.
+Sites are data and map markers only; opening a site never spawns a monster. `frontierQuest()` returns a virtual quest
+with ID `frontier:<site>`. `startQuest()` validates rank, prerequisites, membership and cost before spawning its single
+guardian. It shares normal party selection and extra fees, but allows 600 seconds for the longer journey and fight.
+Failure cleans up the guardian and permits retry. Victory records completion once and grants land, a small permanent
+bonus and one relic. It does not mark the reused boss artwork's regular quest complete. Completed sites cannot repeat.
+
+`buildAreas()` combines the original town with captured rectangles; `townDist()` and footprint validation use that union.
+Capture clears blocking scenery and rebuilds paths. Normal paid expansion still expands only the original town.
+Distant facility visits receive travel time proportional to distance, initialized on the visit task when first needed.
+Bonuses derive from the completion ledger via `frontierBonus()`, never from repeatedly incremented counters.
+
+Legendary accessories have `legendary: true` and cannot be developed, discovered as shop stock, purchased or duplicated.
+`equipRelic()` moves the one physical copy between the vault and residents, returning a replaced relic to the vault;
+owners away on quests or KO must return first. Autonomous shopping cannot replace an equipped relic. Migration
+reconciles equipped copies against the eight-entry ownership ledger.
+
+The Frontiers panel is reached from the Quest Board or by tapping a den. It shows locks, rewards, party controls,
+capture status and the relic vault. Show on map centers and outlines the territory. The renderer reuses one fixed
+native-resolution ground canvas (about 16.6 MiB), rebuilding only when roads or claimed land change; it does not allocate
+a new full-map surface every frame. A* has a map-sized search budget. Neither the world size nor inactive sites
+increase monster population or create recurring boss timers.
 
 ## 4b. Replayability layer — happenings, charters, seeded world (`happenings.js` + `sim.js`)
 
@@ -192,7 +224,7 @@ Not in DV2; our own. Everything is driven by the seeded RNG, so **the same world
 
 - Device pixel ratio capped at 2; `scale = round(zoom × dpr)` device pixels per source pixel (always an integer).
 - Static layer (`buildStatic`): ground tiles + road autotiles (47-tile blob set in `ROAD_TILES`, signature N,E,S,W,NE,SE,SW,NW),
-  cached until `s.roads` or `s.town` change.
+  cached until `s.roads`, `s.town` or captured territories change.
 - Each frame: collect visible props, buildings, adventurers, folk, animals, village monsters, wild monsters, happening NPCs → sort by
   foot y → draw. Then build ghost, FX, quest marker, seasonal particles (rain during a Rainy Week), night tint (multiply),
   `drawSky` (rain gloom, pixel fog from `fog.png`, warm sun, meteor streaks at night), then screen-space overlays (damage

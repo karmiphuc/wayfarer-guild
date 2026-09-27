@@ -63,6 +63,10 @@ try {
 { const r = run('node', ['tests/quests.mjs']);
   r.status ? fail('quest regression checks', r.stdout + (r.stderr || '')) : ok('quests', r.stdout.trim()); }
 
+// Expanded-map frontiers: dormant bosses, retry cleanup, one-time rewards and old-save stride migration.
+{ const args = full ? ['--expose-gc', 'tests/frontier.mjs', '--soak'] : ['tests/frontier.mjs']; const r = run('node', args);
+  r.status ? fail('frontier lifecycle checks', r.stdout + (r.stderr || '')) : ok('frontiers', r.stdout.trim()); }
+
 // 5. bundle builds and parses
 { const out = fs.mkdtempSync(path.join(os.tmpdir(), 'wg-bundle-'));
   const r = run('python3', ['tools/bundle.py', '--out', out]);

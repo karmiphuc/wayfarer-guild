@@ -42,7 +42,7 @@ v2/
   css/style.css       all styling; 9-slice wood UI via border-image
   js/                 SOURCE OF TRUTH — edit these
     jobs.js           29 classes (JOBS), 29 mastery perks (PERKS), job-change costs (TIER_TP), visitor pools
-    items.js          70 items: weapons / armor / accessories / consumables (ITEMS), which shop sells what (SHOP_SLOTS)
+    items.js          70 shop items + 8 unique relics (ITEMS), which shop sells what (SHOP_SLOTS)
     happenings.js     weekly random HAPPENINGS, new-game village CHARTERS, per-world roster sizes (ROSTER_SIZE)
     data.js           everything else static: map size, sprites (SPR), facilities (FAC), decor (DECOR), traits/titles,
                       events, monsters, zone spawn lists (ZONE_MONS), bosses, ranks. Re-exports jobs.js, items.js, happenings.js.
@@ -122,13 +122,14 @@ v2/
 
 ## 7. Project facts you should not re-derive
 
-- Map 76×56 tiles of 16 px. The village is a rectangle in the middle (`s.town`), monsters roam 4 zones around it
+- Map 152×112 tiles of 16 px; the original 76×56 home region retains its coordinates. Buildable land is `s.town` plus captured frontier rectangles (`buildAreas(s)`). Monsters roam 4 home zones
   (zone = distance from the ORIGINAL town rect; south is gentle). The Old Cave entrance is random per world (`cavePos(s)`;
   (36,7) in saves from before world codes).
 - Every village is founded from a world code (the seed): it fixes the monster species per zone (`ROSTER_SIZE`), the cave spot
   and the 3 charters offered. Weekly happenings (`HAPPEN_CHANCE` 0.37 ≈ one every 2.7 weeks) use the same seeded RNG, so code +
   choices replay identically.
 - Visitors (non-residents) are capped per rank by `VISITOR_CAP` = 5/5/10/15/20/30 for ★0–★5 (owner's play-test call).
+- Eight `FRONTIERS` sites spawn a guardian only when challenged. Completion grants land, a small bonus and one legendary accessory; never put these relics in shop unlocks. See ARCHITECTURE's Frontier conquests section.
 - 72 monster types: 66 creatures + 6 outlaws (`human: true` — human pawns drawn from character sheets with a weapon; they roam
   zones 3–4 and form the Bandit Raid gang). 6% of wild spawns are Elites (`ELITE_CHANCE`: recoloured, crown, ×2.5 EXP/gold).
 - 1 in-game week = 30 s at 1× speed (`WEEK_SECONDS`), 4 weeks/month, sim step `DT = 0.1 s`, max 40 steps per frame.

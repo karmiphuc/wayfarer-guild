@@ -65,7 +65,7 @@ for (const [p, P] of Object.entries(PERKS)) {
 for (const [i, pool] of VISITOR_JOBS.entries()) for (const j of pool) if (!JOBS[j]) err(`VISITOR_JOBS[${i}]: "${j}" is not a job`);
 
 // ---------------- items ----------------
-const KNOWN_ITEM_KEYS = ['name', 'slot', 'type', 'hand', 'icon', 'tint', 'price', 'dev', 'bow', 'atk', 'def', 'mag', 'hp', 'crit', 'spd', 'heal'];
+const KNOWN_ITEM_KEYS = ['name', 'slot', 'type', 'hand', 'icon', 'tint', 'price', 'dev', 'bow', 'atk', 'def', 'mag', 'hp', 'crit', 'spd', 'heal', 'legendary'];
 for (const [id, it] of Object.entries(ITEMS)) {
   const where = `ITEMS.${id}`;
   if (!['weapon', 'armor', 'acc', 'item'].includes(it.slot)) err(`${where}: bad slot "${it.slot}"`);

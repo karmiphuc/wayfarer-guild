@@ -1,10 +1,10 @@
 // Simulation: calendar, adventurer AI, economy, field combat, monsters, quests, titles, stars.
 // Fixed step (DT). Everything reads/writes the plain state `s`; the renderer only reads it.
-import { MAP_W, MAP_H, FAC, DECOR, JOBS, ITEMS, MONSTERS, BOSSES, PERSONA, FAC_TRAITS, TITLES, RANKS, EVENTS, MATS, TRAIT_NAMES, PERKS, TIER_TP, SHOP_SLOTS,
+import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, FAC, DECOR, JOBS, ITEMS, MONSTERS, BOSSES, PERSONA, FAC_TRAITS, TITLES, RANKS, EVENTS, MATS, TRAIT_NAMES, PERKS, TIER_TP, SHOP_SLOTS,
   ZONE_MONS, ZONE_POP, ZONE_LV, HAPPENINGS, HAPPEN_CHANCE, CHARTERS, VISITOR_CAP, ELITE_CHANCE } from './data.js';
 import { PathGrid } from './path.js';
 import { makeRng } from './rng.js';
-import { defOf, buildingAt, roadAt, setRoad, place, spawnAdventurer, stat, maxHp, log, zoneAt, townDist, ZONE_BIOME, CAVE, cavePos, shuffle, teachJob, perkSum, gearSum, LV_CAP, JOB_CAP, MASTERY } from './state.js';
+import { defOf, buildingAt, roadAt, setRoad, place, spawnAdventurer, stat, maxHp, log, zoneAt, townDist, frontierBonus, ZONE_BIOME, CAVE, cavePos, shuffle, teachJob, perkSum, gearSum, LV_CAP, JOB_CAP, MASTERY } from './state.js';
 import { BIOMES } from './data.js';
 
 export const DT = 0.1;              // seconds per sim step
@@ -39,11 +39,13 @@ export class Sim {
   cost(type) { return Math.round(defOf(type).cost * (1 + this.charter('buildCost'))); }
   canPlace(type, x, y, free = false) {
     const s = this.s, d = defOf(type); if (!d) return 'unknown';
-    const [w, h] = d.fp, t = s.town;
-    if (x < t.x0 || y < t.y0 || x + w > t.x1 || y + h > t.y1) return 'Outside the village';
+    const [w, h] = d.fp;
+    if (x < 0 || y < 0 || x + w >= MAP_W || y + h >= MAP_H) return 'Outside the map';
     if (!free && d.rank && s.stars < d.rank - 1) return `Needs ${d.rank - 1}★ village`;
     if (!free && d.unique && s.buildings.some(b => b.type === type)) return 'Only one allowed';
     for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) {
+      if (townDist(s, xx, yy) > 0) return 'Outside the village - capture this territory first';
+      if (FRONTIERS.some(f => Math.abs(xx - f.x) <= 1 && Math.abs(yy - f.y) <= 1)) return 'Keep the den entrance clear';
       if (buildingAt(s, xx, yy)) return 'Occupied';
       if (!d.road && roadAt(s, xx, yy)) return 'Road in the way';
       if (d.road && roadAt(s, xx, yy)) return 'Already a road';
@@ -100,7 +102,7 @@ export class Sim {
       }
     }
   }
-  bonus(key) { let v = 0; for (const t of TITLES) if (this.s.titles[t.id] && t.bonus[key]) v += t.bonus[key]; return v; }
+  bonus(key) { let v = frontierBonus(this.s, key); for (const t of TITLES) if (this.s.titles[t.id] && t.bonus[key]) v += t.bonus[key]; return v; }
   eventOn(id) { return this.s.events.some(e => e.id === id); }
 
   // ---------- step ----------
@@ -204,12 +206,12 @@ export class Sim {
   }
   edgeSpawn() {
     const R = this.R; const x = 38 + R.int(-1, 1);
-    return { x, y: MAP_H - 1 };
+    return { x, y: HOME_H - 1 };
   }
   randomCellInZone(z, tries = 60) {
     const R = this.R;
     for (let i = 0; i < tries; i++) {
-      const x = R.int(1, MAP_W - 2), y = R.int(1, MAP_H - 2);
+      const x = R.int(1, HOME_W - 2), y = R.int(1, HOME_H - 2);
       if (Math.abs(x - 38) < 4 && y > 38) continue;   // keep the arrival road clear
       if (zoneAt(x, y) === z && townDist(this.s, x, y) > 1 && this.grid.walkable(x, y)) return [x, y];
     }
@@ -266,8 +268,9 @@ export class Sim {
     for (const slot of ['weapon', 'armor', 'acc']) {
       const shops = this.facilities('shop').filter(b => SHOP_SLOTS[FAC[b.type].slot].includes(slot)); if (!shops.length) continue;
       const cur = a.eq[slot] ? ITEMS[a.eq[slot]] : null, curV = cur && this.canEquip(a, cur) ? this.gearValue(a, cur) : 0;
+      if (cur?.legendary) continue;
       for (const id in this.s.unlocked) {
-        const it = ITEMS[id]; if (!it || it.slot !== slot || !this.canEquip(a, it)) continue;
+        const it = ITEMS[id]; if (!it || it.legendary || it.slot !== slot || !this.canEquip(a, it)) continue;
         const v = this.gearValue(a, it), price = this.itemPrice(id);
         if (v > curV + 1 && price <= a.gold && (!best || v - curV > best.gain)) best = { id, gain: v - curV, shops, price };
       }
@@ -346,10 +349,11 @@ export class Sim {
       case 'visit': {
         const b = s.buildings.find(o => o.id === t.b); if (!b) { a.task = null; break; }
         const [dx, dy] = this.door(b);
+        if (t.travelLimit === undefined) t.travelLimit = 45 + Math.max(0, Math.hypot(dx - a.x, dy - a.y) - 40) * 2;
         if (this.walkTo(a, dx, dy)) {
           if (b.occ.length >= this.capOf(b) && !t.sleep) { if (a.taskT > 25) { a.task = null; this.emote(a, 'annoyed'); a.sat -= 1; } break; }
           a.inside = { b: b.id, t: t.dur, task: t }; b.occ.push(a.id); a.x = dx; a.y = dy - 0.6;
-        } else if (a.taskT > 45) a.task = null;
+        } else if (a.taskT > t.travelLimit) a.task = null;
         break;
       }
       case 'hunt': case 'return': this.huntStep(a, t); break;
@@ -360,7 +364,8 @@ export class Sim {
       }
       case 'camp': { a.energy = Math.min(100, a.energy + DT * 3); a.hp = Math.min(maxHp(a, s), Math.round((a.hp + DT) * 10) / 10); if (a.taskT > t.dur) { a.task = null; a.sat -= 3; this.emote(a, 'sad'); } break; }
       case 'leave': {
-        if (this.walkTo(a, 38, MAP_H - 1)) {
+        if (this.walkTo(a, 38, HOME_H - 1)) {
+          for (const id in s.frontier.relics) if (s.frontier.relics[id] === a.id) s.frontier.relics[id] = null;
           s.advs = s.advs.filter(o => o !== a);
           if (a.sat >= 60) { s.pop += 6; log(s, `${a.name} left happy and will tell friends about the village.`); } else log(s, `${a.name} left the village.`);
         }
@@ -397,7 +402,7 @@ export class Sim {
       case 'train': paid = this.price(b); this.gainXp(a, (6 + b.lv * 3) * (1 + this.bonus('xp')), true); joy = 1 + ap / 6; this.emote(a, 'fire'); break;
       case 'shop': {
         if (t.buy === 'potion') { const P = this.potion(), n = Math.min(3 - a.potions, Math.floor(a.gold / P.price)); if (n > 0) { paid = n * P.price * (1 + this.bonus('shopSales') + this.charter('shopSales')); a.potions += n; } }   // shop sales bonuses count for potions too
-        else if (t.buy && ITEMS[t.buy] && a.gold >= this.itemPrice(t.buy)) {
+        else if (t.buy && ITEMS[t.buy] && !ITEMS[t.buy].legendary && !ITEMS[a.eq[ITEMS[t.buy].slot]]?.legendary && a.gold >= this.itemPrice(t.buy)) {
           const it = ITEMS[t.buy]; paid = this.itemPrice(t.buy); a.eq[it.slot] = t.buy; a.hp = Math.min(a.hp, maxHp(a, s));
           log(s, `${a.name} bought a ${it.name}! (+${paid}G)`, 'coin'); this.emote(a, 'star'); this.bark(a, it.name + '!');
           paid *= 1 + this.bonus('shopSales') + this.charter('shopSales');
@@ -564,12 +569,12 @@ export class Sim {
     const xp = Math.round(M.xp * 1.6 * (1 + m.lv * 0.08) * (1 + this.bonus('xp')) * el);
     const party = s.advs.filter(o => !o.inside && !o.ko && Math.hypot(o.x - m.x, o.y - m.y) < 5);
     for (const o of party) this.gainXp(o, Math.ceil(xp / Math.max(1, party.length) * (party.length > 1 ? 1.3 : 1)));
-    const gold = Math.round(M.gold * (1 + m.lv * 0.05) * (this.eventOn('contest') ? 2 : 1) * (1 + perkSum(a, 'goldPct')) * Math.max(0.1, 1 + this.charter('killGold')) * (m.golden ? 5 : 1) * el);
+    const gold = Math.round(M.gold * (1 + m.lv * 0.05) * (this.eventOn('contest') ? 2 : 1) * (1 + perkSum(a, 'goldPct')) * Math.max(0.1, 1 + this.charter('killGold') + frontierBonus(s, 'killGold')) * (m.golden ? 5 : 1) * el);
     a.gold += gold; a.kills++; s.stats.kills++; s.stats.monthKills++; s.pop += (m.boss ? 30 : 0.25) + perkSum(a, 'popKill');
     this.addSat(a, 1.5);
     // materials go to the village
     const drops = M.drops || {};
-    const md = (1 + this.charter('matDrops')) * (m.elite ? 2 : 1);
+    const md = (1 + this.charter('matDrops')) * (m.elite ? 2 : 1) * (1 + frontierBonus(s, 'matDrops'));
     for (const k in drops) { const n = m.boss ? Math.round(drops[k] * md) : (R.chance(Math.min(1, drops[k] * md)) ? 1 : 0); if (n) { s.mats[k] = (s.mats[k] || 0) + n; s.fx.push({ k: 'mat', x: m.x, y: m.y, t: 0, life: 1, mat: k }); } }
     // treasure chest: discovers new gear for the shops
     if (m.golden || R.chance(m.boss ? 1 : 0.025 * (m.elite ? 3 : 1) * (1 + perkSum(a, 'treasurePct') + this.charter('treasure') + (this.happening('fog') ? 0.5 : 0)))) this.treasure(m, a);
@@ -586,7 +591,7 @@ export class Sim {
   }
   treasure(m, a) {
     const s = this.s;
-    const pool = Object.keys(ITEMS).filter(id => !s.unlocked[id] && ITEMS[id].dev && this.itemTier(id) <= 1 + Math.floor(m.lv / 6));
+    const pool = Object.keys(ITEMS).filter(id => !ITEMS[id].legendary && !s.unlocked[id] && ITEMS[id].dev && this.itemTier(id) <= 1 + Math.floor(m.lv / 6));
     s.fx.push({ k: 'chest', x: m.x, y: m.y, t: 0, life: 1.6 });
     if (pool.length) {
       const id = this.R.pick(pool); s.unlocked[id] = true;
@@ -597,6 +602,7 @@ export class Sim {
   itemTier(id) { const p = ITEMS[id].price; return p < 200 ? 1 : p < 600 ? 2 : p < 1500 ? 3 : p < 3000 ? 4 : 5; }
   devCost(id) { return { ...(ITEMS[id].dev || {}) }; }
   develop(id) {
+    if (!ITEMS[id] || ITEMS[id].legendary) return 'This relic must be earned by capturing its territory';
     const s = this.s; if (!s.buildings.some(b => b.type === 'smith')) return 'Build a Blacksmith first';
     if (s.unlocked[id]) return 'Already developed';
     const cost = this.devCost(id), gold = Math.round(ITEMS[id].price * 1.5);
@@ -692,11 +698,12 @@ export class Sim {
     if (t.b) {
       const b = s.buildings.find(o => o.id === t.b); if (!b) { f.task = null; return; }
       const [dx, dy] = this.door(b);
+      if (t.travelLimit === undefined) t.travelLimit = 40 + Math.max(0, Math.hypot(dx - f.x, dy - f.y) - 40) * 2;
       if (this.walkTo(f, dx, dy)) {
         const p = Math.max(2, Math.round((FAC[b.type].price || 12) * 0.4));
         s.gold += p; s.stats.income += p; b.sales += p; b.visits++; f.inside = 3; f.task = null;
         s.fx.push({ k: 'coin', x: b.x + FAC[b.type].fp[0] / 2, y: b.y, t: 0, life: 1, text: `+${p}G` });
-      } else if (f.taskT > 40) f.task = null;
+      } else if (f.taskT > t.travelLimit) f.task = null;
     } else if (!t.dest || this.walkTo(f, t.dest[0], t.dest[1]) || f.taskT > 25) { f.task = null; }
   }
   animalStep(an) {
@@ -775,7 +782,7 @@ export class Sim {
         const z = Math.min(4, 1 + Math.floor(s.stars / 2)), n = Math.min(10, 4 + Math.round(s.stars * 1.5)), t = s.town, side = R.pick(['n', 'e', 'w']);
         h.data.mobs = []; h.data.side = side; h.data.breaches = 0;
         for (let i = 0; i < n; i++) {
-          const x = side === 'w' ? R.int(1, 4) : side === 'e' ? R.int(MAP_W - 5, MAP_W - 2) : R.int(t.x0, t.x1 - 1);
+          const x = side === 'w' ? R.int(1, 4) : side === 'e' ? R.int(HOME_W - 5, HOME_W - 2) : R.int(t.x0, t.x1 - 1);
           const y = side === 'n' ? R.int(1, 4) : R.int(t.y0 + 2, t.y1 - 3);
           const tx = side === 'w' ? t.x0 : side === 'e' ? t.x1 - 1 : Math.max(t.x0, Math.min(t.x1 - 1, x));
           const ty = side === 'n' ? t.y0 : Math.max(t.y0, Math.min(t.y1 - 1, y));
@@ -854,11 +861,12 @@ export class Sim {
       case 'wanderer': { const a = s.advs.find(o => o.id === h.data.adv); if (a && !a.resident) log(s, `${a.name} the wanderer moved on.`); break; }
     }
   }
-  merchantPool() { const s = this.s, cap = 2 + Math.floor(s.stars / 2); return Object.keys(ITEMS).filter(id => !s.unlocked[id] && ITEMS[id].dev && this.itemTier(id) <= cap); }
+  merchantPool() { const s = this.s, cap = 2 + Math.floor(s.stars / 2); return Object.keys(ITEMS).filter(id => !ITEMS[id].legendary && !s.unlocked[id] && ITEMS[id].dev && this.itemTier(id) <= cap); }
   merchantOffer() {
     return shuffle(this.R, this.merchantPool()).slice(0, 3).map(id => ({ id, price: Math.round(ITEMS[id].price * 2.5) }));
   }
   buyMerchant(id) {
+    if (!ITEMS[id] || ITEMS[id].legendary) return 'Relics cannot be bought';
     const s = this.s, h = this.happening('merchant'); if (!h) return 'The merchant has left';
     const o = h.data.offer.find(o => o.id === id); if (!o) return 'Sold out';
     if (s.unlocked[id]) return 'Already in stock';
@@ -935,11 +943,51 @@ export class Sim {
         name: `Old Cave · ${floors} floors`, desc: 'Delve into the cave north of town. Treasure waits at the bottom.' });
     }
     // the next two undefeated bosses whose star requirement is met
-    const next = Object.entries(BOSSES).filter(([id, B]) => !s.bossesBeaten[id] && !s.activeQuests.some(q => q.boss === id) && B.star <= s.stars).sort((p, q) => p[1].rec - q[1].rec).slice(0, 2);
+    const next = Object.entries(BOSSES).filter(([id, B]) => !s.bossesBeaten[id] && !s.activeQuests.some(q => !q.frontier && q.boss === id) && B.star <= s.stars).sort((p, q) => p[1].rec - q[1].rec).slice(0, 2);
     for (const [id, B] of next) s.quests.push({ id: s.nextId++, kind: 'boss', zone: B.zone, boss: id, fee: Math.round(B.gold * 0.3), reward: { gold: B.gold, tp: 8 + Math.round(B.rec * 1.5), pop: 40 + B.rec * 12 },
       name: `Defeat ${B.name}`, desc: `${B.name} terrorises the ${BIOMES[ZONE_BIOME[B.zone]].name}. Assemble your best!` });
   }
-  questLevel(q) { return q.boss ? BOSSES[q.boss].rec : [0, 1, 5, 10, 16][q.zone]; }
+  questLevel(q) { return q.rec || (q.boss ? BOSSES[q.boss].rec : [0, 1, 5, 10, 16][q.zone]); }
+  frontierQuest(id) {
+    const f = FRONTIERS.find(f => f.id === id); if (!f) return null;
+    return { id: 'frontier:' + id, frontier: id, kind: 'boss', name: f.bossName, desc: `Capture ${f.name}`, boss: f.boss, zone: f.zone, fee: f.fee, rec: f.rec, spot: [f.x, f.y], reward: { gold: f.fee * 2, tp: 10 + f.star * 5, pop: 50 + f.star * 20 } };
+  }
+  questById(id) { return String(id).startsWith('frontier:') ? this.frontierQuest(String(id).slice(9)) : this.s.quests.find(q => q.id === +id); }
+  frontierBlock(id) {
+    const f = FRONTIERS.find(f => f.id === id), s = this.s;
+    if (!f) return 'Unknown territory';
+    if (s.frontier.completed[id]) return 'Territory already captured';
+    if (s.activeQuests.some(q => q.frontier === id)) return 'A party is already challenging this den';
+    if (s.stars < f.star) return `Needs a ${f.star}-star village`;
+    const missing = f.requires.filter(id => !s.frontier.completed[id]);
+    if (missing.length) return 'Capture first: ' + missing.map(id => FRONTIERS.find(f => f.id === id).name).join(', ');
+    return null;
+  }
+  captureFrontier(id) {
+    const s = this.s, f = FRONTIERS.find(f => f.id === id);
+    if (!f || s.frontier.completed[id]) return;
+    s.frontier.completed[id] = true; s.frontier.relics[f.relic] = null;
+    s.props = s.props.filter(p => p.k === 'cave' || townDist(s, p.x, p.y) > 0 || p.soft);
+    for (const m of s.mons) if (!m.quest && !m.raid && townDist(s, m.x, m.y) === 0) m.hp = 0;
+    this.rebuildGrid(); this.invalidatePaths();
+    log(s, `${f.name} captured! Land is buildable. ${f.benefit}. Relic: ${ITEMS[f.relic].name}.`, 'title');
+  }
+  equipRelic(id, pawnId) {
+    const s = this.s, it = ITEMS[id];
+    if (!it?.legendary || !Object.hasOwn(s.frontier.relics, id)) return 'Relic not yet earned';
+    const a = pawnId == null ? null : s.advs.find(a => a.id === pawnId && a.resident);
+    if (pawnId != null && !a) return 'Choose a resident adventurer';
+    const old = s.advs.find(a => a.id === s.frontier.relics[id]);
+    if (old === a && a?.eq.acc === id) return null;
+    if ([old, a].some(a => a && (a.ko || this.questForPawn(a.id)))) return 'Wait until the adventurer returns and recovers';
+    if (old?.eq.acc === id) { old.eq.acc = null; old.hp = Math.min(old.hp, maxHp(old, s)); }
+    if (a) {
+      if (ITEMS[a.eq.acc]?.legendary) s.frontier.relics[a.eq.acc] = null;
+      a.eq.acc = id; a.hp = Math.min(a.hp, maxHp(a, s));
+    }
+    s.frontier.relics[id] = a ? a.id : null;
+    return null;
+  }
   questForPawn(id) { return this.s.activeQuests.find(q => q.members.includes(id)); }
   questCandidates() {
     const s = this.s;
@@ -947,20 +995,22 @@ export class Sim {
   }
   questReady(q) { return this.questCandidates().filter(a => a.lv >= this.questLevel(q) && a.hp >= maxHp(a, this.s) * 0.5); }
   autoQuestParty(qid) {
-    const q = this.s.quests.find(q => q.id === qid); if (!q) return [];
+    const q = this.questById(qid); if (!q) return [];
     const cands = this.questReady(q);
     return shuffle(this.R, cands).slice(0, 4).map(a => a.id);
   }
   questExtraFee(q) { return Math.ceil(q.fee * 0.25); }
   questCost(q, count) { return q.fee + Math.max(0, count - 4) * this.questExtraFee(q); }
   instantQuest(qid) {
-    const q = this.s.quests.find(q => q.id === qid); if (!q) return 'Quest gone';
+    const q = this.questById(qid); if (!q) return 'Quest gone';
+    if (q.frontier) { const err = this.frontierBlock(q.frontier); if (err) return err; }
     if (this.s.gold < q.fee) return 'Not enough gold for the quest';
     if (!this.questReady(q).length) return 'No capable adventurers are available right now';
     return this.startQuest(qid, this.autoQuestParty(qid));
   }
   startQuest(qid, memberIds) {
-    const s = this.s, q = s.quests.find(q => q.id === qid); if (!q) return 'Quest gone';
+    const s = this.s, q = this.questById(qid); if (!q) return 'Quest gone';
+    if (q.frontier) { const err = this.frontierBlock(q.frontier); if (err) return err; }
     const ids = [...new Set(memberIds)];
     if (!ids.length) return 'Pick at least one adventurer';
     if (ids.length > 8) return 'A party can have at most 8 adventurers';
@@ -969,11 +1019,15 @@ export class Sim {
     const cost = this.questCost(q, members.length);
     if (s.gold < cost) return 'Not enough gold for the quest and extra adventurers';
     s.gold -= cost;
-    const cv = cavePos(s), spot = q.kind === 'dungeon' ? [cv.x + 1, cv.y + 1] : (this.randomCellInZone(q.zone) || [38, 50]);
+    const cv = cavePos(s), spot = q.frontier ? q.spot : q.kind === 'dungeon' ? [cv.x + 1, cv.y + 1] : (this.randomCellInZone(q.zone) || [38, 50]);
     q.spot = spot; q.mobs = []; q.floor = 0; q.ft = 0;
     if (q.kind === 'dungeon') { /* no field mobs */ }
     else if (q.kind === 'outbreak') for (let i = 0; i < q.n; i++) { const c = this.grid.nearestWalkable(spot[0] + this.R.int(-2, 2), spot[1] + this.R.int(-2, 2)) || spot; const m = this.spawnMonster(q.zone, q.mon, c, { quest: q.id, lvBonus: 1 }); if (m) q.mobs.push(m.id); }
-    else { const m = this.spawnBoss(q.boss, spot, { quest: q.id }); q.mobs.push(m.id); }
+    else {
+      const m = this.spawnBoss(q.boss, spot, { quest: q.id, ...(q.frontier ? { frontier: q.frontier, lv: q.rec } : {}) });
+      if (q.frontier) { m.hp = m.mhp = Math.round(m.mhp * 1.35); m.atk = Math.round(m.atk * 1.15); }
+      q.mobs.push(m.id);
+    }
     for (const a of members) { if (a.inside) { const b = s.buildings.find(o => o.id === a.inside.b); if (b) b.occ = b.occ.filter(i => i !== a.id); a.inside = null; } a.task = { type: 'quest', qid: q.id }; a.path = null; }
     s.activeQuests.push({ ...q, members: members.map(a => a.id), t: 0 });
     s.quests = s.quests.filter(o => o.id !== q.id);
@@ -994,6 +1048,7 @@ export class Sim {
     for (const q of this.s.activeQuests) this.checkQuest(q);
   }
   checkQuest(q) {
+    if (!this.s.activeQuests.includes(q)) return;
     const s = this.s;
     q.t += DT * 10;
     const party = s.advs.filter(a => q.members.includes(a.id));
@@ -1001,15 +1056,16 @@ export class Sim {
     const alive = s.mons.filter(m => m.quest === q.id && m.hp > 0);
     if (!alive.length) {
       s.gold += q.reward.gold; s.tp += q.reward.tp; s.pop += q.reward.pop; s.cleared++;
-      if (q.boss) s.bossesBeaten[q.boss] = true;
+      if (q.frontier) this.captureFrontier(q.frontier);
+      else if (q.boss) s.bossesBeaten[q.boss] = true;
       for (const a of party) { if (a.task?.qid === q.id) { a.task = null; a.path = null; } a.work += 5; this.addSat(a, 20); }
       log(s, `Quest cleared: ${q.name}! +${q.reward.gold}G +${q.reward.tp}TP +${q.reward.pop} popularity`, 'title');
       this.emit('fanfare', 'Quest Cleared!', q.name);
       s.activeQuests = s.activeQuests.filter(o => o.id !== q.id);
-      if (q.boss) s.quests = s.quests.filter(o => o.boss !== q.boss);
+      if (q.boss && !q.frontier) s.quests = s.quests.filter(o => o.boss !== q.boss);
       this.checkStars(); return;
     }
-    if (party.every(a => a.ko) || q.t > WEEK_SECONDS * 8) {
+    if (party.every(a => a.ko) || q.t > WEEK_SECONDS * (q.frontier ? 20 : 8)) {
       for (const m of alive) m.hp = 0;
       for (const a of party) if (a.task?.qid === q.id) { a.task = null; a.path = null; }
       log(s, `Quest failed: ${q.name}. The party retreated.`, 'bad'); this.emit('sfx', 'fail');

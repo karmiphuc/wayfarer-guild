@@ -1,5 +1,5 @@
 // Game state creation, world generation, save/load. State is plain JSON (no class instances).
-import { MAP_W, MAP_H, TOWN0, FAC, DECOR, JOBS, NAMES, PERSONA, ITEMS, PERKS, VISITOR_JOBS, TITLES, ZONE_MONS, CHARTERS, ROSTER_SIZE, MONSTERS, HAPPENINGS } from './data.js';
+import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, TOWN0, FAC, DECOR, JOBS, NAMES, PERSONA, ITEMS, PERKS, VISITOR_JOBS, TITLES, ZONE_MONS, CHARTERS, ROSTER_SIZE, MONSTERS, HAPPENINGS } from './data.js';
 import { makeRng } from './rng.js';
 
 export const SCHEMA = 1;
@@ -7,11 +7,16 @@ const SAVE_KEYS = ['wayfarerV2_a', 'wayfarerV2_b'];
 
 // Chebyshev distance from the town rectangle (0 inside)
 export function townDist(s, x, y) {
-  const t = s.town;
-  const dx = x < t.x0 ? t.x0 - x : x >= t.x1 ? x - t.x1 + 1 : 0;
-  const dy = y < t.y0 ? t.y0 - y : y >= t.y1 ? y - t.y1 + 1 : 0;
-  return Math.max(dx, dy);
+  let d = Infinity;
+  for (const t of buildAreas(s)) {
+    const dx = x < t.x0 ? t.x0 - x : x >= t.x1 ? x - t.x1 + 1 : 0;
+    const dy = y < t.y0 ? t.y0 - y : y >= t.y1 ? y - t.y1 + 1 : 0;
+    d = Math.min(d, Math.max(dx, dy));
+  }
+  return d;
 }
+export function buildAreas(s) { return [s.town, ...FRONTIERS.filter(f => s.frontier?.completed[f.id]).map(f => f.land)]; }
+export function frontierBonus(s, key) { let v = 0; for (const f of FRONTIERS) if (s.frontier?.completed[f.id]) v += f.bonus[key] || 0; return v; }
 // Zone (0 town, 1 meadow, 2 forest, 3 hills, 4 ashen) from distance to the ORIGINAL town rect, so zones stay put.
 export function zoneAt(x, y) {
   const t = TOWN0;
@@ -33,7 +38,8 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     time: { week: 1, month: 4, year: 1, t: 0 },
     gold: 3000, tp: 10, pop: 40, stars: 0,
     mats: { wood: 6, hide: 2, herb: 4, ore: 0, crystal: 0 },
-    town: { ...TOWN0 },
+    town: { ...TOWN0 }, mapWidth: HOME_W, mapHeight: HOME_H,
+    frontier: { completed: {}, relics: {} },
     ground: [], roads: '', props: [],
     buildings: [], advs: [], mons: [], monsters: [], fx: [], folk: [], animals: [],
     unlocked: { woodSword: true, cloth: true, potion: true },
@@ -50,10 +56,10 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
   s.world = { code: seed, zoneMons, cave: { x: R.int(24, 49), y: R.int(6, 8) } };   // s.seed is the RNG's running state; world.code keeps the original
   s.charterChoices = shuffle(R, CHARTERS.map(c => c.id)).slice(0, 3);
   // ground detail variant per cell (0 = plain grass, 1..6 = tufts)
-  const g = new Array(MAP_W * MAP_H);
+  const g = new Array(HOME_W * HOME_H);
   for (let i = 0; i < g.length; i++) g[i] = R.chance(0.12) ? R.int(1, 6) : 0;
   s.ground = g.join('');
-  s.roads = '0'.repeat(MAP_W * MAP_H);
+  s.roads = '0'.repeat(HOME_W * HOME_H);
 
   // wild props outside the town: density and species by zone
   const ZP = {
@@ -62,16 +68,16 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     3: { p: 0.10, k: ['rockBig', 'rock', 'treeYellow', 'stump', 'crystalBush', 'treeDead'] },
     4: { p: 0.09, k: ['treeDead', 'rockBig', 'treeWhite', 'rock', 'crystalBush'] },
   };
-  const occ = new Uint8Array(MAP_W * MAP_H);
+  const occ = new Uint8Array(HOME_W * HOME_H);
   const big = k => /^tree|rockBig|berry|crystal|stump/.test(k);
-  for (let y = 1; y < MAP_H - 1; y++) for (let x = 1; x < MAP_W - 1; x++) {
+  for (let y = 1; y < HOME_H - 1; y++) for (let x = 1; x < HOME_W - 1; x++) {
     const z = zoneAt(x, y); if (!z) continue;
     if (townDist(s, x, y) <= 1) continue;            // breathing room around town
     if (Math.abs(x - 38) <= 1 && y > 37) continue;    // keep the south approach open
     const zp = ZP[z]; if (!R.chance(zp.p)) continue;
     const k = R.pick(zp.k), w = big(k) ? 2 : 1;
-    if (occ[y * MAP_W + x] || (w === 2 && occ[y * MAP_W + x + 1])) continue;
-    occ[y * MAP_W + x] = 1; if (w === 2) occ[y * MAP_W + x + 1] = 1;
+    if (occ[y * HOME_W + x] || (w === 2 && occ[y * HOME_W + x + 1])) continue;
+    occ[y * HOME_W + x] = 1; if (w === 2) occ[y * HOME_W + x + 1] = 1;
     s.props.push({ k, x, y, w, block: big(k) || k === 'rock' });
   }
   addCave(s);
@@ -96,7 +102,34 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
   for (let i = 0; i < 3; i++) spawnAdventurer(s, R, { x: 38, y: 50 + i * 2 });
   for (const k of ['Chicken', 'Chicken', 'Dog', 'Cat']) s.animals.push({ k, x: R.int(28, 46), y: R.int(20, 36), tx: 0, ty: 0, t: 0, flip: false });
   log(s, 'Welcome, Chief! Build shops, attract adventurers, and grow your village.', 'good');
+  expandWorld(s);
   return s;
+}
+
+// Preserve every old coordinate and road. Added terrain uses its own RNG, never the simulation's.
+export function expandWorld(s) {
+  if (s.mapWidth === MAP_W && s.mapHeight === MAP_H) return;
+  const oldW = s.mapWidth || HOME_W, oldH = s.mapHeight || HOME_H;
+  const terrain = { seed: (s.world?.code || 4242) ^ 0x46524f4e }, R = makeRng(terrain);
+  const ground = [], roads = [];
+  for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
+    const old = x < oldW && y < oldH;
+    ground.push(old ? s.ground[y * oldW + x] || '0' : R.chance(0.12) ? String(R.int(1, 6)) : '0');
+    roads.push(old ? s.roads[y * oldW + x] || '0' : '0');
+    if (!old && x > 1 && y > 1 && x < MAP_W - 2 && y < MAP_H - 2 && R.chance(0.035)) {
+      const f = FRONTIERS.find(f => x >= f.land.x0 && x < f.land.x1 && y >= f.land.y0 && y < f.land.y1);
+      const k = R.pick(f?.zone === 2 ? ['treePine', 'treeRound', 'bush2'] : f?.zone === 3 ? ['rock', 'treeYellow', 'crystalBush'] : ['treeDead', 'rock', 'bush']);
+      s.props.push({ k, x, y, w: 1, block: true });
+    }
+  }
+  s.ground = ground.join(''); s.roads = roads.join(''); s.mapWidth = MAP_W; s.mapHeight = MAP_H;
+  // Open narrow trails to each den so procedural scenery cannot seal a challenge away.
+  s.props = s.props.filter(p => !FRONTIERS.some(f => {
+    const parent = FRONTIERS.find(o => o.id === f.requires[0]), sx = parent ? parent.x : 38, sy = parent ? parent.y : 28;
+    return (p.x + p.w > Math.min(sx, f.x) - 1 && p.x < Math.max(sx, f.x) + 2 && Math.abs(p.y - sy) <= 1)
+      || (p.x + p.w > f.x - 1 && p.x < f.x + 2 && p.y >= Math.min(sy, f.y) - 1 && p.y <= Math.max(sy, f.y) + 1)
+      || (p.x + p.w > f.x - 4 && p.x < f.x + 5 && Math.abs(p.y - f.y) <= 4);
+  }));
 }
 
 export const CAVE = { x: 36, y: 7 };   // default dungeon entrance (old saves); new villages roll s.world.cave. Door = (x+1, y+1)
@@ -111,10 +144,10 @@ export function shuffle(R, arr) { const a = arr.slice(); for (let i = a.length -
 
 export function roadAt(s, x, y) {
   if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return false;
-  return s.roads.charCodeAt(y * MAP_W + x) === 49;
+  return s.roads.charCodeAt(y * (s.mapWidth || HOME_W) + x) === 49;
 }
 export function setRoad(s, x, y, on) {
-  const i = y * MAP_W + x;
+  const i = y * (s.mapWidth || HOME_W) + x;
   s.roads = s.roads.slice(0, i) + (on ? '1' : '0') + s.roads.slice(i + 1);
 }
 
@@ -204,7 +237,7 @@ export function stat(a, k, s) {
   v *= 1 + Math.min(0.6, jl * 0.004) + perkSum(a, 'allPct') + perkSum(a, PCT[k]);
   v *= 1 + (a.work - 100) / 400;
   if (a.partner && s) { const m = s.monsters.find(m => m.id === a.partner); if (m) v += (m.bond / 20) * ({ hp: 4, atk: 1, def: 1, mag: 1 }[k]) * (1 + perkSum(a, 'bondPct') * 0.5); }
-  if (s) v *= 1 + titleBonus(s, k);   // e.g. Iron Fortress: bonus { def: 0.15 }
+  if (s) v *= 1 + titleBonus(s, k) + frontierBonus(s, k);
   return Math.max(1, Math.round(v));
 }
 export const maxHp = (a, s) => stat(a, 'hp', s);
@@ -241,6 +274,9 @@ export function migrate(s) {
   s.world = s.world && typeof s.world === 'object' ? s.world : { code: null, zoneMons: null, cave: { ...CAVE } };   // old saves: full rosters, original cave spot
   if (s.world.code === undefined) s.world.code = null;                // unknown for saves made before world codes
   if (!(s.world.cave && Number.isInteger(s.world.cave.x) && Number.isInteger(s.world.cave.y))) s.world.cave = { ...CAVE };
+  s.frontier = s.frontier || { completed: {}, relics: {} };
+  s.frontier.completed = s.frontier.completed || {}; s.frontier.relics = s.frontier.relics || {};
+  expandWorld(s);
   if (s.world.zoneMons) for (const z of Object.keys(s.world.zoneMons)) {  // drop unknown species; an empty roster falls back to ZONE_MONS
     const l = (Array.isArray(s.world.zoneMons[z]) ? s.world.zoneMons[z] : []).filter(id => MONSTERS[id]);
     if (l.length) s.world.zoneMons[z] = l; else delete s.world.zoneMons[z];
@@ -264,6 +300,15 @@ export function migrate(s) {
     for (const j in a.jobLv) { if (JOB_RENAME[j]) { a.jobLv[JOB_RENAME[j]] = a.jobLv[j]; delete a.jobLv[j]; } }
     if (!JOBS[a.job]) a.job = 'villager';
     for (const j in a.jobLv) if (a.jobLv[j] >= MASTERY && JOBS[j] && !a.perks.includes(JOBS[j].perk)) a.perks.push(JOBS[j].perk);
+  }
+  // The reward ledger is authoritative: one relic per completed site, one equipped copy at most.
+  for (const f of FRONTIERS) {
+    delete s.unlocked[f.relic];
+    const owner = s.frontier.completed[f.id] && s.advs.find(a => a.id === s.frontier.relics[f.relic] && a.resident);
+    if (s.frontier.completed[f.id]) s.frontier.relics[f.relic] = owner ? owner.id : null;
+    else delete s.frontier.relics[f.relic];
+    for (const a of s.advs) if (a.eq.acc === f.relic && a !== owner) a.eq.acc = null;
+    if (owner && owner.eq.acc !== f.relic) s.frontier.relics[f.relic] = null;
   }
   return s;
 }
