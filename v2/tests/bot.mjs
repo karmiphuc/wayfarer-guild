@@ -33,9 +33,10 @@ for (let w = 0; w < months * 4; w++) {
   for (const id in ITEMS) if (!s.unlocked[id] && ITEMS[id].dev && s.gold > ITEMS[id].price * 1.5 + 500) sim.develop(id);
   // quests
   if (s.quests.length) {
-    const choices = s.quests.filter(q => q.fee < s.gold - 200 && !s.activeQuests.some(o => o.kind === q.kind)).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0) || a.zone - b.zone);
+    const choices = s.quests.filter(q => q.fee < s.gold - 200).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0) || a.zone - b.zone);
     for (const q of choices) {
-      if (s.activeQuests.some(o => o.kind === q.kind)) continue;
+      if (sim.questReady(q).length < 4 || s.gold < q.fee + 200) continue;
+      if (s.gold < q.fee + 1500) { const e = sim.instantQuest(q.id); if (e) throw new Error('instant quest: ' + e); continue; }
       const party = sim.autoQuestParty(q.id);
       if (party.length < 4) continue;
       const extra = sim.questCandidates().filter(a => !party.includes(a.id) && a.lv >= sim.questLevel(q)).slice(0, 4);

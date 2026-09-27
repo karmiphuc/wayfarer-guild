@@ -107,7 +107,8 @@ export class Renderer {
     }
     if (this.ghost) this.drawGhost(s);
     this.drawFx(s);
-    for (const q of s.activeQuests) if (q.spot) this.drawQuestMarker(q);
+    let caveIndex = 0;
+    for (const q of s.activeQuests) if (q.spot) this.drawQuestMarker(q, q.kind === 'dungeon' ? caveIndex++ : 0);
     this.drawWeather(s, vx0 + 2, vy0 + 2, vx1 - 4, vy1 - 5);
     // day/night tint (last fifth of each week is night)
     let f = s.time.t / WEEK_SECONDS, night = f > 0.8 ? (f < 0.9 ? (f - 0.8) / 0.1 : (1 - f) / 0.1) * 1.4 : 0;  // dusk -> midnight -> dawn at week end
@@ -298,10 +299,10 @@ export class Renderer {
     if (FAC[gh.type]) { g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect((gh.x + (w >> 1)) * T + 5, (gh.y + h) * T + 5, 6, 6); }  // door marker
     if (d.appeal && d.r) { g.strokeStyle = 'rgba(255,200,255,0.6)'; g.lineWidth = 1 / this.scale; g.strokeRect((gh.x - d.r) * T, (gh.y - d.r) * T, (w + d.r * 2) * T, (h + d.r * 2) * T); }
   }
-  drawQuestMarker(q) {
+  drawQuestMarker(q, caveIndex = 0) {
     const g = this.g, bob = Math.sin(this.time * 4) * 2;
     if (q.kind === 'dungeon') {
-      const x = q.spot[0] * T - 8, y = (q.spot[1] - 3) * T - 6;
+      const x = q.spot[0] * T - 8, y = (q.spot[1] - 3 - caveIndex) * T - 6;
       g.fillStyle = '#1a1a1a'; g.fillRect(x - 1, y - 1, 34, 5); g.fillStyle = '#ff9f1c'; g.fillRect(x, y, Math.round(32 * (q.floor + (q.ft || 0) / 7) / q.floors), 3);
       return;
     }
@@ -429,8 +430,8 @@ export class Renderer {
       if (bx < -20 || by < -20 || bx > this.cssW + 20 || by > this.cssH + 20) continue;
       const t = '★' + b.lv; g.strokeText(t, bx, by); g.fillText(t, bx, by);
     }
-    const cave = s.activeQuests.find(q => q.kind === 'dungeon');
-    if (cave) { const [qx, qy] = this.toScreen(cave.spot[0] + 0.5, cave.spot[1] - 3.8); const t = `B${Math.min(cave.floors, cave.floor + 1)}F`; g.fillStyle = '#fff'; g.strokeText(t, qx, qy); g.fillText(t, qx, qy); }
+    const caves = s.activeQuests.filter(q => q.kind === 'dungeon');
+    for (const [i, cave] of caves.entries()) { const [qx, qy] = this.toScreen(cave.spot[0] + 0.5, cave.spot[1] - 3.8 - i); const t = `B${Math.min(cave.floors, cave.floor + 1)}F`; g.fillStyle = '#fff'; g.strokeText(t, qx, qy); g.fillText(t, qx, qy); }
     for (const a of s.advs) {
       if (a.inside || a.dungeon) continue;
       const [sx, sy] = this.toScreen(a.x + 0.5, a.y - 0.4);

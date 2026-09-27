@@ -945,16 +945,22 @@ export class Sim {
     const s = this.s;
     return s.advs.filter(a => !a.ko && a.hp > 0 && !a.dungeon && a.task?.type !== 'quest' && !this.questForPawn(a.id));
   }
+  questReady(q) { return this.questCandidates().filter(a => a.lv >= this.questLevel(q) && a.hp >= maxHp(a, this.s) * 0.5); }
   autoQuestParty(qid) {
     const q = this.s.quests.find(q => q.id === qid); if (!q) return [];
-    const cands = this.questCandidates().filter(a => a.lv >= this.questLevel(q) && a.hp >= maxHp(a, this.s) * 0.5);
+    const cands = this.questReady(q);
     return shuffle(this.R, cands).slice(0, 4).map(a => a.id);
   }
   questExtraFee(q) { return Math.ceil(q.fee * 0.25); }
   questCost(q, count) { return q.fee + Math.max(0, count - 4) * this.questExtraFee(q); }
+  instantQuest(qid) {
+    const q = this.s.quests.find(q => q.id === qid); if (!q) return 'Quest gone';
+    if (this.s.gold < q.fee) return 'Not enough gold for the quest';
+    if (!this.questReady(q).length) return 'No capable adventurers are available right now';
+    return this.startQuest(qid, this.autoQuestParty(qid));
+  }
   startQuest(qid, memberIds) {
     const s = this.s, q = s.quests.find(q => q.id === qid); if (!q) return 'Quest gone';
-    if (s.activeQuests.some(o => o.kind === q.kind)) return 'A quest of this type is already underway';
     const ids = [...new Set(memberIds)];
     if (!ids.length) return 'Pick at least one adventurer';
     if (ids.length > 8) return 'A party can have at most 8 adventurers';

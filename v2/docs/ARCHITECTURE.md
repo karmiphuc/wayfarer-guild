@@ -71,7 +71,7 @@ Dependency order (also the bundle order in `tools/bundle.py`):
 | `monsters[]` | befriended village monsters `{id, type, name, bond, x, y, riding?}` |
 | `folk[]`, `animals[]` | ambient townsfolk (spend small change) and farm animals |
 | `unlocked {itemId:true}` | gear the shops can sell |
-| `quests[]`, `activeQuests[]` | quest board and up to three active quests (one per kind) `{kind: outbreak|boss|dungeon, zone, members[], spot, mobs[], floor...}`; old `quest` saves migrate into this array |
+| `quests[]`, `activeQuests[]` | quest board and active quests without a count/type cap `{kind: outbreak|boss|dungeon, zone, members[], spot, mobs[], floor...}`; old `quest` saves migrate into this array |
 | `cleared, bossesBeaten {id:true}` | progression counters |
 | `titles {id:true}`, `traits {Name:n}` | earned titles · town trait totals — rebuilt from buildings + village monsters by `recomputeTraits()` on every build/upgrade/tame, so **never write `s.traits` directly** (anything you add there is lost on the next build) |
 | `events [{id, weeks}]` | running timed events |
@@ -104,7 +104,7 @@ then × (1 + `titleBonus(s, k)`) — e.g. the Iron Fortress title gives `def: 0.
 | Movement | `walkTo, speed, stepToward` | A* path cached per goal + grid version; monsters/pets use straight steps with collision |
 | Combat | `huntStep, fight, hitMonster, killMonster, treasure, hurtAdv, koStep` | adventurers hunt in the zone their power allows (`zoneFor`); healers heal first; perks applied here (see §5). Kills: XP shared with adventurers within 5 tiles, gold to the killer, materials to the village, 2.5% treasure chest (unlocks gear), taming chance if a Stable exists. HP 0 → KO → walks home at half speed. |
 | Monsters | `monStep, petStep, towerStep, fleeStep, chargeStep` | outlaws (`MONSTERS[x].human`) use the same AI but slash with their weapon (`atkT` drives the attack pose) and can't be tamed; the Bandit Raid gang is picked by rank and scaled by `f` (0.55–1.0) in `startHappening('bandits')`. Aggro radius 2.2 (boss 4), leash 9 tiles, never enter town — except raiders: stampede monsters `chargeStep` straight at the town edge (a breach costs popularity/gold), bandits may chase into town; the Golden Slime `fleeStep`s away from adventurers. Pets follow their partner, become mounts at bond ≥ 50. Towers credit kills to `s.advs[0]` (known bug, #17). |
-| Quests | `refreshQuests, autoQuestParty, questCandidates, questCost, startQuest, questStep, questCheck, checkQuest, dungeonTick, endDungeon` | one outbreak, boss and dungeon concurrently; each owns its party, targets and completion. Outbreak: kill N mobs; boss: next 2 undefeated and inactive bosses with `star ≤ stars`; dungeon: cave at `cavePos(s)`, floors every 7 s |
+| Quests | `refreshQuests, autoQuestParty, questCandidates, questReady, questCost, instantQuest, startQuest, questStep, questCheck, checkQuest, dungeonTick, endDungeon` | any available quests concurrently; each owns its party, targets and completion. Outbreak: kill N mobs; boss: next 2 undefeated and inactive bosses with `star ≤ stars`; dungeon: cave at `cavePos(s)`, floors every 7 s |
 | Happenings & charters | `rollHappening, startHappening, tickHappenings, endHappening, happening(id), merchantOffer, rally, npcStep, charter(key), charterHappen(id), chooseCharter, placeFree, refund` | see §4b |
 | Player actions | `build, upgrade, demolish, develop, runEvent, startQuest, changeJob, gift, chooseCharter, buyMerchant` | return `null` on success or an error string (shown as a toast) |
 | Jobs | `canChangeJob, jobCost, changeJob, gainXp, master` | change needs current job mastered (or target already learned) + `req` jobs mastered + TP (`TIER_TP`). Reaching job Lv10 calls `master()` → perk added, fanfare. |
@@ -114,10 +114,13 @@ Hooks passed to `new Sim(s, hooks)`: `sfx(name)`, `fanfare(title, subtitle)`, `r
 Quest selection calls `autoQuestParty()` once from the UI action, never during rendering. It shuffles available pawns
 with the seeded RNG, selecting up to four at the suggested level and at least half HP. The player can adjust the party
 to 1-8 available non-KO pawns; slots 5-8 each cost `ceil(entry fee * 0.25)` extra. Depart and the total cost appear before
-the pawn grid. `startQuest()` revalidates unique members, the type slot and total funds before changing state.
+the pawn grid. `startQuest()` revalidates unique available members and total funds before changing state.
+Instant Depart on each card calls `instantQuest()`: validate the entry fee and capable pool, then launch with the same
+random default party. Clicking the card itself still opens the party picker. No quest count or type cap applies.
 Active quest membership reserves a pawn even while recovering in the inn; it cannot join another party or rally.
 After recovery it resumes its original quest. Each ending removes only that quest and its own matching pawn tasks.
-Every active quest has a separate Watch button and map marker; music follows the nearest active quest.
+Every active quest has a separate Watch button and map marker; cave bars and floor labels stack for concurrent parties.
+Music follows the nearest active quest.
 
 ## 4b. Replayability layer — happenings, charters, seeded world (`happenings.js` + `sim.js`)
 

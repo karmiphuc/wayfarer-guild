@@ -168,7 +168,7 @@ export class UI {
   }
   panel_quests() {
     const s = this.s; let h = '';
-    h += `<p class="muted">One Outbreak, one Cave and one Boss quest can run at the same time.</p>`;
+    h += `<p class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random capable adventurers.</p>`;
     for (const q of s.activeQuests) {
       const alive = s.mons.filter(m => m.quest === q.id && m.hp > 0);
       h += `<div class="section">Underway: ${esc(q.name)}</div><div class="row spread"><span class="muted">${q.kind === 'dungeon' ? `Floor ${q.floor}/${q.floors}` : alive.length + ' foes remain'}</span><button class="btn sm" data-act="watchQuest" data-id="${q.id}">Watch</button></div><div class="grid">`;
@@ -180,12 +180,12 @@ export class UI {
     if (!s.quests.length) h += `<p class="muted">New quests are posted at the start of each month.</p>`;
     for (const q of s.quests) {
       const face = q.boss ? `<i data-face="bf_${q.boss}"></i>` : q.kind === 'dungeon' ? `<i data-spr="cave"></i>` : MONSTERS[q.mon].human ? `<i data-char="${MONSTERS[q.mon].spr}" data-scale="3"></i>` : `<i data-mon="${MONSTERS[q.mon].spr}" data-scale="3"></i>`;
-      const rec = this.sim.questLevel(q), busy = s.activeQuests.some(o => o.kind === q.kind);
+      const rec = this.sim.questLevel(q), ready = this.sim.questReady(q).length;
       h += `<div class="card ${this.questPick === q.id ? 'sel' : ''}" data-act="pickQuest" data-id="${q.id}"><div class="thumb">${face}</div><div class="meta">
         <div class="name">${esc(q.name)}</div><div class="sub">${esc(q.desc)}</div>
-        <div class="sub">Fee <b>${q.fee}G</b> · Reward ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop · Suggested Lv${rec}+</div></div></div>`;
+        <div class="sub">Fee <b>${q.fee}G</b> · Reward ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop · Suggested Lv${rec}+</div>
+        <button class="btn sm" data-act="instantQuest" data-id="${q.id}" ${!ready || s.gold < q.fee ? 'disabled' : ''}>Instant Depart (${q.fee}G)</button>${!ready ? '<div class="sub">No capable adventurers available</div>' : s.gold < q.fee ? '<div class="sub">Not enough gold</div>' : ''}</div></div>`;
       if (this.questPick === q.id) {
-        if (busy) { h += `<p class="muted">A quest of this type is already underway.</p>`; continue; }
         const cands = this.sim.questCandidates().sort((a, b) => b.lv - a.lv);
         this.party = (this.party || []).filter(id => cands.some(a => a.id === id));
         const extra = Math.max(0, this.party.length - 4), cost = this.sim.questCost(q, this.party.length);
@@ -431,6 +431,7 @@ export class UI {
       case 'pickQuest': this.questPick = this.questPick === +d.id ? null : +d.id; this.party = this.questPick ? sim.autoQuestParty(this.questPick) : []; this.renderPanel(); audio.sfx('click'); break;
       case 'togParty': { const id = +d.id; if (this.party.includes(id)) this.party = this.party.filter(x => x !== id); else if (this.party.length < 8 && sim.questCandidates().some(a => a.id === id)) this.party.push(id); else this.toast('A party can have at most 8 available adventurers'); this.renderPanel(); audio.sfx('click'); break; }
       case 'startQuest': if (err(sim.startQuest(+d.id, this.party || []))) { this.questPick = null; this.party = null; this.game.audio.sfx('quest'); } this.renderPanel(); break;
+      case 'instantQuest': if (err(sim.instantQuest(+d.id))) { this.questPick = null; this.party = null; audio.sfx('quest'); } this.renderPanel(); break;
       case 'watchQuest': { const q = s.activeQuests.find(q => q.id === +d.id); if (q) { this.close(); this.game.centerOn(q.spot[0], q.spot[1]); } break; }
       case 'develop': err(sim.develop(d.id)); this.renderPanel(); break;
       case 'event': err(sim.runEvent(d.id)); this.renderPanel(); break;

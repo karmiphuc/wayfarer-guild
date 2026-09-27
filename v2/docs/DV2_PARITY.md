@@ -37,7 +37,7 @@ playthrough. Never hard-code them as targets: our numbers come from the bot soak
 | Town Points & events | TP monthly from kills; ~45 events: satisfaction, stat training, popularity, Monsterology, Expand Town 1/2, Cauldron, Harbor; limit per season; Butler/Maid/Rescue Squad discounts | 5 events, no season limit | 🟡 | #34 |
 | Local residents | trait thresholds unlock local customers; Cart/Balloon/Blimp stations bring 2/6/8 | ambient townsfolk from trait totals | 🟡 | #33 |
 | Farmland | produce vegetables/fruit; Farmer speeds it | — | ❌ | #35 |
-| Quests | Dungeon / Mob group (Outbreak) / Boss / Counterattack; start fee + recruitment fee for non-volunteers; sales dip while away | one outbreak, boss and cave concurrently; 4 random capable defaults, up to 8 with paid extras; Depart above party picker | 🟡 | #25 |
+| Quests | Dungeon / Mob group (Outbreak) / Boss / Counterattack; start fee + recruitment fee for non-volunteers; sales dip while away | no concurrent quest cap; Instant Depart or 4 random capable defaults, up to 8 with paid extras; Depart above party picker | 🟡 | #25 |
 | Dungeons | multi-floor, treasure; Ninja/Mercenary speed up | one cave, floors, treasure | 🟡 | #39 |
 | KO & rescue | KO'd adventurer rescued by another or revived by item, taken to the Inn | walks home alone | 🟡 | #24 |
 | Monsters & taming | Monster Tamer in party on Outbreak quests; partners; Monster Farm; mount at 50 friendship; flying mounts ignore roads | random taming with a Stable; partners; mounts at bond 50 | 🟡 | #37 |
