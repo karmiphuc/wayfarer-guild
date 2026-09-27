@@ -25,11 +25,11 @@ playthrough. Never hard-code them as targets: our numbers come from the bot soak
 | Adventurer stats | HP/ATK/DEF/MAG from base Health/Strength/Dexterity/Toughness/Spirit/Luck | HP/ATK/DEF/MAG only | 🟡 | #20 |
 | Satisfaction & Work (0–999) | gifts raise both; Work multiplies stats, auras at high Work | both exist; gold gifts only | 🟡 | #22 |
 | Gifts | gift items/equipment; job-preferred items; bundles of 3; diminishing Work gains | Gift 50G button | 🟡 | #22, #18 |
-| Jobs | ~50 jobs, mastered at Lv10 (cap 99), cost TP, prerequisites, medals; race jobs can't change | 29 combat jobs, tiers, prerequisites | 🟡 | #36 |
+| Jobs | ~50 jobs, mastered at Lv10 (cap 99), cost TP, prerequisites, medals; race jobs can't change | 37 combat jobs; every T3 has a T4 successor; no town-job passives, medals or race lock | 🟡 | #36 |
 | Job passive ("Bonus") | active while in the job: Merchant +store sales, Ninja faster dungeons, Cook +food sales… | — (we only have mastery perks) | ❌ | #23 |
 | Mastery bonus | permanent +20/30 base stat or a learned spell | permanent stacking perks | 🟡 | #30, #20 |
 | Magic & status | Fire/Ice/Lightning/Dark/Heal spells; Burn, Freeze, Paralysis, Poison, Confusion, Sleep, Blind | fireball splash, burn perk | 🟡 | #30 |
-| Equipment | 4 slots: Weapon, Armor 1 (head/shield), Armor 2 (body), Accessory; shops stock unlocked gear | 3 slots (weapon/armor/acc), 70 ordinary items + 8 single-copy frontier relics | 🟡 | #31 |
+| Equipment | 4 slots: Weapon, Armor 1 (head/shield), Armor 2 (body), Accessory; shops stock unlocked gear | 4 slots (weapon/body/helm-or-shield/accessory), 85 ordinary items + 8 single-copy frontier relics; old equipped helmets/shields migrate | ✅ | #31 |
 | Treasure & gear unlocks | gold chests unlock gear; Luck affects contents | chests unlock gear | ✅ | #20 |
 | Collectible items | food, merch, ores, gems, spellbooks as drops/purchases; used for gifts, facility boosts, Cauldron | — | ❌ | #18 |
 | Cauldron | throw items → Fire/Ice/Lightning/Dark essences + knowledge; recipes: weapons, spellbooks, houses, castles; enlarge events | Blacksmith develop (materials) | ❌ | #40 |
@@ -81,7 +81,7 @@ plus implementation notes, "Done when", and verification commands. Labels: `dv2-
 | 28 | Calendar ceremonies: medals, milestones, return waves, evaluation & score | 1 | 27 |
 | 29 | Build tools: Rearrange, Removal cost, Stream, Bridge, Iconic Statue | 1 | — |
 | 30 | Spells on mastery + status effects | 2 | 20 |
-| 31 | Fourth equipment slot (head / shield) | 2 | — |
+| 31 | Fourth equipment slot (head / shield) — complete | 2 | — |
 | 32 | Town traits & titles at DV2 scale | 2 | — |
 | 33 | Local residents + Cart / Balloon / Blimp stations | 2 | 32 |
 | 34 | Event engine: seasonal limits, discounts, catalogue | 2 | 20, 23 |

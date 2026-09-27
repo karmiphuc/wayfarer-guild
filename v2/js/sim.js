@@ -318,7 +318,7 @@ export class Sim {
       (this.happening('rain') && (d.kind === 'food' || d.kind === 'sleep') ? 1.25 : 1));
   }
   basicGearNeeds(a) {
-    const needs = [], order = ['weapon', 'armor', 'acc'];
+    const needs = [], order = ['weapon', 'armor', 'offhand', 'acc'];
     for (const slot of order) {
       const equipped = a.eq[slot] && ITEMS[a.eq[slot]];
       if (equipped && this.canEquip(a, equipped)) continue;
@@ -338,7 +338,7 @@ export class Sim {
   bestGearFor(a) {
     // most worthwhile affordable upgrade on sale in any shop that stocks that slot
     let best = null;
-    for (const slot of ['weapon', 'armor', 'acc']) {
+    for (const slot of ['weapon', 'armor', 'offhand', 'acc']) {
       const shops = this.facilities('shop').filter(b => SHOP_SLOTS[FAC[b.type].slot].includes(slot)); if (!shops.length) continue;
       const cur = a.eq[slot] ? ITEMS[a.eq[slot]] : null, curV = cur && this.canEquip(a, cur) ? this.gearValue(a, cur) : 0;
       if (cur?.legendary) continue;

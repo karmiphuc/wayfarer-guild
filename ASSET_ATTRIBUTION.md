@@ -69,6 +69,14 @@ These are **not** “in use” until copied into the repo and moved to the table
 | Tiny Swords — old version only | characters / buildings / UI | separate download explicitly labeled CC0 | https://pixelfrog-assets.itch.io/tiny-swords | **Only evaluate `TS_old version_CC0 Licensed`**; current Free Pack has no-redistribution terms |
 
 
+## v2 masterwork equipment
+
+| Repo path | Asset / pack | Creator | Source | License | Modified? |
+|---|---|---|---|---|---|
+| `v2/assets/items/w_{Dawnblade,Voidblade,RegalBlade,Runelance,CrystalAxe,ArchonStaff,FrostStaff,StarTome}.png`, matching `h_*` except StarTome, and `a_{warlord,astral,crown,mirror,ironcap,citadel,dawnshield}.png` | 16x16 RPG Items (DB32) | ARoachIFoundOnMyPillow | https://opengameart.org/content/16x16-rpg-items-db32 | CC0 1.0 | Icons unchanged; held weapons rotated/cropped with nearest-neighbor sampling. Source license verified 2026-09-27; see `v2/assets/DB32_RPG_ITEMS_CC0_LICENSE.txt`. |
+
+The new class variants use existing Ninja Adventure sheets and faces under their existing CC0 license.
+
 ## Attribution template
 
 For CC-BY / OGA-BY assets, store something like:

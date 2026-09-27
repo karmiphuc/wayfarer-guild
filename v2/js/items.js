@@ -1,5 +1,5 @@
 // Gear catalogue. Weapons: `type` gates which classes can use them (JOBS[j].wt); `hand` is the in-hand sprite;
-// `tint` hue-rotates both icon and in-hand sprite so higher tiers read at a glance. Slots: weapon / armor / acc / item.
+// `tint` hue-rotates both icon and in-hand sprite. armor = body; offhand = one helm OR shield.
 // dev: materials to develop at the Blacksmith (null = starter stock). Treasure chests can also reveal gear.
 
 const W = (name, type, hand, stats, price, dev, tint = 0, bow = false) =>
@@ -21,7 +21,7 @@ export const ITEMS = {
   knightBlade: W('Knight Blade', 'sword', 'Sword2', { atk: 13, def: 2 }, 700, { ore: 10, hide: 3 }, 45),
   flameSword:  W('Flame Sword', 'sword', 'Sword', { atk: 19, mag: 4 }, 1500, { ore: 14, crystal: 5 }, -40),
   greatSword:  W('Great Sword', 'sword', 'BigSword', { atk: 24 }, 2200, { ore: 22, crystal: 6, hide: 6 }),
-  dragonSlayer:W('Dragon Slayer', 'sword', 'BigSword', { atk: 36, def: 4 }, 5200, { ore: 34, crystal: 16 }, 250),
+  dragonSlayer:W('Dragon Slayer', 'sword', 'Voidblade', { atk: 36, def: 4 }, 5200, { ore: 34, crystal: 16 }),
   // ---- axes / hammers / clubs ----
   club:        W('Club', 'club', 'Club', { atk: 5 }, 110, { wood: 4 }),
   boneClub:    W('Bone Club', 'club', 'Bone', { atk: 10, hp: 6 }, 420, { hide: 6, wood: 4 }),
@@ -35,7 +35,7 @@ export const ITEMS = {
   // ---- spears ----
   spear:       W('Spear', 'spear', 'Lance2', { atk: 6 }, 170, { wood: 6 }),
   lance:       W('Lance', 'spear', 'Lance', { atk: 12, def: 2 }, 620, { ore: 10, wood: 6 }),
-  holyLance:   W('Holy Lance', 'spear', 'Lance', { atk: 24, mag: 6, def: 3 }, 3300, { ore: 20, crystal: 12 }, 40),
+  holyLance:   W('Holy Lance', 'spear', 'Runelance', { atk: 24, mag: 6, def: 3 }, 3300, { ore: 20, crystal: 12 }, 40),
   trident:     W('Trident', 'trident', 'Fork', { atk: 16, mag: 3 }, 1200, { ore: 12, crystal: 4 }),
   seaFork:     W('Sea King Fork', 'trident', 'Fork', { atk: 28, mag: 8 }, 3800, { ore: 22, crystal: 14 }, 180),
   // ---- bows ----
@@ -45,7 +45,7 @@ export const ITEMS = {
   // ---- staves / tomes ----
   oakWand:     W('Oak Wand', 'staff', 'MagicWand', { mag: 6 }, 160, { wood: 4, herb: 3 }),
   walkStaff:   W('Pilgrim Staff', 'staff', 'Stick', { mag: 4, def: 2 }, 120, { wood: 4 }),
-  crystalWand: W('Crystal Wand', 'staff', 'MagicWand', { mag: 16 }, 1300, { herb: 8, crystal: 6 }, 180),
+  crystalWand: W('Crystal Wand', 'staff', 'FrostStaff', { mag: 16 }, 1300, { herb: 8, crystal: 6 }),
   sageStaff:   W('Sage Staff', 'staff', 'Stick', { mag: 26, def: 4 }, 3400, { herb: 14, crystal: 14 }, 50),
   sutra:       W('Sutra Tome', 'book', 'Book', { mag: 11, def: 2 }, 650, { herb: 10, crystal: 3 }),
   grimoire:    W('Grimoire', 'book', 'Book', { mag: 26 }, 3600, { herb: 16, crystal: 14 }, 230),
@@ -55,7 +55,7 @@ export const ITEMS = {
   katana:      W('Katana', 'katana', 'Katana', { atk: 18 }, 1400, { ore: 16, crystal: 4 }),
   muramasa:    W('Muramasa', 'katana', 'Katana', { atk: 34 }, 5000, { ore: 28, crystal: 18 }, -40),
   rapier:      W('Rapier', 'rapier', 'Rapier', { atk: 8, mag: 3 }, 400, { ore: 6, hide: 2 }),
-  royalRapier: W('Royal Rapier', 'rapier', 'Rapier', { atk: 18, mag: 10 }, 2800, { ore: 12, crystal: 10 }, 45),
+  royalRapier: W('Royal Rapier', 'rapier', 'RegalBlade', { atk: 18, mag: 10 }, 2800, { ore: 12, crystal: 10 }),
   whip:        W('Whip', 'whip', 'Whip', { atk: 7 }, 260, { hide: 6 }),
   thornWhip:   W('Thorn Whip', 'whip', 'Whip', { atk: 17, mag: 4 }, 1700, { hide: 12, herb: 8 }, 100),
   sai:         W('Sai', 'fist', 'Sai', { atk: 10 }, 420, { ore: 6 }),
@@ -64,6 +64,15 @@ export const ITEMS = {
   bone:        W('Ritual Bone', 'bone', 'Bone', { atk: 5, mag: 8 }, 360, { hide: 5, herb: 4 }),
   lichFemur:   W('Lich Femur', 'bone', 'Bone', { atk: 12, mag: 20 }, 2600, { hide: 12, crystal: 10 }, 260),
 
+  // ---- masterwork weapons ----
+  dawnblade:   W('Dawnblade', 'sword', 'Dawnblade', { atk: 32, mag: 8, hp: 15 }, 5400, { ore: 32, crystal: 18 }),
+  runelance:   W('Runic Halberd', 'spear', 'Runelance', { atk: 32, def: 7 }, 5200, { ore: 30, wood: 16, crystal: 16 }),
+  crystalAxe:  W('Crystal Reaver', 'axe', 'CrystalAxe', { atk: 36, hp: 15 }, 5400, { ore: 32, crystal: 20 }),
+  archonStaff: W('Archon Staff', 'staff', 'ArchonStaff', { mag: 34, hp: 20 }, 5500, { wood: 18, herb: 20, crystal: 24 }),
+  starTome:    { ...W('Starbound Codex', 'book', 'Book', { mag: 32, def: 8 }, 5300, { herb: 24, crystal: 22 }), icon: 'w_StarTome' },
+  duskfang:    W('Duskfang', 'dagger', 'Voidblade', { atk: 28, crit: 0.08 }, 5000, { ore: 26, hide: 16, crystal: 18 }),
+  skyBow:      W('Skywarden Bow', 'bow', 'Bow2', { atk: 30, crit: 0.05 }, 5000, { wood: 30, hide: 16, crystal: 18 }, 180, true),
+
   // ---- armor ----
   cloth:       { name: 'Traveler Garb', slot: 'armor', icon: 'a_cloth', def: 2, price: 50, dev: null },
   leather:     { name: 'Leather Vest', slot: 'armor', icon: 'a_leather', def: 5, price: 150, dev: { hide: 5 } },
@@ -71,13 +80,21 @@ export const ITEMS = {
   mageRobe:    { name: 'Mage Robe', slot: 'armor', icon: 'a_robe', def: 5, mag: 6, price: 600, dev: { herb: 8, hide: 4 } },
   plate:       { name: 'Plate Armor', slot: 'armor', icon: 'a_plate', def: 15, hp: 20, price: 1200, dev: { ore: 20, crystal: 5 } },
   ninjaGarb:   { name: 'Shinobi Garb', slot: 'armor', icon: 'a_ninja', def: 10, atk: 4, price: 1000, dev: { hide: 12, crystal: 4 } },
-  buckler:     { name: 'Wood Buckler', slot: 'armor', icon: 'a_buckler', def: 4, hp: 4, price: 120, dev: { wood: 6 } },
-  ironHelm:    { name: 'Iron Helm & Mail', slot: 'armor', icon: 'a_helm', def: 12, hp: 12, price: 800, dev: { ore: 14 } },
-  kiteShield:  { name: 'Kite Shield', slot: 'armor', icon: 'a_kite', def: 13, price: 900, dev: { ore: 12, wood: 6 } },
-  hornHelm:    { name: 'Horned Warhelm', slot: 'armor', icon: 'a_hornhelm', def: 14, atk: 5, price: 1800, dev: { ore: 16, hide: 8 } },
-  bronzeShield:{ name: 'Sun Shield', slot: 'armor', icon: 'a_bronze', def: 18, mag: 4, price: 2200, dev: { ore: 18, crystal: 6 } },
-  aegis:       { name: 'Golden Aegis', slot: 'armor', icon: 'a_aegis', def: 30, hp: 30, price: 6000, dev: { ore: 30, crystal: 24 } },
+  buckler:     { name: 'Wood Buckler', slot: 'offhand', icon: 'a_buckler', def: 4, hp: 4, price: 120, dev: { wood: 6 } },
+  ironHelm:    { name: 'Iron Helm', slot: 'offhand', icon: 'a_helm', def: 12, hp: 12, price: 800, dev: { ore: 14 } },
+  kiteShield:  { name: 'Kite Shield', slot: 'offhand', icon: 'a_kite', def: 13, price: 900, dev: { ore: 12, wood: 6 } },
+  hornHelm:    { name: 'Horned Warhelm', slot: 'offhand', icon: 'a_hornhelm', def: 14, atk: 5, price: 1800, dev: { ore: 16, hide: 8 } },
+  bronzeShield:{ name: 'Sun Shield', slot: 'offhand', icon: 'a_bronze', def: 18, mag: 4, price: 2200, dev: { ore: 18, crystal: 6 } },
+  aegis:       { name: 'Golden Aegis', slot: 'offhand', icon: 'a_aegis', def: 30, hp: 30, price: 6000, dev: { ore: 30, crystal: 24 } },
   dragonMail:  { name: 'Dragon Mail', slot: 'armor', icon: 'a_dragon', def: 26, hp: 40, price: 4800, dev: { ore: 30, crystal: 16, hide: 12 } },
+  warlordPlate:{ name: 'Warlord Plate', slot: 'armor', icon: 'a_warlord', def: 24, atk: 6, hp: 25, price: 4700, dev: { ore: 28, hide: 16, crystal: 12 } },
+  astralMail:  { name: 'Astral Mail', slot: 'armor', icon: 'a_astral', def: 22, mag: 8, hp: 35, price: 5100, dev: { ore: 26, herb: 18, crystal: 20 } },
+  duskRobe:    { name: 'Duskweave Robe', slot: 'armor', icon: 'a_robe', tint: 210, def: 16, mag: 14, hp: 20, price: 4200, dev: { hide: 22, herb: 22, crystal: 16 } },
+  ironCap:     { name: 'Iron Cap', slot: 'offhand', icon: 'a_ironcap', def: 2, price: 60, dev: null },
+  crownHelm:   { name: 'Warlord Crown', slot: 'offhand', icon: 'a_crown', def: 20, atk: 7, hp: 15, price: 3900, dev: { ore: 26, hide: 12, crystal: 14 } },
+  mirrorHelm:  { name: 'Mirror Helm', slot: 'offhand', icon: 'a_mirror', def: 18, mag: 9, hp: 20, price: 4100, dev: { ore: 24, crystal: 20 } },
+  citadelShield:{ name: 'Citadel Shield', slot: 'offhand', icon: 'a_citadel', def: 23, hp: 20, price: 3400, dev: { ore: 24, wood: 16, crystal: 10 } },
+  dawnShield:  { name: 'Dawnguard Shield', slot: 'offhand', icon: 'a_dawnshield', def: 26, mag: 5, hp: 25, price: 5000, dev: { ore: 28, crystal: 20 } },
 
   // ---- accessories ----
   luckyCharm:  { name: 'Lucky Charm', slot: 'acc', icon: 'c_charm', crit: 0.05, price: 300, dev: { herb: 4, crystal: 1 } },
@@ -100,4 +117,4 @@ export const ITEMS = {
 };
 
 // Which shop sells which slot
-export const SHOP_SLOTS = { weapon: ['weapon'], armor: ['armor', 'acc'], item: ['item', 'acc'] };
+export const SHOP_SLOTS = { weapon: ['weapon'], armor: ['armor', 'offhand', 'acc'], item: ['item', 'acc'] };

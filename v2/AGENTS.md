@@ -41,8 +41,8 @@ v2/
   index.html          page shell (top bar, bottom menu, panels). Dev entry loads js/main.js as an ES module.
   css/style.css       all styling; 9-slice wood UI via border-image
   js/                 SOURCE OF TRUTH — edit these
-    jobs.js           29 classes (JOBS), 29 mastery perks (PERKS), job-change costs (TIER_TP), visitor pools
-    items.js          70 shop items + 8 unique relics (ITEMS), which shop sells what (SHOP_SLOTS)
+    jobs.js           37 classes (JOBS), 37 mastery perks (PERKS), job-change costs (TIER_TP), visitor pools
+    items.js          85 shop items + 8 unique relics (ITEMS), which shop sells what (SHOP_SLOTS)
     happenings.js     weekly random HAPPENINGS, new-game village CHARTERS, per-world roster sizes (ROSTER_SIZE)
     data.js           everything else static: map size, sprites (SPR), facilities (FAC), decor (DECOR), traits/titles,
                       events, monsters, zone spawn lists (ZONE_MONS), bosses, ranks. Re-exports jobs.js, items.js, happenings.js.

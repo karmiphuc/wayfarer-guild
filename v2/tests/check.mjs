@@ -71,7 +71,7 @@ try {
 { const r = run('node', ['tests/palisades.mjs']);
   r.status ? fail('palisade routing checks', r.stdout + (r.stderr || '')) : ok('palisades', r.stdout.trim()); }
 
-for (const name of ['camps', 'raids', 'rescue', 'economy', 'relic-ui']) {
+for (const name of ['camps', 'raids', 'rescue', 'economy', 'relic-ui', 'equipment']) {
   const r = run('node', [`tests/${name}.mjs`]);
   r.status ? fail(`${name} regression checks`, r.stdout + (r.stderr || '')) : ok(name, r.stdout.trim());
 }

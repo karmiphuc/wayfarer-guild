@@ -99,7 +99,7 @@ not stored as extra perimeter buildings or timers; no new top-level save fields 
 
 Adventurer (`makeAdventurer` in `state.js`):
 `id, name, job, spr (sprite sheet name), lv, xp, jobLv {job: level}, jobXp, base {hp,atk,def,mag}, hp, gold, sat (satisfaction),
-work, hunger, energy, fun, persona [PERSONA keys], resident, home (building id), partner (monster id), eq {weapon, armor, acc},
+work, hunger, energy, fun, persona [PERSONA keys], resident, home (building id), partner (monster id), eq {weapon, armor, offhand, acc},
 perks [PERKS keys], potions, x, y, dir (0 down,1 up,2 left,3 right), path, task, inside, dungeon, ko, stay, days, kills` + animation fields.
 
 **Stat formula** (`stat(a, k, s)` in `state.js`):
@@ -129,7 +129,15 @@ then × (1 + `titleBonus(s, k)`) — e.g. the Iron Fortress title gives `def: 0.
 
 Hooks passed to `new Sim(s, hooks)`: `sfx(name)`, `fanfare(title, subtitle)`, `report({income, upkeep, tp, kills})`.
 
-Residents reserve the total cost of the cheapest compatible unlocked weapon, armor and accessory for each missing
+Body armor uses `eq.armor`; one helmet OR shield uses `eq.offhand`. Both contribute stats independently alongside
+the weapon and accessory. Migration moves old helmets/shields out of `armor` exactly once. The Armor Shop stocks both
+armor slots; the starter Iron Cap gives residents a cheap first helm. There are 85 ordinary items and eight unique relics.
+
+The 37-job roster includes an Archer -> Ranger -> Sharpshooter -> Wildwarden line and dedicated Shogun, Grandmaster,
+Empress, Golden Sovereign and Nightblade promotions. Every tier-3 class has at least one tier-4 successor; validation
+enforces this. New jobs use existing mastery/perk mechanics, with no additional per-frame scans or save collections.
+
+Residents reserve the total cost of the cheapest compatible unlocked weapon, body armor, helm/shield and accessory for each missing
 slot, considering only shops that exist. They buy the cheapest missing basic before upgrades. Optional meals,
 lessons and potions respect that reserve; urgent hunger, exhaustion and injury can spend it. While saving, urgent
 meals favor cost per hunger restored; residents still prefer their free home for rest. `shopPrice()` and

@@ -56,7 +56,7 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     frontier: { completed: {}, relics: {} },
     ground: [], roads: '', props: [],
     buildings: [], advs: [], mons: [], monsters: [], fx: [], folk: [], animals: [],
-    unlocked: { woodSword: true, cloth: true, potion: true },
+    unlocked: { woodSword: true, cloth: true, ironCap: true, potion: true },
     quests: [], activeQuests: [], cleared: 0, bossesBeaten: {},
     titles: {}, events: [], log: [],
     stats: { income: 0, lastIncome: 0, kills: 0, monthKills: 0, visitorsTotal: 0, spentBuild: 0 },
@@ -247,7 +247,7 @@ export function makeAdventurer(s, R, jobId = 'villager') {
     hp: 1, gold: R.int(60, 160), sat: R.int(15, 35), work: 100,
     hunger: R.int(20, 50), energy: R.int(60, 90), fun: R.int(30, 60),
     persona: [R.pick(personaKeys)], resident: false, home: null, partner: null,
-    eq: { weapon: null, armor: null, acc: null }, perks: [], potions: 1,
+    eq: { weapon: null, armor: null, offhand: null, acc: null }, perks: [], potions: 1,
     x: 0, y: 0, px: 0, py: 0, dir: 0, path: null, task: null, taskT: 0, cool: 0, stay: R.int(3, 6) * 7, days: 0,
     ko: false, rescueBy: null, rescueRetry: 0, emote: null, emoteT: 0, anim: 0, atkT: 0, bark: null, barkT: 0, kills: 0,
   };
@@ -286,7 +286,7 @@ export const LV_CAP = 99, JOB_CAP = 99, MASTERY = 10;
 // Sum of a bonus key over the town titles earned so far (TITLES[].bonus). Sim uses the same data via Sim.bonus().
 export function titleBonus(s, key) { let v = 0; for (const t of TITLES) if (s.titles && s.titles[t.id] && t.bonus[key]) v += t.bonus[key]; return v; }
 export function perkSum(a, key) { let v = 0; for (const p of a.perks || []) { const P = PERKS[p]; if (P && P[key]) v += P[key]; } return v; }
-export function gearSum(a, key) { let v = 0; for (const slot of ['weapon', 'armor', 'acc']) { const it = a.eq[slot] && ITEMS[a.eq[slot]]; if (it && it[key]) v += it[key]; } return v; }
+export function gearSum(a, key) { let v = 0; for (const slot of ['weapon', 'armor', 'offhand', 'acc']) { const it = a.eq[slot] && ITEMS[a.eq[slot]]; if (it && it[key]) v += it[key]; } return v; }
 export function stat(a, k, s) {
   const job = JOBS[a.job], v0 = JOBS.villager;
   let v = a.base[k] + (job[k] - v0[k]) + (a.lv - 1) * GROW[k] * (1 + job[k] / 25);
@@ -354,9 +354,15 @@ export function migrate(s) {
   addCave(s);
   const ren = id => (id in ITEM_RENAME ? ITEM_RENAME[id] : id);
   const unl = {}; for (const id in s.unlocked) { const n = ren(id); if (n && ITEMS[n]) unl[n] = true; } s.unlocked = unl;
+  s.unlocked.ironCap = true;
   for (const a of s.advs) {
     a.rescueBy ??= null; a.rescueRetry ??= 0;
     a.perks = a.perks || []; a.eq = a.eq || {}; a.eq.acc = a.eq.acc || null;
+    // Older saves used the body slot for helmets and shields. Move the exact owned item once.
+    if (a.eq.offhand === undefined) {
+      a.eq.offhand = ITEMS[a.eq.armor]?.slot === 'offhand' ? a.eq.armor : null;
+      if (a.eq.offhand) a.eq.armor = null;
+    }
     for (const k of ['weapon', 'armor']) { const n = a.eq[k] && ren(a.eq[k]); a.eq[k] = n && ITEMS[n] ? n : null; }
     if (JOB_RENAME[a.job]) a.job = JOB_RENAME[a.job];
     for (const j in a.jobLv) { if (JOB_RENAME[j]) { a.jobLv[JOB_RENAME[j]] = a.jobLv[j]; delete a.jobLv[j]; } }

@@ -63,12 +63,13 @@ for (const [p, P] of Object.entries(PERKS)) {
   }
 }
 for (const [i, pool] of VISITOR_JOBS.entries()) for (const j of pool) if (!JOBS[j]) err(`VISITOR_JOBS[${i}]: "${j}" is not a job`);
+for (const [id, j] of Object.entries(JOBS)) if (j.tier === 3 && !Object.values(JOBS).some(next => next.tier === 4 && next.req?.includes(id))) err(`JOBS.${id}: tier-3 job has no tier-4 successor`);
 
 // ---------------- items ----------------
 const KNOWN_ITEM_KEYS = ['name', 'slot', 'type', 'hand', 'icon', 'tint', 'price', 'dev', 'bow', 'atk', 'def', 'mag', 'hp', 'crit', 'spd', 'heal', 'legendary'];
 for (const [id, it] of Object.entries(ITEMS)) {
   const where = `ITEMS.${id}`;
-  if (!['weapon', 'armor', 'acc', 'item'].includes(it.slot)) err(`${where}: bad slot "${it.slot}"`);
+  if (!['weapon', 'armor', 'offhand', 'acc', 'item'].includes(it.slot)) err(`${where}: bad slot "${it.slot}"`);
   if (!exists(`assets/items/${it.icon}.png`)) err(`${where}: icon assets/items/${it.icon}.png missing`);
   if (!(it.price > 0)) err(`${where}: price must be > 0`);
   for (const k of Object.keys(it)) if (!KNOWN_ITEM_KEYS.includes(k)) err(`${where}: unknown key "${k}"`);
@@ -80,7 +81,7 @@ for (const [id, it] of Object.entries(ITEMS)) {
     if (it.tint !== undefined && typeof it.tint !== 'number') err(`${where}: tint must be a number (hue degrees)`);
   }
 }
-for (const slot of ['weapon', 'armor', 'acc', 'item']) if (!Object.values(SHOP_SLOTS).some(s => s.includes(slot))) err(`SHOP_SLOTS: no shop sells "${slot}"`);
+for (const slot of ['weapon', 'armor', 'offhand', 'acc', 'item']) if (!Object.values(SHOP_SLOTS).some(s => s.includes(slot))) err(`SHOP_SLOTS: no shop sells "${slot}"`);
 for (const s of Object.keys(SHOP_SLOTS)) if (!Object.values(FAC).some(f => f.kind === 'shop' && f.slot === s)) err(`SHOP_SLOTS.${s}: no FAC shop with slot "${s}"`);
 
 // ---------------- monsters & bosses ----------------

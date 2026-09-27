@@ -354,7 +354,7 @@ export class UI {
     const s = this.s, smith = s.buildings.some(b => b.type === 'smith'), tab = this.devTab || 'weapon';
     let h = `<div class="row">${Object.entries(MATS).map(([k, m]) => `<span class="chip"><i data-icon="i_${m.icon}" data-scale="1"></i>${m.name} ${s.mats[k] || 0}</span>`).join('')}</div>`;
     if (!smith) h += `<p class="muted">Build a <b>Blacksmith</b> to develop new gear. Monsters drop materials; treasure chests can also reveal new gear.</p>`;
-    const tabs = [['weapon', 'Weapons'], ['armor', 'Armor'], ['acc', 'Accessories'], ['item', 'Items']];
+    const tabs = [['weapon', 'Weapons'], ['armor', 'Body Armor'], ['offhand', 'Helms / Shields'], ['acc', 'Accessories'], ['item', 'Items']];
     h += `<div class="tabs" style="margin-top:6px">${tabs.map(([k, n]) => `<button class="btn sm ${tab === k ? 'on' : ''}" data-act="devTab" data-k="${k}">${n} ${Object.keys(ITEMS).filter(id => !ITEMS[id].legendary && ITEMS[id].slot === k && s.unlocked[id]).length}/${Object.values(ITEMS).filter(i => !i.legendary && i.slot === k).length}</button>`).join('')}</div><div class="grid">`;
     const list = Object.entries(ITEMS).filter(([, it]) => !it.legendary && it.slot === tab).sort((p, q) => p[1].price - q[1].price);
     for (const [id, it] of list) {
@@ -452,7 +452,7 @@ export class UI {
       <p class="muted">Share a world code with a friend: the same code gives the same land, monsters, cave and charter choices.</p>
       <p class="muted">The game autosaves every in-game week. Controls: drag or WASD/arrows to pan · wheel/pinch or +/- to zoom · tap adventurers or buildings to inspect · Space pauses · 1/2/3 set speed.</p>
       <div class="section">Credits</div>
-      <p class="muted">All art, music and sound: <b>Ninja Adventure</b> asset pack by Pixel-boy &amp; AAA (CC0) — pixel-boy.itch.io. Armor and accessory icons: <b>16x16 RPG Item Pack</b> by Alex's Assets (CC0). Fountain, statue and castle: <b>Medieval Fantasy</b> by Pixel-boy (CC0). Game design inspired by the adventurer-village genre (Kairosoft's Dungeon Village); no Kairosoft assets are used. Code: original.</p>`;
+      <p class="muted">Art, music and sound: <b>Ninja Adventure</b> asset pack by Pixel-boy &amp; AAA (CC0) — pixel-boy.itch.io. Armor and accessory icons: <b>16x16 RPG Item Pack</b> by Alex's Assets (CC0). Masterwork equipment: <b>16x16 RPG Items (DB32)</b> by ARoachIFoundOnMyPillow (CC0) — OpenGameArt.org. Fountain, statue and castle: <b>Medieval Fantasy</b> by Pixel-boy (CC0). Game design inspired by the adventurer-village genre (Kairosoft's Dungeon Village); no Kairosoft assets are used. Code: original.</p>`;
   }
 
   // ---------- inspector ----------
@@ -479,7 +479,7 @@ export class UI {
       <div class="stats"><div><b>ATK</b> ${stat(a, 'atk', s)}</div><div><b>DEF</b> ${stat(a, 'def', s)}</div><div><b>MAG</b> ${stat(a, 'mag', s)}</div><div><b>Work</b> ${Math.round(a.work)}</div></div>
       <div class="row muted"><span>💰 ${a.gold}G</span><span>Potions ${a.potions}</span><span>Kills ${a.kills}</span><span>Hunger ${Math.round(a.hunger)}</span><span>Energy ${Math.round(a.energy)}</span></div>
       <div class="muted">${this.taskLabel(a)}</div>
-      <div class="row" style="margin:6px 0">${['weapon', 'armor', 'acc'].map(sl => { const it = a.eq[sl] && ITEMS[a.eq[sl]]; return `<span class="chip">${it ? `<i data-item="${a.eq[sl]}" data-scale="1"></i>${it.name}` : { weapon: 'No weapon', armor: 'No armor', acc: 'No accessory' }[sl]}</span>`; }).join('')}</div>
+      <div class="row" style="margin:6px 0">${['weapon', 'armor', 'offhand', 'acc'].map(sl => { const it = a.eq[sl] && ITEMS[a.eq[sl]], label = { weapon: 'Weapon', armor: 'Body armor', offhand: 'Helm / shield', acc: 'Accessory' }[sl]; return `<span class="chip">${label}: ${it ? `<i data-item="${a.eq[sl]}" data-scale="1"></i>${it.name}` : 'None'}</span>`; }).join('')}</div>
       ${a.perks.length ? `<div class="muted">Mastered perks:</div><div class="row">${a.perks.map(p => `<span class="tag gold" title="${esc(PERKS[p].desc)}">★ ${PERKS[p].name}</span>`).join('')}</div>` : ''}
       <div class="muted">Job Lv${a.jobLv[a.job] || 1}/99 · ${(a.jobLv[a.job] || 1) >= MASTERY ? 'mastered' : `${MASTERY - (a.jobLv[a.job] || 1)} to mastery`} · Lv${a.lv}/99</div>`;
     const pet = a.partner && s.monsters.find(m => m.id === a.partner);
