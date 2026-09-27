@@ -377,6 +377,7 @@ export class UI {
       h += `<div class="card"><div class="thumb"><i data-item="${id}" data-scale="3"></i></div><div class="meta"><div class="name">${it.name}</div>
         <div class="sub">${st} · ${it.price}G${it.type ? ` · ${it.type}` : ''}</div>${users.length ? `<div class="sub" title="${users.join(', ')}">Class bonus: ${esc(users.slice(0, 4).join(', '))}${users.length > 4 ? '…' : ''}</div>` : ''}
         ${it.revive ? '<div class="sub">One stored charge per pawn, consumed on a lethal hit. No equipment slot. Sold at Item Shops after research.</div>' : ''}
+        ${it.bow ? '<div class="sub">Any class can fire arrows with this bow. Bow specialists prioritize buying bows.</div>' : ''}
         ${it.star ? `<div class="sub ${s.stars < it.star ? 'cross' : ''}">Requires ${it.star} stars${it.researchOnly ? ' · Research only' : ''}</div>` : ''}
         ${have ? '<div class="sub check">In stock</div>' : `<div class="sub">${costs} · ${Math.round(it.price * 1.5)}G</div><button class="btn sm" data-act="develop" data-id="${id}" ${smith && s.stars >= (it.star || 0) ? '' : 'disabled'}>Develop</button>`}</div></div>`;
     }
@@ -401,6 +402,7 @@ export class UI {
           <div class="thumb"><i data-char="${j.sprites[0]}" data-scale="3"></i></div><div class="meta"><div class="name">${j.name}</div>${status ? `<div>${status}</div>` : ''}
           <div class="sub"><b>${P.name}</b>: ${esc(P.desc)}</div>
           <div class="sub">${esc(j.desc)} · Preferred: ${j.wt.length > 6 ? 'any weapon' : j.wt.join(', ')}</div>
+          <div class="sub">${j.attack === 'bow' ? 'Needs a bow to shoot; prioritizes buying bows.' : j.attack === 'magic' ? 'Innate spells with any melee weapon or empty hands; bows fire physical arrows.' : j.attack === 'throw' ? 'Innate throwing attacks with melee weapons or empty hands; bows fire arrows.' : 'Melee attacks; equip a bow to fire arrows.'}</div>
           ${req ? `<div class="sub">Needs: ${req}</div>` : ''}${a && err && !cur ? `<div class="sub cross">${esc(err)}</div>` : ''}</div></div>`;
       }
       h += '</div>';
@@ -538,6 +540,7 @@ export class UI {
       <div class="muted">${this.taskLabel(a)}</div>
       <div class="row" style="margin:6px 0">${['weapon', 'armor', 'offhand', 'acc'].map(sl => { const it = a.eq[sl] && ITEMS[a.eq[sl]], label = { weapon: 'Weapon', armor: 'Body armor', offhand: 'Helm / shield', acc: 'Accessory' }[sl]; return `<span class="chip">${label}: ${it ? `<i data-item="${a.eq[sl]}" data-scale="1"></i>${it.name}` : 'None'}</span>`; }).join('')}</div>
       ${a.eq.weapon ? `<div class="${this.sim.weaponMatch(a) ? 'check' : 'muted'}">${this.sim.weaponMatch(a) ? 'Class match: +10% damage · +1 combat speed' : 'Weapon usable · normal stats, no class bonus'}</div>` : ''}
+      <div class="muted">Attack: ${{ arrow: 'Arrows', fire: 'Innate magic', shuriken: 'Innate throwing' }[this.sim.attackProfile(a).projectile] || 'Melee'} · Reach ${this.sim.attackProfile(a).range} tiles${job.attack === 'bow' ? ' · Prioritizes bows' : ''}</div>
       ${a.eq.blessing && ITEMS[a.eq.blessing] ? `<div class="relic-summary"><strong class="tag gold">★ Permanent blessing</strong><div><i data-item="${a.eq.blessing}" data-scale="1"></i> ${esc(ITEMS[a.eq.blessing].name)}</div><div class="muted">${esc(statLine(ITEMS[a.eq.blessing]))} · Accessory slot stays free</div></div>` : ''}
       ${a.perks.length ? `<div class="muted">Mastered perks:</div><div class="row">${a.perks.map(p => `<span class="tag gold" title="${esc(PERKS[p].desc)}">★ ${PERKS[p].name}</span>`).join('')}</div>` : ''}
       <div class="muted">Job Lv${a.jobLv[a.job] || 1}/99 · ${(a.jobLv[a.job] || 1) >= MASTERY ? 'mastered' : `${MASTERY - (a.jobLv[a.job] || 1)} to mastery`} · Lv${a.lv}/99</div>`;
