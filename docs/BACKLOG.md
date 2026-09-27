@@ -13,6 +13,8 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Gear clarity and resident essentials (#26): show earned legendary rewards prominently in the guild vault, expose accessory stock in Armor and Item Shops, and prioritize affordable missing basic equipment while reserving savings from optional spending. Urgent food and recovery remain available.
+
 - Palisades: build and remove wooden barriers to direct traffic; the main village has a free perimeter with eight broad openings, following paid expansion. Routes respect walls and preserve existing buildings on old saves.
 
 - Map interaction polish: Road, Palisade and Remove drags interpolate every crossed tile and suppress native browser image dragging. The eight frontier sites now have distinct atlas-built landmarks with full visible click targets and compact captured forms.

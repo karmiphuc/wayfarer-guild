@@ -304,6 +304,37 @@ export class Sim {
   }
   capOf(b) { const d = FAC[b.type]; return (d.cap || 3) + (b.lv - 1); }
   canEquip(a, it) { return it.slot !== 'weapon' || JOBS[a.job].wt.includes(it.type); }
+  shopPrice(id, count = 1) {
+    const it = ITEMS[id]; if (!it) return Infinity;
+    return Math.round(this.itemPrice(id) * count * (1 + this.bonus('shopSales') + this.charter('shopSales')) *
+      (this.eventOn('sale') ? 1.5 : 1) * (1 + this.royalAura()));
+  }
+  visitPrice(a, b) {
+    const d = FAC[b.type]; if (!d) return Infinity;
+    let paid = this.price(b);
+    if (d.kind === 'home' || (d.kind === 'sleep' && a.home === b.id)) return 0;
+    if (d.kind === 'food') paid *= this.pmul(a, 'food');
+    return Math.round(paid * (1 + this.royalAura()) *
+      (this.happening('rain') && (d.kind === 'food' || d.kind === 'sleep') ? 1.25 : 1));
+  }
+  basicGearNeeds(a) {
+    const needs = [], order = ['weapon', 'armor', 'acc'];
+    for (const slot of order) {
+      const equipped = a.eq[slot] && ITEMS[a.eq[slot]];
+      if (equipped && this.canEquip(a, equipped)) continue;
+      const shops = this.facilities('shop').filter(b => SHOP_SLOTS[FAC[b.type].slot].includes(slot));
+      if (!shops.length) continue;
+      let best = null;
+      for (const id of Object.keys(this.s.unlocked).sort()) {
+        const it = ITEMS[id];
+        if (!it || it.legendary || it.slot !== slot || !this.canEquip(a, it)) continue;
+        const price = this.shopPrice(id);
+        if (!best || price < best.price || (price === best.price && id < best.id)) best = { id, slot, price, shops, gain: this.gearValue(a, it) };
+      }
+      if (best) needs.push(best);
+    }
+    return needs.sort((p, q) => p.price - q.price || order.indexOf(p.slot) - order.indexOf(q.slot) || p.id.localeCompare(q.id));
+  }
   bestGearFor(a) {
     // most worthwhile affordable upgrade on sale in any shop that stocks that slot
     let best = null;
@@ -313,7 +344,7 @@ export class Sim {
       if (cur?.legendary) continue;
       for (const id in this.s.unlocked) {
         const it = ITEMS[id]; if (!it || it.legendary || it.slot !== slot || !this.canEquip(a, it)) continue;
-        const v = this.gearValue(a, it), price = this.itemPrice(id);
+        const v = this.gearValue(a, it), price = this.shopPrice(id);
         if (v > curV + 1 && price <= a.gold && (!best || v - curV > best.gain)) best = { id, gain: v - curV, shops, price };
       }
     }
@@ -329,26 +360,45 @@ export class Sim {
   decide(a) {
     const s = this.s, R = this.R, sc = [];
     const hpR = a.hp / maxHp(a, s);
+    const raiding = s.mons.some(m => m.raid && m.hp > 0);
+    const basics = a.resident ? this.basicGearNeeds(a) : [];
+    const reserve = basics.reduce((n, g) => n + g.price, 0);
+    const saving = reserve > 0, urgent = saving && (a.hunger >= 80 || a.energy < 15 || hpR < 0.3);
+    const canSpend = cost => cost <= a.gold && (!reserve || a.gold - cost >= reserve);
     const add = (score, task) => { if (score > 0) sc.push([score + R.range(0, 8), task]); };
     // eat
-    if (a.hunger > 35) { const b = this.pickFacility(a, 'food', b => this.price(b) <= a.gold); if (b) add(a.hunger * 0.9 * this.pmul(a, 'food'), { type: 'visit', b: b.id, dur: 5 }); }
+    if (a.hunger > 35) {
+      const critical = a.hunger >= 80;
+      let b = null;
+      if (critical && reserve) {
+        b = this.facilities('food').filter(b => this.visitPrice(a, b) <= a.gold)
+          .sort((p, q) => this.visitPrice(a, p) / FAC[p.type].fill - this.visitPrice(a, q) / FAC[q.type].fill || this.visitPrice(a, p) - this.visitPrice(a, q) || p.id - q.id)[0] || null;
+      } else b = this.pickFacility(a, 'food', b => canSpend(this.visitPrice(a, b)));
+      if (b) add(a.hunger * 0.9 * this.pmul(a, 'food') + (critical && saving ? 30 : 0), { type: 'visit', b: b.id, dur: 5 });
+    }
     // sleep / rest
     if (a.energy < 45 || hpR < 0.45) {
       const home = a.home && s.buildings.find(b => b.id === a.home);
-      const b = home || this.pickFacility(a, 'sleep', b => this.price(b) <= a.gold);
+      const critical = a.energy < 15 || hpR < 0.25;
+      const b = home || this.pickFacility(a, 'sleep', b => critical ? this.visitPrice(a, b) <= a.gold : canSpend(this.visitPrice(a, b)));
       const need = (100 - a.energy) * 0.9 * this.pmul(a, 'rest') + (1 - hpR) * 60;
-      if (b) add(need, { type: 'visit', b: b.id, dur: 12, sleep: true }); else add(need * 0.5, { type: 'camp', dur: 10 });
+      if (b) add(need + (critical && saving ? 40 : 0), { type: 'visit', b: b.id, dur: 12, sleep: true }); else add(need * 0.5 + (critical && saving ? 40 : 0), { type: 'camp', dur: 10 });
     }
     // heal at shrine
-    if (hpR < 0.7) { const b = this.pickFacility(a, 'heal', b => this.price(b) <= a.gold); if (b) add((1 - hpR) * 80, { type: 'visit', b: b.id, dur: 4 }); }
+    if (hpR < 0.7) { const critical = hpR < 0.3; const b = this.pickFacility(a, 'heal', b => critical ? this.visitPrice(a, b) <= a.gold : canSpend(this.visitPrice(a, b))); if (b) add((1 - hpR) * 80 + (critical && saving ? 40 : 0), { type: 'visit', b: b.id, dur: 4 }); }
     // shopping for gear
-    const g = this.bestGearFor(a);
-    if (g) { const shop = g.shops.sort((p, q) => this.appeal(q) - this.appeal(p))[0]; add(35 + g.gain * 3 * this.pmul(a, 'shop'), { type: 'visit', b: shop.id, dur: 4, buy: g.id }); }
-    if (a.potions < 2) { const b = this.pickFacility(a, 'shop', b => FAC[b.type].slot === 'item'); if (b && a.gold > 60) add(18 * this.pmul(a, 'shop'), { type: 'visit', b: b.id, dur: 3, buy: 'potion' }); }
+    if (!raiding && !urgent) {
+      const basic = basics[0], g = basic ? (basic.price <= a.gold ? basic : null) : this.bestGearFor(a);
+      if (g) { const shop = g.shops.sort((p, q) => this.appeal(q) - this.appeal(p) || p.id - q.id)[0]; add((basic ? 65 : 35) + g.gain * 3 * this.pmul(a, 'shop'), { type: 'visit', b: shop.id, dur: 4, buy: g.id }); }
+      if (a.potions < 2) {
+        const n = 3 - a.potions, cost = this.shopPrice(this.potion() === ITEMS.medipack ? 'medipack' : 'potion', n);
+        const b = this.pickFacility(a, 'shop', b => FAC[b.type].slot === 'item');
+        if (b && a.gold > 60 && canSpend(cost)) add(18 * this.pmul(a, 'shop'), { type: 'visit', b: b.id, dur: 3, buy: 'potion' });
+      }
+    }
     // train
-    { const b = this.pickFacility(a, 'train', b => this.price(b) <= a.gold); if (b) add(16 * this.pmul(a, 'train') + (a.jobLv[a.job] < 10 ? 6 : 0), { type: 'visit', b: b.id, dur: 8, train: true }); }
+    { const b = this.pickFacility(a, 'train', b => canSpend(this.visitPrice(a, b))); if (b) add(16 * this.pmul(a, 'train') + (a.jobLv[a.job] < 10 ? 6 : 0), { type: 'visit', b: b.id, dur: 8, train: true }); }
     // hunt
-    const raiding = s.mons.some(m => m.raid && m.hp > 0);
     if (hpR > 0.6 && a.energy > 40 && !raiding) {
       const z = this.zoneFor(a);
       add((28 + (a.gold < 80 ? 30 : 0)) * this.pmul(a, 'hunt') * (this.eventOn('contest') ? 1.6 : 1) * (this.happening('rain') ? 0.6 : 1), { type: 'hunt', zone: z, dur: 40 + R.int(0, 30) });
@@ -519,6 +569,16 @@ export class Sim {
   settleVisit(a, b, t) {
     const s = this.s, d = FAC[b.type]; let paid = 0, joy = 0;
     const ap = this.appeal(b);
+    const basics = a.resident ? this.basicGearNeeds(a) : [], reserve = basics.reduce((sum, g) => sum + g.price, 0);
+    if (reserve) {
+      const hpR = a.hp / maxHp(a, s), basic = t.buy && basics.some(g => g.id === t.buy);
+      const critical = (d.kind === 'food' && a.hunger >= 80) || ((d.kind === 'sleep' || d.kind === 'home') && (a.energy < 15 || hpR < 0.25)) || (d.kind === 'heal' && hpR < 0.3);
+      let cost = this.visitPrice(a, b);
+      if (d.kind === 'shop' && t.buy && t.buy !== 'potion') cost = this.shopPrice(t.buy);
+      if (d.kind === 'shop' && t.buy === 'potion') { const P = this.potion(), id = P === ITEMS.medipack ? 'medipack' : 'potion'; cost = this.shopPrice(id, 3 - a.potions); }
+      // Inn recovery is already delivered by insideStep; settle its bill even after the urgent need has passed.
+      if (cost > 0 && d.kind !== 'sleep' && !basic && !critical && cost > a.gold - reserve) return;
+    }
     switch (d.kind) {
       case 'food': paid = this.price(b) * this.pmul(a, 'food'); a.hunger = Math.max(0, a.hunger - d.fill); a.fun = Math.min(100, a.fun + (d.fun || 8)); joy = 3 + ap / 4; this.emote(a, 'love'); break;
       case 'sleep': paid = a.home === b.id ? 0 : this.price(b); joy = 2 + ap / 5; this.emote(a, 'zzz'); break;
@@ -526,8 +586,13 @@ export class Sim {
       case 'heal': paid = this.price(b); a.hp = maxHp(a, s); a.fun = Math.min(100, a.fun + 10); joy = 3 + ap / 4; this.emote(a, 'happy'); break;
       case 'train': paid = this.price(b); this.gainXp(a, (6 + b.lv * 3) * (1 + this.bonus('xp')), true); joy = 1 + ap / 6; this.emote(a, 'fire'); break;
       case 'shop': {
-        if (t.buy === 'potion') { const P = this.potion(), n = Math.min(3 - a.potions, Math.floor(a.gold / P.price)); if (n > 0) { paid = n * P.price * (1 + this.bonus('shopSales') + this.charter('shopSales')); a.potions += n; } }   // shop sales bonuses count for potions too
-        else if (t.buy && ITEMS[t.buy] && !ITEMS[t.buy].legendary && !ITEMS[a.eq[ITEMS[t.buy].slot]]?.legendary && a.gold >= this.itemPrice(t.buy)) {
+        if (t.buy === 'potion') {
+          const P = this.potion(), id = P === ITEMS.medipack ? 'medipack' : 'potion'; let n = 0;
+          const reserve = a.resident ? this.basicGearNeeds(a).reduce((sum, g) => sum + g.price, 0) : 0;
+          while (n < 3 - a.potions && this.shopPrice(id, n + 1) <= a.gold - reserve) n++;
+          if (n > 0) { paid = n * P.price * (1 + this.bonus('shopSales') + this.charter('shopSales')); a.potions += n; }
+        }
+        else if (t.buy && ITEMS[t.buy] && !ITEMS[t.buy].legendary && this.canEquip(a, ITEMS[t.buy]) && !ITEMS[a.eq[ITEMS[t.buy].slot]]?.legendary && a.gold >= this.shopPrice(t.buy)) {
           const it = ITEMS[t.buy]; paid = this.itemPrice(t.buy); a.eq[it.slot] = t.buy; a.hp = Math.min(a.hp, maxHp(a, s));
           log(s, `${a.name} bought a ${it.name}! (+${paid}G)`, 'coin'); this.emote(a, 'star'); this.bark(a, it.name + '!');
           paid *= 1 + this.bonus('shopSales') + this.charter('shopSales');
@@ -1173,7 +1238,7 @@ export class Sim {
     s.props = s.props.filter(p => p.k === 'cave' || townDist(s, p.x, p.y) > 0 || p.soft);
     for (const m of s.mons) if (!m.quest && !m.raid && townDist(s, m.x, m.y) === 0) m.hp = 0;
     this.rebuildGrid(); this.invalidatePaths();
-    log(s, `${f.name} captured! Land is buildable. ${f.benefit}. Relic: ${ITEMS[f.relic].name}.`, 'title');
+    log(s, `${f.name} captured! Land is buildable. ${f.benefit}. ${ITEMS[f.relic].name} is in the guild vault; equip it from Frontiers.`, 'title');
   }
   equipRelic(id, pawnId) {
     const s = this.s, it = ITEMS[id];

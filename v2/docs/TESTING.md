@@ -52,6 +52,11 @@ Run from the repository root.
 
 ## Manual play check (1 minute, every feature)
 
+Gear economy regressions run in `tests/economy.mjs`; `tests/relic-ui.mjs` checks vault visibility and shop stock.
+For gear changes, open Frontiers after a conquest, assign its vault relic to a resident, verify the pawn's accessory,
+and inspect both Armor and Item Shops for ordinary accessory stock. Check an under-equipped resident buys cheap basics
+before upgrades, preserves savings during routine needs, and still meets urgent hunger/rest/healing needs.
+
 ```
 python3 v2/tools/serve.py 8766 .
 # open http://localhost:8766/v2/?new  → Start → watch 1 in-game week at 4× → open every bottom-menu panel

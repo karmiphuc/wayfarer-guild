@@ -1,5 +1,5 @@
 // DOM UI: top bar, ticker, bottom menu panels, inspector, fanfares. Uses event delegation via data-act.
-import { FAC, DECOR, SPR, JOBS, ITEMS, MATS, MONSTERS, BOSSES, FRONTIERS, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
+import { FAC, DECOR, SPR, JOBS, ITEMS, SHOP_SLOTS, MATS, MONSTERS, BOSSES, FRONTIERS, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
 import { IMG, iconCanvas, itemIcon, keyIcon, goldified, tinted } from './assets.js';
 import { defOf, maxHp, stat, save, wipeSave, valid, migrate, newGame, seedCode, parseSeed, MASTERY } from './state.js';
 
@@ -226,9 +226,10 @@ export class UI {
     return h;
   }
   panel_frontiers() {
-    const s = this.s, completed = s.frontier?.completed || {};
+    const s = this.s, completed = s.frontier?.completed || {}, relics = s.frontier?.relics || {};
     let h = `<div class="row spread"><span class="muted">Conquer each den once to claim its land, permanent village bonus and unique legendary relic.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
-      <p class="muted frontier-note">Dormant sites have no boss waiting on the map. Choose a party and depart to begin the fight. A failed conquest can be retried; a captured site never repeats.</p>`;
+      <p class="frontier-note"><b>Legendary rewards go to the Guild Relic Vault below, not a pawn inventory.</b> Select an earned relic, then choose a resident to equip it.</p>`;
+    h += this.frontierRelics();
     const picked = FRONTIERS.find(f => f.id === this.frontierPick);
     if (picked) h += this.frontierDetail(picked);
     h += '<div class="section">Territories</div><div class="grid frontier-grid">';
@@ -237,16 +238,15 @@ export class UI {
       const req = f.requires.length ? f.requires.map(id => FRONTIERS.find(x => x.id === id)?.name || id).join(', ') : 'None';
       const status = captured ? '<span class="tag res">Captured</span>' : active ? '<span class="tag gold">Underway</span>'
         : block ? `<span class="tag ko">${esc(block)}</span>` : '<span class="tag vis">Ready</span>';
-      const relic = ITEMS[f.relic], q = this.sim.frontierQuest(f.id);
+      const relic = ITEMS[f.relic], q = this.sim.frontierQuest(f.id), owner = s.advs.find(a => a.id === relics[f.relic]);
+      const relicStatus = captured ? owner ? `Equipped by ${esc(owner.name)}` : 'In Guild Relic Vault · ready to assign' : esc(statLine(relic));
       h += `<div class="card frontier-card ${this.frontierPick === f.id ? 'sel' : ''}" data-act="pickFrontier" data-id="${f.id}"><div class="thumb"><i data-face="bf_${f.boss}"></i></div><div class="meta">
         <div class="name">${esc(f.name)}</div><div>${status}</div><div class="sub">${esc(f.bossName)} · Suggested Lv${f.rec}+ · (${f.x}, ${f.y})</div>
         <div class="sub">Fee ${q.fee}G · Victory ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop</div>
-        <div class="sub">Land bonus: ${esc(f.benefit)}</div><div class="sub">Legendary: ${esc(relic.name)} · ${esc(statLine(relic))}</div><div class="sub">Requires: ${esc(req)}</div>
-        <button class="btn sm" data-act="mapFrontier" data-id="${f.id}">${active ? 'Watch' : 'Show on map'}</button></div></div>`;
+        <div class="sub">Land bonus: ${esc(f.benefit)}</div><div class="sub">Legendary: ${esc(relic.name)} · ${relicStatus}</div><div class="sub">Requires: ${esc(req)}</div>
+        <button class="btn sm" data-act="mapFrontier" data-id="${f.id}">${active ? 'Watch' : 'Show on map'}</button>${captured ? `<button class="btn sm" data-act="pickRelic" data-id="${f.relic}">Manage relic</button>` : ''}</div></div>`;
     }
-    h += '</div>';
-    h += this.frontierRelics();
-    return h;
+    return h + '</div>';
   }
   frontierDetail(f) {
     const s = this.s, q = this.sim.frontierQuest(f.id), active = s.activeQuests.find(x => x.frontier === f.id), captured = !!s.frontier?.completed?.[f.id];
@@ -258,7 +258,10 @@ export class UI {
         h += `<div class="card" data-act="selAdv" data-id="${a.id}"><div class="thumb"><i data-face="f_${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="bar hp"><i style="width:${a.hp / maxHp(a, s) * 100}%"></i></div><div class="sub">${a.ko ? 'KO' : JOBS[a.job].name + ' Lv' + a.lv}</div></div></div>`; }
       return h + '</div>';
     }
-    if (captured) return h + `<p class="check">Captured permanently. This land bonus is active and its legendary reward cannot be earned again.</p>`;
+    if (captured) {
+      const owner = s.advs.find(a => a.id === s.frontier?.relics?.[f.relic]);
+      return h + `<p class="check">Captured permanently. This land bonus is active and the one-of-a-kind ${esc(ITEMS[f.relic].name)} ${owner ? `is equipped by ${esc(owner.name)}` : 'is stored in the Guild Relic Vault'}.</p><button class="btn sm" data-act="pickRelic" data-id="${f.relic}">Manage relic</button>`;
+    }
     const block = this.sim.frontierBlock(f.id);
     if (block) return h + `<p class="cross">${esc(block)}</p>`;
     if (!q) return h + '<p class="cross">This frontier is unavailable.</p>';
@@ -275,24 +278,28 @@ export class UI {
   }
   frontierRelics() {
     const s = this.s, relics = s.frontier?.relics || {}, earned = FRONTIERS.filter(f => Object.prototype.hasOwnProperty.call(relics, f.relic));
-    let h = '<div class="section">Legendary relics</div>';
-    if (!earned.length) return h + '<p class="muted">Captured frontiers add their one-of-a-kind relic here.</p>';
+    const inVault = earned.filter(f => relics[f.relic] == null).length;
+    let h = `<div class="section relic-summary">Guild Relic Vault <span class="tag gold">${earned.length}/${FRONTIERS.length} earned</span>${inVault ? `<span class="tag vis">${inVault} ready to assign</span>` : ''}</div>`;
+    if (!earned.length) return h + '<p class="muted relic-note">Win a frontier conquest to place its one-of-a-kind legendary accessory here.</p>';
     const itemId = earned.some(f => f.relic === this.relicPick) ? this.relicPick : null;
+    h += '<p class="muted relic-note">These are single physical relics. Select one to assign or transfer it; ordinary accessories remain available through shops.</p><div class="grid relic-grid">';
+    for (const f of earned) {
+      const it = ITEMS[f.relic], owner = s.advs.find(a => a.id === relics[f.relic]);
+      const selected = this.relicPick === f.relic;
+      h += `<button type="button" class="card relic-choice ${selected ? 'sel' : ''}" data-act="pickRelic" data-id="${f.relic}" data-focus-key="relic:${f.relic}" aria-pressed="${selected}" aria-label="${esc(`${it.name}, ${owner ? 'equipped by ' + owner.name : 'in Guild Relic Vault, ready to assign'}`)}"><span class="thumb"><i data-item="${f.relic}" data-scale="3"></i></span><span class="meta"><span class="name">${esc(it.name)}</span><span class="sub">${esc(statLine(it))}</span><strong class="sub ${owner ? 'check' : 'relic-ready'}">${owner ? 'Equipped by ' + esc(owner.name) : 'In vault · select to assign'}</strong></span></button>`;
+    }
+    h += '</div>';
     if (itemId) {
-      const ownerId = relics[itemId], owner = s.advs.find(a => a.id === ownerId), ownerAway = owner && (owner.ko || this.sim.questForPawn(owner.id));
-      h += `<div class="relic-transfer"><div class="row"><button class="btn sm" data-act="equipRelic" data-id="${itemId}" data-pawn="none" ${ownerId == null || ownerAway ? 'disabled' : ''}>Return to vault</button><span class="muted">Choose a resident to equip or transfer this single relic.${ownerAway ? ' Its owner must return and recover first.' : ''}</span></div><div class="grid" style="margin-top:6px">`;
+      const item = ITEMS[itemId], ownerId = relics[itemId], owner = s.advs.find(a => a.id === ownerId), ownerAway = owner && (owner.ko || this.sim.questForPawn(owner.id));
+      h += `<div class="relic-transfer"><div class="row spread"><b>Assign ${esc(item.name)}</b><button class="btn sm" data-act="equipRelic" data-id="${itemId}" data-pawn="none" ${ownerId == null || ownerAway ? 'disabled' : ''}>Return to vault</button></div><p class="muted">Choose a resident to equip or transfer this relic.${ownerAway ? ' Its owner must return and recover first.' : ''}</p><div class="grid relic-owner-grid">`;
       for (const a of s.advs.filter(a => a.resident).sort((a, b) => b.lv - a.lv)) {
         const unavailable = ownerAway || a.ko || a.task?.type === 'quest' || !!this.sim.questForPawn(a.id), current = ownerId === a.id;
-        h += `<div class="card ${current ? 'sel' : ''} ${unavailable ? 'locked' : ''}" ${unavailable ? '' : `data-act="equipRelic" data-id="${itemId}" data-pawn="${a.id}"`}><div class="thumb"><i data-face="f_${a.spr}"></i></div><div class="meta"><div class="name">${esc(a.name)}</div><div class="sub">${JOBS[a.job].name} Lv${a.lv}${current ? ' · equipped' : unavailable ? a.ko ? ' · KO' : ' · away on quest' : ''}</div></div></div>`;
+        const state = current ? 'equipped' : unavailable ? a.ko ? 'KO' : 'away on quest' : 'available';
+        h += `<button type="button" class="card relic-choice ${current ? 'sel' : ''} ${unavailable ? 'locked' : ''}" data-act="equipRelic" data-id="${itemId}" data-pawn="${a.id}" data-focus-key="relic-owner:${itemId}:${a.id}" aria-pressed="${current}" aria-label="${esc(`${a.name}, ${JOBS[a.job].name}, level ${a.lv}, ${state}`)}" ${unavailable ? 'disabled' : ''}><span class="thumb"><i data-face="f_${a.spr}"></i></span><span class="meta"><span class="name">${esc(a.name)}</span><span class="sub">${JOBS[a.job].name} Lv${a.lv} · ${state}</span></span></button>`;
       }
       h += '</div></div>';
     }
-    h += '<div class="grid" style="margin-top:6px">';
-    for (const f of earned) {
-      const it = ITEMS[f.relic], owner = s.advs.find(a => a.id === relics[f.relic]);
-      h += `<div class="card ${this.relicPick === f.relic ? 'sel' : ''}" data-act="pickRelic" data-id="${f.relic}"><div class="thumb"><i data-item="${f.relic}" data-scale="3"></i></div><div class="meta"><div class="name">${esc(it.name)}</div><div class="sub">${esc(statLine(it))}</div><div class="sub">${owner ? 'Equipped by ' + esc(owner.name) : 'In the guild vault'}</div></div></div>`;
-    }
-    return h + '</div>';
+    return h;
   }
   panel_camps() {
     const s = this.s, camps = s.banditCamps || [];
@@ -499,7 +506,11 @@ export class UI {
       h += `<table class="t"><tr><td>Appeal</td><td>${this.sim.appeal(b)}</td></tr>${F.price ? `<tr><td>Price</td><td>${this.sim.price(b)}G</td></tr>` : ''}
         ${F.kind === 'home' ? `<tr><td>Residents</td><td>${s.advs.filter(a => a.home === b.id).map(a => esc(a.name)).join(', ') || 'Vacant'} (${this.sim.capOf(b)} max)</td></tr>` : ''}
         <tr><td>Visits</td><td>${b.visits}</td></tr><tr><td>Total sales</td><td>${b.sales}G</td></tr><tr><td>Inside now</td><td>${occ.map(a => esc(a.name)).join(', ') || '—'}</td></tr></table>`;
-      if (F.kind === 'shop') h += `<div class="muted">Stock: ${Object.keys(s.unlocked).filter(id => ITEMS[id] && !ITEMS[id].legendary && ITEMS[id].slot === F.slot).map(id => ITEMS[id].name).join(', ') || 'nothing yet'}</div>`;
+      if (F.kind === 'shop') {
+        const slots = SHOP_SLOTS[F.slot] || [F.slot];
+        const stock = Object.keys(s.unlocked).filter(id => ITEMS[id] && !ITEMS[id].legendary && slots.includes(ITEMS[id].slot)).map(id => ITEMS[id].name);
+        h += `<div class="muted"><b>Stock:</b> ${stock.map(esc).join(', ') || 'nothing yet'}${slots.includes('acc') ? '<br>Developed accessories are sold here.' : ''}</div>`;
+      }
       h += `<div class="row" style="margin-top:6px">${b.lv < 5 ? `<button class="btn sm" data-act="upgrade" data-id="${b.id}" ${s.gold < this.sim.upgradeCost(b) ? 'disabled' : ''}>Upgrade ${this.sim.upgradeCost(b)}G</button>` : '<span class="muted">Max level</span>'}
         ${b.type !== 'guild' ? `<button class="btn sm" data-act="demolish" data-id="${b.id}">Remove (+${this.sim.refund(b)}G)</button>` : `<button class="btn sm" data-act="open" data-k="quests">Quests</button><button class="btn sm" data-act="classes">Classes</button>`}</div>`;
     } else h += `<div class="row"><button class="btn sm" data-act="demolish" data-id="${b.id}">Remove (+${this.sim.refund(b)}G)</button></div>`;
@@ -599,7 +610,7 @@ export class UI {
       case 'togFrontierParty': { const id = +d.id; if (this.frontierParty.includes(id)) this.frontierParty = this.frontierParty.filter(x => x !== id); else if (this.frontierParty.length < 8 && sim.questCandidates().some(x => x.id === id)) this.frontierParty.push(id); else this.toast('A party can have at most 8 available adventurers'); this.renderPanel(); audio.sfx('click'); break; }
       case 'startFrontier': if (err(sim.startQuest(d.id, this.frontierParty || []))) { this.frontierParty = []; audio.sfx('quest'); } this.renderPanel(); break;
       case 'instantFrontier': if (err(sim.instantQuest(d.id))) { this.frontierParty = []; audio.sfx('quest'); } this.renderPanel(); break;
-      case 'pickRelic': this.relicPick = this.relicPick === d.id ? null : d.id; this.renderPanel(); audio.sfx('click'); break;
+      case 'pickRelic': this.relicPick = this.relicPick === d.id ? null : d.id; this.renderPanel(); if (this.relicPick) $('#panel-body').scrollTop = 0; audio.sfx('click'); break;
       case 'equipRelic': err(sim.equipRelic(d.id, d.pawn === 'none' ? null : +d.pawn)); this.renderPanel(); break;
       case 'pickCamp': this.showCamp(d.id); audio.sfx('click'); break;
       case 'mapCamp': { const c = (s.banditCamps || []).find(x => x.id === d.id); if (c) { this.game.rnd.campFocus = c.id; this.close(); this.game.centerOn(c.x, c.y); } break; }
