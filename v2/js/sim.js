@@ -15,6 +15,7 @@ const RESCUE_DELAY = 4;
 const RESCUE_RANGE = 24;
 const RESCUE_APPROACH_LIMIT = 20;
 const FIELD_RECOVERY = 60;
+const RAIDER_WEAPONS = Object.fromEntries(Object.values(ITEMS).filter(it => it.slot === 'weapon').map(it => [it.hand, it]));
 
 
 function setTimeoutSim(sim, steps, fn) { (sim.timers || (sim.timers = [])).push({ t: steps, fn }); }
@@ -331,6 +332,24 @@ export class Sim {
   }
   capOf(b) { const d = FAC[b.type]; return (d.cap || 3) + (b.lv - 1); }
   weaponMatch(a, it = ITEMS[a.eq.weapon]) { return it?.slot === 'weapon' && JOBS[a.job].wt.includes(it.type); }
+  attackProfile(a, it = a.eq ? ITEMS[a.eq.weapon] : RAIDER_WEAPONS[a.weapon]) {
+    const j = JOBS[a.job], bonus = a.perks ? perkSum(a, 'range') : 0;
+    if (it?.bow) return { range: Math.max(3, j.attack === 'bow' ? j.range : 0) + bonus, magic: false, projectile: 'arrow' };
+    if (j.attack === 'magic' || j.attack === 'throw') return { range: j.range + bonus, magic: j.attack === 'magic', projectile: j.attack === 'magic' ? 'fire' : 'shuriken' };
+    return { range: (['spear', 'trident', 'whip'].includes(it?.type) ? 2 : 1) + bonus, magic: false, projectile: null };
+  }
+  bowNeed(a) {
+    if (JOBS[a.job].attack !== 'bow') return null;
+    const shops = this.facilities('shop').filter(b => SHOP_SLOTS[FAC[b.type].slot].includes('weapon'));
+    if (!shops.length) return null;
+    let best = null;
+    for (const id of Object.keys(this.s.unlocked).sort()) {
+      const it = ITEMS[id]; if (!this.s.unlocked[id] || !it?.bow || it.legendary) continue;
+      const price = this.shopPrice(id);
+      if (!best || price < best.price) best = { id, slot: 'weapon', price, shops, gain: this.gearValue(a, it), priority: true };
+    }
+    return best;
+  }
   shopPrice(id, count = 1) {
     const it = ITEMS[id]; if (!it) return Infinity;
     return Math.round(this.itemPrice(id) * count * (1 + this.bonus('shopSales') + this.charter('shopSales')) *
@@ -346,8 +365,10 @@ export class Sim {
   }
   basicGearNeeds(a) {
     const needs = [], order = ['weapon', 'armor', 'offhand', 'acc'];
+    const bow = this.bowNeed(a);
     for (const slot of order) {
       const equipped = a.eq[slot] && ITEMS[a.eq[slot]];
+      if (slot === 'weapon' && bow) { if (!equipped?.bow) needs.push(bow); continue; }
       if (equipped) continue;
       const shops = this.facilities('shop').filter(b => SHOP_SLOTS[FAC[b.type].slot].includes(slot));
       if (!shops.length) continue;
@@ -360,17 +381,20 @@ export class Sim {
       }
       if (best) needs.push(best);
     }
-    return needs.sort((p, q) => p.price - q.price || order.indexOf(p.slot) - order.indexOf(q.slot) || p.id.localeCompare(q.id));
+    return needs.sort((p, q) => Number(!!q.priority) - Number(!!p.priority) || p.price - q.price || order.indexOf(p.slot) - order.indexOf(q.slot) || p.id.localeCompare(q.id));
   }
   bestGearFor(a) {
     // most worthwhile affordable upgrade on sale in any shop that stocks that slot
     let best = null;
+    const bow = this.bowNeed(a), bowsOnly = JOBS[a.job].attack === 'bow' && (bow || ITEMS[a.eq.weapon]?.bow);
+    if (bow && !ITEMS[a.eq.weapon]?.bow) return bow.price <= a.gold ? bow : null;
     for (const slot of ['weapon', 'armor', 'offhand', 'acc']) {
       const shops = this.facilities('shop').filter(b => SHOP_SLOTS[FAC[b.type].slot].includes(slot)); if (!shops.length) continue;
       const cur = a.eq[slot] ? ITEMS[a.eq[slot]] : null, curV = cur ? this.gearValue(a, cur) : 0;
       if (cur?.legendary) continue;
       for (const id in this.s.unlocked) {
         const it = ITEMS[id]; if (!it || it.legendary || it.slot !== slot) continue;
+        if (slot === 'weapon' && bowsOnly && !it.bow) continue;
         const v = this.gearValue(a, it), price = this.shopPrice(id);
         if (v > curV + 1 && price <= a.gold && (!best || v - curV > best.gain)) best = { id, gain: v - curV, shops, price };
       }
@@ -378,7 +402,7 @@ export class Sim {
     return best;
   }
   gearValue(a, it) {
-    const j = JOBS[a.job], magic = j.mag > j.atk;
+    const j = JOBS[a.job], magic = this.attackProfile(a, it.slot === 'weapon' ? it : ITEMS[a.eq.weapon]).magic;
     const match = this.weaponMatch(a, it), offense = ((it.atk || 0) * (magic ? 0.4 : 1) + (it.mag || 0) * (magic ? 1.2 : 0.3)) * (match ? 1.1 * (j.spd + 1) / j.spd : 1);
     return offense + (it.def || 0) + (it.hp || 0) * 0.3 + (it.crit || 0) * 120 + (it.spd || 0) * 60;
   }
@@ -557,7 +581,7 @@ export class Sim {
     const recovering = task?.type === 'return' || (task?.type === 'hunt' && (task.done || a.energy < 12 || hpR < 0.35 * this.pmul(a, 'retreat') + 0.05)) ||
       (task?.type === 'quest' && hpR < 0.3 && a.potions > 0);
     if (!task?.carrying && !recovering && townDist(s, Math.round(a.x), Math.round(a.y)) === 0) {
-      const threat = s.mons.find(m => m.hp > 0 && m.raid && m.target === a.id && Math.hypot(m.x - a.x, m.y - a.y) <= Math.max(4, (m.range || 1) + 0.2));
+      const threat = s.mons.find(m => m.hp > 0 && m.raid && m.target === a.id && Math.hypot(m.x - a.x, m.y - a.y) <= Math.max(4, (m.job ? this.attackProfile(m).range : m.range || 1) + 0.2));
       if (threat) { this.fight(a, threat, true); return; }
     }
     if (a.hunger >= 100 && s.tick % 50 === 0) { a.sat = Math.max(0, a.sat - 2); this.emote(a, 'hungry'); }
@@ -666,6 +690,7 @@ export class Sim {
           log(s, `${a.name} bought a ${it.name}! One resurrection is ready.`, 'coin'); this.emote(a, 'star');
         }
         else if (t.buy && ITEMS[t.buy] && ITEMS[t.buy].slot !== 'item' && !ITEMS[t.buy].legendary && !ITEMS[a.eq[ITEMS[t.buy].slot]]?.legendary && a.gold >= this.shopPrice(t.buy)) {
+          if (ITEMS[t.buy].slot === 'weapon' && !ITEMS[t.buy].bow && JOBS[a.job].attack === 'bow' && (ITEMS[a.eq.weapon]?.bow || this.bowNeed(a))) return;
           const it = ITEMS[t.buy]; paid = this.itemPrice(t.buy); a.eq[it.slot] = t.buy; a.hp = Math.min(a.hp, maxHp(a, s));
           log(s, `${a.name} bought a ${it.name}! (+${paid}G)`, 'coin'); this.emote(a, 'star'); this.bark(a, it.name + '!');
           paid *= 1 + this.bonus('shopSales') + this.charter('shopSales');
@@ -802,7 +827,7 @@ export class Sim {
     const m = this.nearestRaider(a);
     if (!m) { a.task = null; a.path = null; return; }
     const outside = townDist(this.s, Math.round(a.x), Math.round(a.y)) > 0;
-    if (!outside && Math.hypot(m.x - a.x, m.y - a.y) <= JOBS[a.job].range + perkSum(a, 'range') + 0.4) { this.fight(a, m); return; }
+    if (!outside && Math.hypot(m.x - a.x, m.y - a.y) <= this.attackProfile(a).range + 0.4) { this.fight(a, m); return; }
     const x = outside ? a.x : m.x, y = outside ? a.y : m.y;
     const key = `${outside}:${Math.round(x)},${Math.round(y)}:${this.grid.version}`;
     if (t.holdKey !== key) { t.hold = this.defensePoint(x, y); t.holdKey = key; }
@@ -815,7 +840,7 @@ export class Sim {
     return best;
   }
   fight(a, m, holdTerritory = false) {
-    const s = this.s, job = JOBS[a.job], range = job.range + perkSum(a, 'range') + 0.4, d = Math.hypot(m.x - a.x, m.y - a.y);
+    const s = this.s, job = JOBS[a.job], attack = this.attackProfile(a), range = attack.range + 0.4, d = Math.hypot(m.x - a.x, m.y - a.y);
     // healers mend wounded allies first
     if (job.heal && a.cool <= 0) {
       const ally = s.advs.find(o => o !== a && !o.inside && !o.ko && !o.dungeon && o.hp < maxHp(o, s) * 0.6 && Math.hypot(o.x - a.x, o.y - a.y) < 4);
@@ -832,16 +857,14 @@ export class Sim {
     a.cool -= DT; if (a.cool > 0) return;
     const match = this.weaponMatch(a);
     a.cool = 1.1 / (job.spd + (match ? 1 : 0)); a.atkT = 0.3;
-    const magic = job.mag > job.atk, P = k => perkSum(a, k);
+    const magic = attack.magic, P = k => perkSum(a, k);
     // Rallying Roar from nearby allies
     let aura = 0; for (const o of s.advs) if (o !== a && !o.inside && !o.ko && o.perks.includes('roar') && Math.hypot(o.x - a.x, o.y - a.y) < 3) { aura = PERKS.roar.auraAtk; break; }
     const pow = (magic ? stat(a, 'mag', s) * 1.25 : stat(a, 'atk', s)) * (1 + aura);
     let dmg = Math.max(1, Math.round(pow * this.R.range(0.85, 1.2) - m.def * 0.5));
     if (match) dmg = Math.round(dmg * 1.1);
     const crit = this.R.chance(0.08 + P('crit') + gearSum(a, 'crit')); if (crit) dmg = Math.round(dmg * (1.8 + P('critMul')));
-    const wpn = a.eq.weapon && ITEMS[a.eq.weapon];
-    if (job.range > 1 || P('range')) s.fx.push({ k: 'proj', x: a.x, y: a.y, tx: m.x, ty: m.y, t: 0, life: 0.25,
-      p: magic ? 'fire' : (wpn && wpn.bow) || job.weapon === 'Bow' ? 'arrow' : 'shuriken' });
+    if (attack.projectile) s.fx.push({ k: 'proj', x: a.x, y: a.y, tx: m.x, ty: m.y, t: 0, life: 0.25, p: attack.projectile });
     else s.fx.push({ k: 'slash', x: m.x, y: m.y, t: 0, life: 0.3, dir: a.dir });
     if (!m.boss && P('execute') && m.hp < m.mhp * 0.3 && this.R.chance(P('execute'))) { s.fx.push({ k: 'num', x: m.x, y: m.y - 1.1, t: 0, life: 1, text: 'FINISH!', c: '#ff5ad1', big: true }); dmg = m.hp; }
     this.hitMonster(m, dmg, a, crit);
@@ -1008,20 +1031,21 @@ export class Sim {
         if (ally) { ally.hp = Math.min(ally.mhp, ally.hp + Math.max(1, Math.round(m.mag * 1.4))); m.cd = 2; m.atkT = 0.3; s.fx.push({ k: 'heal', x: ally.x, y: ally.y, t: 0, life: 0.8 }); return; }
       }
     }
+    const attack = m.job ? this.attackProfile(m) : null;
     let tgt = m.target && s.advs.find(a => a.id === m.target && !a.ko && !a.inside && !a.dungeon);
     if (tgt && Math.hypot(tgt.x - m.x, tgt.y - m.y) > 9) { tgt = null; m.target = null; }
     if (!tgt) { // aggro: attack adventurers that wander close
-      for (const a of s.advs) if (!a.ko && !a.inside && !a.dungeon && Math.hypot(a.x - m.x, a.y - m.y) < (m.boss ? 4 : m.job ? Math.max(4, m.range + 1) : 2.2)) { tgt = a; m.target = a.id; break; }
+      for (const a of s.advs) if (!a.ko && !a.inside && !a.dungeon && Math.hypot(a.x - m.x, a.y - m.y) < (m.boss ? 4 : attack ? Math.max(4, attack.range + 1) : 2.2)) { tgt = a; m.target = a.id; break; }
     }
     if (tgt) {
-      const d = Math.hypot(tgt.x - m.x, tgt.y - m.y), reach = m.boss ? 1.6 : m.range || 1.0;
+      const d = Math.hypot(tgt.x - m.x, tgt.y - m.y), reach = m.boss ? 1.6 : attack ? attack.range : m.range || 1.0;
       if (d > reach) { if (townDist(s, Math.round(m.x), Math.round(m.y)) > 0 || m.boss || m.raid || m.camp) this.stepToward(m, tgt.x, tgt.y, spd); else { m.target = null; } }
       if (!m.job) m.cd -= DT;
       if (d <= reach + 0.2 && m.cd <= 0) {
-        const magic = m.job && m.mag > m.atk;
+        const magic = attack?.magic;
         m.cd = m.boss ? 1.3 : m.job ? 1.5 / m.moveSpeed : 1.5; m.atkT = 0.3;
         this.hurtAdv(tgt, (magic ? m.mag * 1.2 : m.atk) * R.range(0.8, 1.15), m.className || M.name);
-        if (m.job && reach > 1) s.fx.push({ k: 'proj', x: m.x, y: m.y, tx: tgt.x, ty: tgt.y, t: 0, life: 0.25, p: magic ? 'fire' : m.weapon === 'Bow' ? 'arrow' : 'shuriken' });
+        if (attack?.projectile) s.fx.push({ k: 'proj', x: m.x, y: m.y, tx: tgt.x, ty: tgt.y, t: 0, life: 0.25, p: attack.projectile });
         else s.fx.push({ k: M.human ? 'slash' : 'claw', x: tgt.x, y: tgt.y, t: 0, life: 0.3, dir: m.dir });
         if (M.human) this.emit('sfx', 'sword');
       }

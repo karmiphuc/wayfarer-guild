@@ -31,6 +31,7 @@ const perkUse = {};
 const allWeaponTypes = new Set(Object.values(ITEMS).filter(i => i.slot === 'weapon').map(i => i.type));
 for (const [id, j] of Object.entries(JOBS)) {
   const where = `JOBS.${id}`;
+  if (j.attack !== undefined && !['bow', 'magic', 'throw'].includes(j.attack)) err(`${where}: unknown attack mode "${j.attack}"`);
   for (const k of ['name', 'tier', 'sprites', 'hp', 'atk', 'def', 'mag', 'spd', 'range', 'weapon', 'wt', 'perk', 'desc'])
     if (j[k] === undefined) err(`${where}: missing field "${k}"`);
   if (!(j.tier >= 0 && j.tier < TIER_TP.length)) err(`${where}: tier ${j.tier} outside TIER_TP`);

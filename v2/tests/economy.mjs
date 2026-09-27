@@ -36,7 +36,7 @@ function add(s, type, x = 30, y = 30) {
   assert.equal(weapon.type, 'weapon');
 }
 
-// Item Shops stock unlocked accessories; basic shopping can use the cheapest non-preferred weapon.
+// Item Shops stock unlocked accessories; bow specialists prioritize a bow over cheaper melee stock.
 {
   const one = setup(), item = add(one.s, 'item');
   one.a.eq.weapon = 'woodSword'; one.a.eq.armor = 'cloth'; one.s.unlocked.luckyCharm = true;
@@ -45,8 +45,8 @@ function add(s, type, x = 30, y = 30) {
 
   const two = setup('archer'); add(two.s, 'weapon');
   Object.assign(two.s.unlocked, { woodSword: true, shortBow: true });
-  assert.deepEqual(two.sim.basicGearNeeds(two.a).map(g => g.id), ['woodSword']);
-  assert.equal(two.sim.decide(two.a).buy, 'woodSword');
+  assert.deepEqual(two.sim.basicGearNeeds(two.a).map(g => g.id), ['shortBow']);
+  assert.equal(two.sim.decide(two.a).buy, 'shortBow');
 }
 
 // A poor resident keeps basic-gear savings instead of repeatedly buying optional meals, lessons or potions.

@@ -149,6 +149,20 @@ the class's preferred `wt` types for +10% hit damage (after defense, before crit
 `1.1 / (job.spd + matchBonus)`; movement and healing speed are unchanged. Abstract cave offense and weapon upgrade scoring
 include the corresponding damage-rate bonus. An unequipped default sprite grants no weapon bonus.
 
+`JOBS.attack` identifies bow specialists (`bow`), innate casters (`magic`), and innate throwing classes (`throw`);
+omitted means melee. `attackProfile()` derives range, damage type and projectile from current equipment without saved
+fields. Any equipped bow fires physical arrows at range 3, or the bow specialist's higher class range. Otherwise innate
+attacks retain class range; melee reaches 1 (2 for spears/tridents/whips). Mastery range adds reach without changing effects.
+The profile drives field combat, territorial defense and classed raiders (whose explicit weapon sprite resolves to its
+catalogue type). Existing damage, affinity, cooldown, healing and cave formulas remain, except equipped bows use physical
+damage in the field. Changing class or loading a save immediately derives the correct attack; no gear is removed.
+
+Scout, Archer, Ranger, Sharpshooter and Wildwarden put an available unlocked bow first in `basicGearNeeds()`, even when
+already holding stronger melee gear. `bowNeed()` reserves the cheapest available bow's full checkout price; urgent care
+keeps the existing exceptions. Once they hold a bow, automatic weapon upgrades remain bows. Without bow stock/shop they
+keep normal fallback shopping; a newly stocked bow is considered on the next decision. Settlement rejects stale melee
+purchases after a bow becomes available or a class changes into a bow specialist. Innate classes keep their usual preferences.
+
 At dusk (70% through the week), `nightRest()` prioritizes home, affordable inn or outdoor village rest when energy is
 below 95. It respects basic-gear savings and urgent hunger, injury, nearby foes, active quests and rescue. Routine
 hunts/strolls reconsider bedtime once per second; existing visits finish, including long journeys to captured land.
