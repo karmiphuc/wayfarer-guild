@@ -93,7 +93,7 @@ const mask = cells => {
     .filter(name => name.endsWith('.png') && !name.endsWith('.face.png') && !name.startsWith('animal_'))
     .map(name => name.slice(0, -4)).sort();
   const configured = Object.values(MONSTERS).filter(M => !M.human).map(M => M.spr).sort();
-  assert.equal(assets.length, 66);
+  assert.equal(assets.length, 68);
   assert.deepEqual(configured, assets, 'every monster sheet should have one MONSTERS layout record');
   assert.deepEqual(Object.values(MONSTERS).filter(M => M.sheetRows).map(M => M.spr).sort(), [
     'GreenOctopus', 'GreyTrex', 'HeartGreen', 'HeartRed', 'KappaGreen', 'KappaRed',

@@ -20,7 +20,7 @@ function fixture() {
 
 const resources = s => ({ gold: s.gold, ...Object.fromEntries(MAT_KEYS.map(k => [k, s.mats[k]])) });
 
-assert.deepEqual(ALPHA_PET_COST, { gold: 10000, wood: 1000, hide: 1000, herb: 1000, ore: 1000, crystal: 1000 });
+assert.deepEqual(ALPHA_PET_COST, { gold: 10000, wood: 100, hide: 100, herb: 100, ore: 100, crystal: 100 });
 
 // Every gate fails atomically, including every individual material.
 {
@@ -38,7 +38,7 @@ for (const [change, error] of [
 }
 for (const k of MAT_KEYS) {
   const { s, pet, sim } = fixture(); s.mats[k]--; const before = resources(s);
-  assert.match(sim.alphaPet(pet.id), /^Need 1,000 /); assert.deepEqual(resources(s), before); assert.equal(pet.alpha, false);
+  assert.match(sim.alphaPet(pet.id), /^Need 100 /); assert.deepEqual(resources(s), before); assert.equal(pet.alpha, false);
 }
 
 // The one-time purchase charges the exact full bundle and preserves the pet.
@@ -96,7 +96,7 @@ for (const k of MAT_KEYS) {
   const ui = Object.create(UI.prototype);
   ui.game = { s, sim, audio: { sfx() {} }, follow: null }; ui.lastHtml = {}; ui.partnerPick = true;
   let html = ui.panel_people();
-  for (const amount of ['10,000G', 'Wood×1,000', 'Hide×1,000', 'Herb×1,000', 'Ore×1,000', 'Crystal×1,000']) assert(html.includes(amount), amount);
+  for (const amount of ['10,000G', 'Wood×100', 'Hide×100', 'Herb×100', 'Ore×100', 'Crystal×100']) assert(html.includes(amount), amount);
   assert(html.includes('+50% pet assist hit damage')); assert(html.includes('+50% bonded passive stat contribution'));
   assert(html.includes('Ready to upgrade')); assert(html.includes('data-act="alphaPet"')); assert(html.includes('style="grid-column:1/-1"'));
   s.stars = 4; assert(ui.panel_people().includes('Reach 5 stars first')); s.stars = 5;
@@ -127,13 +127,35 @@ for (const k of MAT_KEYS) {
     };
     const pet = { id: 1, type: 'slime', alpha: true, riding: true, x: 2, y: 3, dir: 0, anim: 0 };
     Renderer.prototype.drawPet.call(renderer, pet);
-    assert.equal(frames.at(-1)[5], source); assert.equal(crowns.length, 1);
+    assert.equal(frames.at(-1)[5], source); assert.equal(frames.at(-1)[7], 20); assert.equal(crowns.length, 1);
     Renderer.prototype.drawAdv.call(renderer, { monsters: [pet] }, { partner: 1, x: 2, y: 3, dir: 0, anim: 0, atkT: 0, eq: null });
-    assert.equal(frames.at(-1)[5], source); assert.equal(crowns.length, 2);
+    assert.equal(frames.at(-1)[5], source); assert.equal(frames.at(-1)[7], 20); assert.equal(crowns.length, 2);
   } finally {
     if (oldImage === undefined) delete IMG[key]; else IMG[key] = oldImage;
     if (oldDocument === undefined) delete globalThis.document; else globalThis.document = oldDocument;
   }
 }
 
-console.log('alpha pets: exact atomic cost, one-time save migration, combat/stat bonuses, UI and gold+crown rendering passed');
+// Global progression survives loading, counts existing Alphas, and caps at 500 per material.
+{
+  const { s, pet, sim } = fixture();
+  for (const amount of [100, 200, 300, 400, 500, 500, 500]) {
+    const next = { ...pet, id: s.nextId++, alpha: false }; s.monsters.push(next);
+    const cost = sim.alphaPetCost(); assert.equal(cost.gold, 10000);
+    for (const k of MAT_KEYS) { assert.equal(cost[k], amount); s.mats[k] = amount; }
+    s.gold = 10000; assert.equal(sim.alphaPet(next.id), null);
+  }
+  delete s.flags.alphaUpgrades; migrate(s);
+  assert.equal(s.flags.alphaUpgrades, 7);
+  assert.equal(new Sim(migrate(JSON.parse(JSON.stringify(s)))).alphaPetCost().wood, 500);
+}
+// Integer destination dimensions are exactly 25% larger, with the same foot anchor.
+{
+  const calls = [], renderer = { g: { drawImage(...args) { calls.push(args); } } };
+  const im = {};
+  Renderer.prototype.monFrame.call(renderer, 'test', 2, 3, 0, 0, im, false, 16);
+  Renderer.prototype.monFrame.call(renderer, 'test', 2, 3, 0, 0, im, false, 20);
+  assert.equal(calls[1][7] / calls[0][7], 1.25);
+  assert.equal(calls[1][6] + calls[1][8], calls[0][6] + calls[0][8]);
+}
+console.log('alpha pets: escalating capped costs, migration, combat bonuses, UI and 25% larger rendering passed');

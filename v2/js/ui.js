@@ -2,7 +2,6 @@
 import { FAC, DECOR, SPR, JOBS, ITEMS, SHOP_SLOTS, MATS, MONSTERS, BOSSES, FRONTIERS, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
 import { IMG, iconCanvas, itemIcon, keyIcon, goldified, tinted } from './assets.js';
 import { defOf, maxHp, stat, save, wipeSave, valid, migrate, newGame, seedCode, parseSeed, MASTERY } from './state.js';
-import { ALPHA_PET_COST } from './sim.js';
 import { CAMP_PATROLS } from './data.js';
 
 const $ = sel => document.querySelector(sel);
@@ -11,8 +10,8 @@ const CATS = [['lodging', 'Lodging'], ['food', 'Food'], ['shop', 'Shops'], ['tra
 const statLine = it => ['atk', 'mag', 'def', 'hp', 'heal'].filter(k => it[k]).map(k => `${k.toUpperCase()}${it[k] > 0 ? '+' : ''}${it[k]}`)
   .concat(it.crit ? [`CRIT+${Math.round(it.crit * 100)}%`] : [], it.spd ? [`SPD+${Math.round(it.spd * 100)}%`] : [], it.revive ? [`One revival at ${Math.round(it.revive * 100)}% HP`] : []).join(' ');
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const ALPHA_COST_TEXT = `${ALPHA_PET_COST.gold.toLocaleString('en-US')}G · ${['wood', 'hide', 'herb', 'ore', 'crystal'].map(k => `${MATS[k].name}×${ALPHA_PET_COST[k].toLocaleString('en-US')}`).join(' · ')}`;
-const ALPHA_BENEFIT_TEXT = '+50% pet assist hit damage · +50% bonded passive stat contribution';
+const alphaCostText = cost => `${cost.gold.toLocaleString('en-US')}G · ${['wood', 'hide', 'herb', 'ore', 'crystal'].map(k => `${MATS[k].name}×${cost[k].toLocaleString('en-US')}`).join(' · ')}`;
+const ALPHA_BENEFIT_TEXT = '+50% pet assist hit damage · +50% bonded passive stat contribution · 25% larger';
 
 export class UI {
   constructor(game) {
@@ -181,7 +180,7 @@ export class UI {
       h += `<div class="card" style="grid-column:1/-1"><div class="thumb"><i data-mon="${MONSTERS[m.type].spr}" data-scale="3" ${m.alpha ? 'data-gold="1"' : ''}></i></div><div class="meta"><div class="name">${m.alpha ? '<span class="tag gold">Alpha</span> ' : ''}${esc(m.name)}</div>
         <div class="sub">Bond ${m.bond}/100 ${m.bond >= 50 ? '· Mount' : ''}</div><div class="sub">${owner ? 'Partner of ' + esc(owner.name) : 'Free in the Stable'}</div>
         <div class="sub">${m.alpha ? 'Alpha pet · ' : 'Alpha upgrade · '}${ALPHA_BENEFIT_TEXT}</div>
-        ${m.alpha ? '<div class="check">One-time Alpha upgrade complete</div>' : `<div class="sub">${ALPHA_COST_TEXT}</div><div class="${block ? 'cross' : 'check'}">${esc(block || 'Ready to upgrade')}</div><button class="btn sm" data-act="alphaPet" data-id="${m.id}" ${block ? 'disabled' : ''}>Make Alpha</button>`}</div></div>`;
+        ${m.alpha ? '<div class="check">One-time Alpha upgrade complete</div>' : `<div class="sub">${alphaCostText(this.sim.alphaPetCost())}</div><div class="sub">Materials rise by 100 per upgrade, capped at 500 each.</div><div class="${block ? 'cross' : 'check'}">${esc(block || 'Ready to upgrade')}</div><button class="btn sm" data-act="alphaPet" data-id="${m.id}" ${block ? 'disabled' : ''}>Make Alpha</button>`}</div></div>`;
     }
     return h + '</div>';
   }
@@ -239,7 +238,7 @@ export class UI {
   panel_frontiers() {
     const s = this.s, completed = s.frontier?.completed || {}, relics = s.frontier?.relics || {};
     let h = `<div class="row spread"><span class="muted">Conquer each den once to claim its land, permanent village bonus and unique legendary relic.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
-      <p class="frontier-note"><b>Legendary rewards go to the Guild Relic Vault below, not a pawn inventory.</b> Select an earned relic, then choose a resident to receive its blessing.</p>`;
+      <p class="frontier-note"><b>Legendary rewards go to the Guild Relic Vault below, not a pawn inventory.</b> Select an earned relic, then choose a resident to receive its blessing. Each camp also has a one-time 30% chance to grant a rare companion, with a bonus Stable space. Previously captured camps receive this chance too.</p>`;
     h += this.frontierRelics();
     const picked = FRONTIERS.find(f => f.id === this.frontierPick);
     if (picked) h += this.frontierDetail(picked);
@@ -251,10 +250,12 @@ export class UI {
         : block ? `<span class="tag ko">${esc(block)}</span>` : '<span class="tag vis">Ready</span>';
       const relic = ITEMS[f.relic], q = this.sim.frontierQuest(f.id), owner = s.advs.find(a => a.id === relics[f.relic]);
       const relicStatus = captured ? owner ? `Blessing assigned to ${esc(owner.name)}` : 'In Guild Relic Vault · ready to assign' : esc(statLine(relic));
+      const petType = s.frontier.petRewards?.[f.id];
+      const petStatus = captured ? petType ? `${MONSTERS[petType].name} joined · assign in Adventurers` : 'No rare companion found' : '30% chance of a rare companion';
       h += `<div class="card frontier-card ${this.frontierPick === f.id ? 'sel' : ''}" data-act="pickFrontier" data-id="${f.id}"><div class="thumb"><i data-face="bf_${f.boss}"></i></div><div class="meta">
         <div class="name">${esc(f.name)}</div><div>${status}</div><div class="sub">${esc(f.bossName)} · Suggested Lv${f.rec}+ · (${f.x}, ${f.y})</div>
         <div class="sub">Fee ${q.fee}G · Victory ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop</div>
-        <div class="sub">Land bonus: ${esc(f.benefit)}</div><div class="sub">Legendary: ${esc(relic.name)} · ${relicStatus}</div><div class="sub">Requires: ${esc(req)}</div>
+        <div class="sub">Land bonus: ${esc(f.benefit)}</div><div class="sub">Legendary: ${esc(relic.name)} · ${relicStatus}</div><div class="sub">${esc(petStatus)}</div><div class="sub">Requires: ${esc(req)}</div>
         <button class="btn sm" data-act="mapFrontier" data-id="${f.id}">${active ? 'Watch' : 'Show on map'}</button>${captured ? `<button class="btn sm" data-act="pickRelic" data-id="${f.relic}">Manage relic</button>` : ''}</div></div>`;
     }
     return h + '</div>';
@@ -618,7 +619,7 @@ export class UI {
       case 'alphaPet': {
         const pet = s.monsters.find(m => m.id === +d.id);
         if (!pet) { err('Pet not found'); break; }
-        this.ask(`Make ${pet.name} an Alpha pet? Cost: ${ALPHA_COST_TEXT}. Benefits: ${ALPHA_BENEFIT_TEXT}. Species and bond are preserved.`, 'Make Alpha', () => {
+        this.ask(`Make ${pet.name} an Alpha pet? Cost: ${alphaCostText(sim.alphaPetCost())}. Benefits: ${ALPHA_BENEFIT_TEXT}. Species and bond are preserved.`, 'Make Alpha', () => {
           err(sim.alphaPet(pet.id)); this.lastHtml.insp = null; this.renderPanel(); this.renderInspector();
         });
         break;

@@ -77,6 +77,12 @@ These are **not** “in use” until copied into the repo and moved to the table
 
 The new class variants use existing Ninja Adventure sheets and faces under their existing CC0 license.
 
+## v2 rare warg companions
+
+| Repo path | Asset / pack | Creator | Source | License | Modified? |
+|---|---|---|---|---|---|
+| `v2/assets/monsters/{DreadWarg,EmberWarg}.png` and matching `.face.png` | Ninja Adventure, March 2026 update, `Actor/Animal/Hyena/{SpriteSheet,Faceset}{,Brown}.png` | Pixel-boy & AAA | https://pixel-boy.itch.io/ninja-adventure-asset-pack | CC0 1.0 (`v2/assets/NINJA_ADVENTURE_CC0_LICENSE.txt`) | Native 14x13 side frames padded to 16x16 and arranged into 64x64 sheets; leftward poses mirrored, vertical movement retains a side pose. Two source animation frames repeat across four animation rows. Faces copied unchanged. Author page and shipped license verified 2026-09-27. |
+
 ## Attribution template
 
 For CC-BY / OGA-BY assets, store something like:

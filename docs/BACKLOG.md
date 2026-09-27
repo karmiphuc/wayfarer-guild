@@ -13,11 +13,15 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Alpha pet materials now start at 100 each, increase by 100 per pet and cap at 500; Alpha sprites are 25% larger.
+  Boss quests refill immediately and continue as scaling legendary rematches after all first clears. Each world
+  camp also rolls once for a 30% rare companion bonus, including camps completed in existing saves.
+
 - Local self-defense interrupts errands and outdoor rest only when the pawn is targeted in town, preserving quest/rescue/recovery priorities and then resuming the pawn's task without a village rally or chase outside owned land. Camp patrols now scale count, interval and level by stars, with a shared interval across camps; old rapid schedules and over-level patrols migrate once.
 
 - Camp guard patrols no longer rally the village, attract distant defenders or prevent distant pawns from resting. Nearby encounters still use normal combat; real bandit raids and stampedes retain territorial defense.
 
-- Late-game investments: one-time Alpha pets cost 10,000 village gold plus 1,000 of every material at five stars with a Stable, granting +50% assist damage and bonded stat bonuses. Research-only Phoenix Sigils cost 15,000 gold plus materials to unlock; pawns buy one slot-free resurrection charge at a 10,000-gold base price, consumed to return at half health in field or cave battles.
+- Late-game investments: one-time Alpha pets cost 10,000 village gold plus the progressive material bundle at five stars with a Stable, granting +50% assist damage and bonded stat bonuses. Research-only Phoenix Sigils cost 15,000 gold plus materials to unlock; pawns buy one slot-free resurrection charge at a 10,000-gold base price, consumed to return at half health in field or cave battles.
 
 - Empty weapon slots render empty hands across all pawn classes; held sprites come only from actual equipped items. Outlaws retain their explicitly assigned weapons.
 

@@ -54,14 +54,14 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     gold: 3000, tp: 10, pop: 40, stars: 0,
     mats: { wood: 6, hide: 2, herb: 4, ore: 0, crystal: 0 },
     town: { ...TOWN0 }, mapWidth: HOME_W, mapHeight: HOME_H,
-    frontier: { completed: {}, relics: {} },
+    frontier: { completed: {}, relics: {}, petRewards: {} },
     ground: [], roads: '', props: [],
     buildings: [], advs: [], mons: [], monsters: [], fx: [], folk: [], animals: [],
     unlocked: { woodSword: true, cloth: true, ironCap: true, potion: true },
     quests: [], activeQuests: [], cleared: 0, bossesBeaten: {},
     titles: {}, events: [], log: [],
     stats: { income: 0, lastIncome: 0, kills: 0, monthKills: 0, visitorsTotal: 0, spentBuild: 0 },
-    flags: { tutorial: 0, nextCampPatrol: 0, patrolScaling: true },
+    flags: { tutorial: 0, nextCampPatrol: 0, patrolScaling: true, bossRematches: 0, alphaUpgrades: 0 },
     world: null, charter: null, charterChoices: [], happen: [], happenLog: [], npcs: [],
   };
   const R = makeRng(s);
@@ -337,9 +337,10 @@ export function valid(s) { return s && typeof s === 'object' && s.schema && Arra
 const ITEM_RENAME = { wand: 'oakWand', bow: 'shortBow', axe: 'battleAxe', book: 'sutra', bigSword: 'greatSword', scroll: null };
 const JOB_RENAME = { princess: 'royal' };
 export function migrate(s) {
-  s.flags ??= {}; s.flags.nextCampPatrol ??= 0;
+  s.flags ??= {}; s.flags.nextCampPatrol ??= 0; s.flags.bossRematches ??= 0;
   s.fx = []; s.folk = s.folk || []; s.animals = s.animals || [];
   for (const m of s.monsters || []) m.alpha = m.alpha === true;
+  s.flags.alphaUpgrades ??= (s.monsters || []).filter(m => m.alpha).length;
   if (!Array.isArray(s.activeQuests)) s.activeQuests = [];
   if (s.quest && !s.activeQuests.some(q => q.id === s.quest.id)) s.activeQuests.push(s.quest);
   delete s.quest;
@@ -348,6 +349,7 @@ export function migrate(s) {
   if (!(s.world.cave && Number.isInteger(s.world.cave.x) && Number.isInteger(s.world.cave.y))) s.world.cave = { ...CAVE };
   s.frontier = s.frontier || { completed: {}, relics: {} };
   s.frontier.completed = s.frontier.completed || {}; s.frontier.relics = s.frontier.relics || {};
+  s.frontier.petRewards ??= {};
   expandWorld(s);
   clearFrontierScenery(s);
   seedBanditCamps(s);
