@@ -13,6 +13,8 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Empty weapon slots render empty hands across all pawn classes; held sprites come only from actual equipped items. Outlaws retain their explicitly assigned weapons.
+
 - Weapon affinity: class changes retain all equipped gear. Any weapon remains usable with normal stats; preferred class types grant +10% damage and +1 combat speed. The class screen and pawn inspector explain the bonus, and shopping/cave combat account for it.
 
 - Frontier blessings and village routines: assign one permanent relic blessing per resident alongside ordinary accessories; migrate existing owners. Live camps send bounded 2–4 guard patrols, recalled on clearance. Pawns prefer rest at dusk while preserving quests, rescue, emergencies and ongoing visits. Connected palisade corners and corrected monster animation axes improve map readability.

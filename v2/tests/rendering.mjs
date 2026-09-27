@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
-import { MAP_H, MAP_W, MONSTERS } from '../js/data.js';
+import { MAP_H, MAP_W, MONSTERS, JOBS } from '../js/data.js';
+import { IMG } from '../js/assets.js';
 import { Renderer, palisadeConnections } from '../js/render.js';
 import { newGame, villageBoundary } from '../js/state.js';
 
@@ -125,4 +126,34 @@ const mask = cells => {
   assert.deepEqual(calls.map(args => args[6]), [true, undefined, true, undefined, true, undefined]);
 }
 
-console.log('rendering: connected palisades and audited monster sheet layouts passed');
+// All classes draw only the equipped weapon, including after a change to a non-matching class.
+{
+  const keys = [...new Set(['h_Sword', ...Object.values(JOBS).map(j => 'h_' + j.weapon)])];
+  const saved = new Map(keys.map(k => [k, IMG[k]]));
+  for (const k of keys) IMG[k] = { width: 16, height: 16 };
+  try {
+    const weapons = [], renderer = {
+      selected: null, drawShadow() {}, drawChar() {},
+      weaponKey: Renderer.prototype.weaponKey, weaponBehind: Renderer.prototype.weaponBehind,
+      drawWeapon(a, key) { weapons.push(key); },
+    };
+    for (const [job, j] of Object.entries(JOBS)) for (const dir of [0, 1, 2, 3]) for (const atkT of [0, 0.2]) {
+      const a = { job, spr: j.sprites[0], x: 1, y: 1, dir, atkT, anim: 0, eq: { weapon: null } };
+      for (const weapon of [null, 'missing-item', 'cloth']) {
+        a.eq.weapon = weapon; weapons.length = 0;
+        Renderer.prototype.drawAdv.call(renderer, {}, a);
+        assert.deepEqual(weapons, [], `${job}: invalid or empty weapon slot drew a weapon`);
+      }
+      a.eq.weapon = 'woodSword'; weapons.length = 0;
+      Renderer.prototype.drawAdv.call(renderer, {}, a);
+      assert.deepEqual(weapons, ['h_Sword'], `${job}: equipped sword should render exactly once`);
+    }
+    weapons.length = 0;
+    Renderer.prototype.drawHuman.call(renderer, { x: 1, y: 1, dir: 0, atkT: 0, anim: 0 }, { spr: 'FighterRed', weapon: 'Sword' });
+    assert.deepEqual(weapons, ['h_Sword'], 'outlaws retain their explicit enemy weapon');
+  } finally {
+    for (const [key, value] of saved) { if (value === undefined) delete IMG[key]; else IMG[key] = value; }
+  }
+}
+
+console.log('rendering: connected palisades, audited monster layouts and equipment-only pawn weapons passed');

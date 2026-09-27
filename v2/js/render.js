@@ -222,7 +222,8 @@ export class Renderer {
   // ---------- held weapons (Ninja Adventure in-hand sprites point blade-down, handle at the top) ----------
   weaponKey(a) {
     const it = a.eq && a.eq.weapon && ITEMS[a.eq.weapon];
-    const k = 'h_' + ((it && it.hand) || JOBS[a.job].weapon);
+    if (it?.slot !== 'weapon' || !it.hand) return null;
+    const k = 'h_' + it.hand;
     return IMG[k] ? k : null;
   }
   weaponImg(a, key) { const it = a.eq && a.eq.weapon && ITEMS[a.eq.weapon]; return tinted(key, it && it.hand === key.slice(2) ? it.tint : 0);
