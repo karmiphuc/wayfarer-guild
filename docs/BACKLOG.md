@@ -13,6 +13,8 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Weapon affinity: class changes retain all equipped gear. Any weapon remains usable with normal stats; preferred class types grant +10% damage and +1 combat speed. The class screen and pawn inspector explain the bonus, and shopping/cave combat account for it.
+
 - Frontier blessings and village routines: assign one permanent relic blessing per resident alongside ordinary accessories; migrate existing owners. Live camps send bounded 2–4 guard patrols, recalled on clearance. Pawns prefer rest at dusk while preserving quests, rescue, emergencies and ongoing visits. Connected palisade corners and corrected monster animation axes improve map readability.
 
 - Equipment and class progression (#31): separate body armor and helm/shield slots with old-save migration; 15 additional items (85 ordinary items total), CC0 masterwork sprites, and eight additional classes (37 total). Every tier-3 class has a tier-4 successor, including a complete archer progression.

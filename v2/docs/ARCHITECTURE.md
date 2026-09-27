@@ -137,12 +137,17 @@ The 37-job roster includes an Archer -> Ranger -> Sharpshooter -> Wildwarden lin
 Empress, Golden Sovereign and Nightblade promotions. Every tier-3 class has at least one tier-4 successor; validation
 enforces this. New jobs use existing mastery/perk mechanics, with no additional per-frame scans or save collections.
 
-Residents reserve the total cost of the cheapest compatible unlocked weapon, body armor, helm/shield and accessory for each missing
+Residents reserve the total cost of the cheapest usable unlocked weapon, body armor, helm/shield and accessory for each missing
 slot, considering only shops that exist. They buy the cheapest missing basic before upgrades. Optional meals,
 lessons and potions respect that reserve; urgent hunger, exhaustion and injury can spend it. While saving, urgent
 meals favor cost per hunger restored; residents still prefer their free home for rest. `shopPrice()` and
 `visitPrice()` include current surcharges so decisions budget the checkout price. Settlement rechecks optional
 purchases and weapon compatibility; inn recovery already delivered during a visit is still billed. No new save fields.
+
+Class changes retain every equipment slot. All weapon types are usable with their normal stats; `weaponMatch()` checks
+the class's preferred `wt` types for +10% hit damage (after defense, before crit) and +1 combat speed. Attack cooldown is
+`1.1 / (job.spd + matchBonus)`; movement and healing speed are unchanged. Abstract cave offense and weapon upgrade scoring
+include the corresponding damage-rate bonus. An unequipped default sprite grants no weapon bonus.
 
 At dusk (70% through the week), `nightRest()` prioritizes home, affordable inn or outdoor village rest when energy is
 below 95. It respects basic-gear savings and urgent hunger, injury, nearby foes, active quests and rescue. Routine

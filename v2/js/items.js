@@ -1,4 +1,4 @@
-// Gear catalogue. Weapons: `type` gates which classes can use them (JOBS[j].wt); `hand` is the in-hand sprite;
+// Gear catalogue. Weapons: `type` determines the class-match bonus (JOBS[j].wt); `hand` is the in-hand sprite;
 // `tint` hue-rotates both icon and in-hand sprite. armor = body; offhand = one helm OR shield.
 // dev: materials to develop at the Blacksmith (null = starter stock). Treasure chests can also reveal gear.
 

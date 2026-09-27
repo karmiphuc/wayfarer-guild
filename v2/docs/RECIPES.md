@@ -37,7 +37,7 @@ Contents: [Class](#1-add-a-class-job) · [Perk effect](#2-add-a-new-perk-effect-
      weapon: 'MagicWand', wt: ['staff', 'book'], perk: 'frostbite', req: ['mage'], desc: 'Freezes the battlefield.' },
    ```
    Rules: `tier` 1–4 · tier ≥ 2 needs `req` · tier ≥ 3 needs at least one tier-2+ `req` · each `req` must be a LOWER tier ·
-   `wt` only weapon types that exist in `items.js` · `weapon` = default in-hand sprite name (`h_<weapon>.png` must exist) ·
+   `wt` = preferred weapon types (+10% damage, +1 combat speed), using types in `items.js`; other weapons are usable · `weapon` = default in-hand sprite name (`h_<weapon>.png` must exist) ·
    one unique perk per job · magic jobs have `mag > atk` (they cast fireballs) · healers add `heal: true`.
    Stat guide (base values): tier 1 ≈ hp 22–38, main stat 7–9 · tier 2 ≈ hp 26–46, main 10–13 · tier 3 ≈ hp 34–50, main 12–18 ·
    tier 4 ≈ hp 46–72, main 18–22.
