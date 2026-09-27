@@ -80,10 +80,11 @@ export class Renderer {
     g.setTransform(S, 0, 0, S, -ox, -oy);
     g.drawImage(this.static, 0, 0);
     const vx0 = ox / S / T - 2, vy0 = oy / S / T - 2, vx1 = vx0 + this.cv.width / S / T + 4, vy1 = vy0 + this.cv.height / S / T + 5;
-    const vis = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1;
+    const vis = (x, y, radius = 0) => x > vx0 - radius && x < vx1 + radius && y > vy0 - radius && y < vy1 + radius;
 
     if (ui.buildMode) this.drawBuildGrid(s);
     this.drawFrontiers(s, vis);
+    this.drawCamps(s, vis);
 
     // collect y-sorted drawables
     const list = [];
@@ -184,7 +185,11 @@ export class Renderer {
     const pet = a.partner && s.monsters.find(m => m.id === a.partner && m.riding);
     let lift = 0;
     if (pet) { const M = MONSTERS[pet.type]; this.monFrame('m_' + M.spr, a.x, a.y + 0.15, a.dir, Math.floor(a.anim * 7)); lift = 0.35; }
-    if (a.ko) { this.g.save(); this.g.globalAlpha = 0.7; this.drawChar('c_' + a.spr, a.x, a.y, 0, 0, 6); this.g.restore(); return; }
+    if (a.ko) {
+      const carrier = a.rescueBy && s.advs.find(o => o.id === a.rescueBy && o.task?.type === 'rescue' && o.task.carrying);
+      const side = carrier ? (carrier.dir === 0 ? -0.35 : carrier.dir === 1 ? 0.35 : 0) : 0;
+      this.drawFallen('c_' + a.spr, a.x + side, a.y - (carrier ? 0.25 : 0)); return;
+    }
     const wk = this.weaponKey(a), behind = this.weaponBehind(a);
     if (wk && behind) this.drawWeapon(a, wk, lift, frame);
     if (a.hitT > 0) { this.g.save(); this.g.filter = 'brightness(2.2)'; }
@@ -194,6 +199,12 @@ export class Renderer {
     if (this.selected && this.selected.kind === 'adv' && this.selected.id === a.id) {
       this.g.strokeStyle = '#ffe36e'; this.g.beginPath(); this.g.ellipse(a.x * T + 8, a.y * T + 12, 7, 3, 0, 0, Math.PI * 2); this.g.stroke();
     }
+  }
+  drawFallen(sheet, x, y) {
+    const im = IMG[sheet]; if (!im) return;
+    const g = this.g;
+    g.save(); g.translate(Math.round(x * T + 8), Math.round(y * T + 6)); g.rotate(Math.PI / 2);
+    g.drawImage(im, 0, 0, 16, 16, -8, -8, 16, 16); g.restore();
   }
   // ---------- held weapons (Ninja Adventure in-hand sprites point blade-down, handle at the top) ----------
   weaponKey(a) {
@@ -236,7 +247,7 @@ export class Renderer {
   // Outlaws: character sheet + in-hand weapon, same animation rules as adventurers (drawWeapon takes a stand-in object).
   drawHuman(m, M) {
     const g = this.g, atk = m.atkT > 0, frame = atk ? 0 : Math.floor(m.anim * 6) % 4, row = atk ? 4 : 0, wk = 'h_' + M.weapon;
-    const pawn = { x: m.x, y: m.y, dir: m.dir, atkT: Math.max(0, m.atkT || 0), spr: M.spr, eq: null, job: 'warrior' };
+    const pawn = { x: m.x, y: m.y, dir: m.dir, atkT: Math.max(0, m.atkT || 0), spr: M.spr, eq: null, job: m.job || 'warrior' };
     this.drawShadow(m.x, m.y);
     if (IMG[wk] && m.dir === 1) this.drawWeapon(pawn, wk, 0, frame);
     if (m.hitT > 0) { g.save(); g.filter = 'brightness(2.2)'; }
@@ -267,7 +278,7 @@ export class Renderer {
     const e = IMG['e27']; if (e && Math.floor(this.time * 0.5 + m.id) % 6 === 0) this.g.drawImage(e, Math.round(m.x * T + 2), Math.round(m.y * T - 12), 12, 11);
   }
   drawMon(m) {
-    const g = this.g;
+    const g = this.g, base = MONSTERS[m.type], M = m.job ? { ...base, spr: m.spr || base.spr, weapon: m.weapon || base.weapon, human: true } : base;
     if (m.hp <= 0) { g.save(); g.globalAlpha = Math.max(0, m.deadT / 0.6); }
     if (m.boss) {
       const B = BOSSES[m.boss], im = IMG['b_' + m.boss];
@@ -275,10 +286,9 @@ export class Renderer {
         if (m.hitT > 0) { g.save(); g.filter = 'brightness(2.2)'; }
         g.drawImage(im, f * B.fw, 0, B.fw, B.fh, Math.round(m.x * T + 8 - B.fw / 2), Math.round(m.y * T + 14 - B.fh), B.fw, B.fh);
         if (m.hitT > 0) g.restore(); }
-    } else if (MONSTERS[m.type].human) {
-      this.drawHuman(m, MONSTERS[m.type]);
+    } else if (M.human) {
+      this.drawHuman(m, M);
     } else {
-      const M = MONSTERS[m.type];
       this.drawShadow(m.x, m.y, 10);
       if (m.hitT > 0) { g.save(); g.filter = 'brightness(2.2)'; }
       this.monFrame('m_' + M.spr, m.x, m.y, m.dir, Math.floor(m.anim * 5), m.golden ? goldified('m_' + M.spr) : m.elite ? tinted('m_' + M.spr, 150) : null);
@@ -287,14 +297,14 @@ export class Renderer {
       if (m.golden && m.hp > 0) this.sparkle(m.x, m.y, m.id);
     }
     if (m.raid && m.hp > 0) {                                     // red marker over raiders (stampede, bandits)
-      const hy = MONSTERS[m.type] && MONSTERS[m.type].human ? -13 : -9;   // outlaws are a head taller
+      const hy = M?.human ? -13 : -9;   // outlaws are a head taller
       const x = Math.round(m.x * T + 8), y = Math.round(m.y * T + hy + Math.sin(this.time * 6 + m.id) * 1.5);
       g.fillStyle = '#2b0a06'; g.beginPath(); g.moveTo(x - 4, y - 1); g.lineTo(x + 4, y - 1); g.lineTo(x, y + 4); g.fill();
       g.fillStyle = '#ff4a3a'; g.beginPath(); g.moveTo(x - 3, y); g.lineTo(x + 3, y); g.lineTo(x, y + 3); g.fill();
     }
     if (m.hp <= 0) { g.restore(); return; }
     if (m.hp < m.mhp || m.boss || m.elite) {   // hp bar
-      const w = m.boss ? 30 : 14, x = Math.round(m.x * T + 8 - w / 2), y = Math.round(m.y * T + (m.boss ? 10 - BOSSES[m.boss].fh : MONSTERS[m.type].human ? -9 : -6));
+      const w = m.boss ? 30 : 14, x = Math.round(m.x * T + 8 - w / 2), y = Math.round(m.y * T + (m.boss ? 10 - BOSSES[m.boss].fh : M?.human ? -9 : -6));
       g.fillStyle = '#1a1a1a'; g.fillRect(x - 1, y - 1, w + 2, 4); g.fillStyle = '#5c1d1d'; g.fillRect(x, y, w, 2);
       g.fillStyle = m.quest ? '#ff9f1c' : m.elite ? '#b066ff' : '#e84a4a'; g.fillRect(x, y, Math.round(w * m.hp / m.mhp), 2);
     }
@@ -320,12 +330,60 @@ export class Renderer {
         g.fillRect(r.x0 * T, r.y0 * T, (r.x1 - r.x0) * T, (r.y1 - r.y0) * T);
         g.strokeStyle = '#ffdc75'; g.lineWidth = 1; g.strokeRect(r.x0 * T, r.y0 * T, (r.x1 - r.x0) * T, (r.y1 - r.y0) * T);
       }
-      if (!vis(f.x, f.y)) continue;
-      this.spr('cave', f.x * T - 16, f.y * T - 25);
+      if (!vis(f.x, f.y, done ? 2 : 6)) continue;
+      this.drawFrontierSite(f, !!done);
+      const markerY = f.y * T - (done ? 54 : 104);
       g.fillStyle = done ? '#5dd17d' : active ? '#ff8057' : ready ? '#ffd65b' : '#a7adb5';
-      g.fillRect(f.x * T + 3, f.y * T - 32, 10, 10);
+      g.fillRect(f.x * T + 3, markerY, 10, 10);
       g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillStyle = '#241b22';
-      g.fillText(done ? '+' : active ? '!' : ready ? '?' : '-', f.x * T + 8, f.y * T - 24);
+      g.fillText(done ? '+' : active ? '!' : ready ? '?' : '-', f.x * T + 8, markerY + 8);
+    }
+  }
+  drawFrontierSite(f, compact) {
+    const g = this.g;
+    g.save(); g.translate(f.x * T + 8, f.y * T); if (!compact) g.scale(2, 2);
+    if (f.id === 'greenmarch') {
+      if (!compact) { this.spr('treePine', -42, -42); this.spr('treeRound', 12, -41); this.spr('bush2', -28, -11); }
+      this.spr('stableHut', -16, -26);
+    } else if (f.id === 'sunken') {
+      if (!compact) { this.spr('rockBig', -42, -29); this.spr('rock', 21, -8); }
+      this.spr('cave', -24, -34); this.spr('basin', -8, -7);
+    } else if (f.id === 'ironvale') {
+      if (!compact) { this.spr('palisadeH', -37, -9); this.spr('palisadeH', 5, -9); this.spr('rock', -33, -23); }
+      this.spr('castle', -15, -34);
+    } else if (f.id === 'moonwood') {
+      if (!compact) { this.spr('treePink', -42, -38); this.spr('treePink', 10, -38); }
+      this.spr('torii', -24, -29); this.spr('statue', -8, -11);
+    } else if (f.id === 'emberreach') {
+      g.fillStyle = '#d85a32'; g.fillRect(-32, -7, 48, 7); g.fillStyle = '#ffb13b'; g.fillRect(-23, -6, 30, 3);
+      if (!compact) { this.spr('rockBig', -44, -29); this.spr('rockBig', 10, -29); this.spr('crystalBush', 12, -13); }
+      this.spr('cave', -24, -35);
+    } else if (f.id === 'stormfen') {
+      if (!compact) { this.spr('crystalBush', -42, -22); this.spr('crystalBush', 14, -22); this.spr('knightStatue', -38, -20); }
+      this.spr('torii', -24, -31);
+    } else if (f.id === 'frostveil') {
+      if (!compact) { this.spr('treeWhite', -44, -39); this.spr('treeWhite', 12, -39); this.spr('crystalBush', 13, -14); }
+      this.spr('cave', -24, -35); this.spr('igloo', 4, -21);
+    } else {
+      if (!compact) { this.spr('knightStatue', -39, -23); this.spr('knightStatue', 15, -23); this.spr('rockBig', -46, -28); }
+      this.spr('castle', -15, -36); this.spr('statueBig', -16, -19);
+    }
+    g.restore();
+  }
+  drawCamps(s, vis) {
+    const g = this.g;
+    for (const c of s.banditCamps || []) {
+      if (!vis(c.x, c.y, 3)) continue;
+      const active = s.activeQuests.some(q => q.camp === c.id), cooling = c.readyAt > s.tick;
+      const x = c.x * T, y = c.y * T, tier = Math.max(1, c.tier || 1);
+      if (this.campFocus === c.id) { g.fillStyle = 'rgba(255,186,65,0.12)'; g.fillRect(x - 48, y - 48, 96, 80); g.strokeStyle = '#ffdc75'; g.lineWidth = 1; g.strokeRect(x - 48, y - 48, 96, 80); }
+      this.spr(tier >= 3 ? 'hutB' : 'hutA', x - 16, y - 34);
+      this.spr('palisadeH', x - 34, y - 8); this.spr('palisadeH', x + 18, y - 8);
+      this.spr(tier >= 2 ? 'barrel' : 'crate', x - 29, y - 14);
+      if (tier >= 3) this.spr('cart', x + 18, y - 24);
+      if (tier >= 4) { this.spr('palisadeV', x - 36, y - 28); this.spr('palisadeV', x + 35, y - 28); }
+      g.fillStyle = active ? '#ff8057' : cooling ? '#8b929c' : '#ffd65b'; g.fillRect(x + 3, y - 48, 10, 10);
+      g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillStyle = '#241b22'; g.fillText(active ? '!' : cooling ? '…' : '?', x + 8, y - 40);
     }
   }
   drawGhost(s, ui) {

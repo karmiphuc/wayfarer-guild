@@ -16,10 +16,10 @@ playthrough. Never hard-code them as targets: our numbers come from the bot soak
 |---|---|---|---|---|
 | Town in a monster field | adventurers hunt around the town, come back to spend | same | ✅ | — |
 | Calendar | year / month / 4 weeks; taxes Apr W1; medals Dec W4; evaluation Mar W4 | calendar + April taxes | 🟡 | #28 |
-| Build / Road / Removal / Rearrange | place, remove (50G), rearrange (200G, unlock) | place, remove, roads; no move | 🟡 | #29 |
+| Build / Road / Removal / Rearrange | place, remove (50G), rearrange (200G, unlock) | place/remove, contiguous drag-painted roads and palisades; no move | 🟡 | #29 |
 | Stream, Bridge, Iconic Statue | terrain decor; statue = meeting point | — | ❌ | #29 |
 | Facility stats | each store has Price, Quality, Appeal; items/upgrades raise them; duplicates add capacity | one appeal + level 1–5 | 🟡 | #19 |
-| Facility catalogue | ~35 stores, ~21 food outlets, 5 castles, unlocked by Facility Store level / stars / events | 16 facilities, 16 decor | 🟡 | #38 |
+| Facility catalogue | ~35 stores, ~21 food outlets, 5 castles, unlocked by Facility Store level / stars / events | 16 facilities, 17 decor | 🟡 | #38 |
 | Houses | Vacant House built when someone wants to move in; 11 house styles with House trait | House / Hut / Snow Lodge | 🟡 | #21 |
 | Visitors → residents | satisfaction → ask to settle → move-in gift | satisfaction ≥ 60 + free home | 🟡 | #21, #22 |
 | Adventurer stats | HP/ATK/DEF/MAG from base Health/Strength/Dexterity/Toughness/Spirit/Luck | HP/ATK/DEF/MAG only | 🟡 | #20 |
@@ -39,10 +39,10 @@ playthrough. Never hard-code them as targets: our numbers come from the bot soak
 | Farmland | produce vegetables/fruit; Farmer speeds it | — | ❌ | #35 |
 | Quests | Dungeon / Mob group (Outbreak) / Boss / Counterattack; start fee + recruitment fee for non-volunteers; sales dip while away | no concurrent quest cap; Instant Depart or 4 random capable defaults, up to 8 with paid extras; Depart above party picker | 🟡 | #25 |
 | Dungeons | multi-floor, treasure; Ninja/Mercenary speed up | one cave, floors, treasure | 🟡 | #39 |
-| KO & rescue | KO'd adventurer rescued by another or revived by item, taken to the Inn | walks home alone | 🟡 | #24 |
+| KO & rescue | KO'd adventurer rescued by another or revived by item, taken to the Inn | one pawn claims and carries the fallen pawn to a reachable bed; field recovery fallback; no revive item | 🟡 | #24 |
 | Monsters & taming | Monster Tamer in party on Outbreak quests; partners; Monster Farm; mount at 50 friendship; flying mounts ignore roads | random taming with a Stable; partners; mounts at bond 50 | 🟡 | #37 |
 | Rank | ★1–★5 per map with conditions (popularity, monthly income, events held, build X) | ★1–★5 conditions | ✅ | — |
-| Maps | Plains → Forest → Tropics → Arctic → Magic → Eastern → Underworld; beat boss → move with ≤ 5 adventurers; money/TP/rank reset; cauldron shared | one 152x112 continuous map, 4 home zones + 8 capturable frontier territories; no map reset/transfer | ❌ | #41, #42 |
+| Maps | Plains → Forest → Tropics → Arctic → Magic → Eastern → Underworld; beat boss → move with ≤ 5 adventurers; money/TP/rank reset; cauldron shared | one 152x112 continuous map, 4 home zones + 8 capturable frontier territories with distinct landmarks; no map reset/transfer | ❌ | #41, #42 |
 | Popularity milestones | every 100 popularity: visitor wave / returning adventurer / medal | — | ❌ | #28 |
 | Endgame score | Popularity×5 + Quests×300 + Titles×1000 + total Lv×5 + total Work×10 | — | ❌ | #28 |
 | Premium currency (Diamonds) | exists in DV2 | intentionally excluded (no premium/stamina, repo rule) | — | — |
@@ -54,8 +54,9 @@ playthrough. Never hard-code them as targets: our numbers come from the bot soak
 | World codes | each village is founded from a seed (shown as a 6-letter code): monster species per zone, cave spot, charter offers | ✅ | #45 |
 | Village charters | pick 1 of 3 at founding; each has an upside, a downside and a starting gift (9 charters) | ✅ | #45 |
 | Weekly happenings | 11 seeded random events: merchant, Golden Slime, rain, clear skies, bard, harvest, stampede, bandits, meteors, fog, legendary wanderer | ✅ | #45 |
-| Raids defend the town | stampedes charge the village edge, bandits camp outside; free adventurers rally (gives towers and the `Safe` trait a job) | 🟡 | #45, #25 |
-| Outlaws | 6 human enemy types with weapons (Cutthroat, Shadow Thief, Swine Raider, Orc Brute, Ronin, Bandit Chief): the bandit gang, plus roaming in zones 3–4 and "Hideout" quests | ✅ | #45 |
+| Raids defend the town | rank-scaled stampedes and class-based bandit companies attack; ranged, magic and healing raiders; free healthy non-rescuers rally | 🟡 | #45, #25 |
+| Bandit camps | 16 seeded dormant sites; tier/rank gates, repeatable party fights, material stores and a four-week cooldown | ✅ | #45, #25 |
+| Outlaws | 6 roaming human enemy types plus job-class raiders with visible weapons and class labels | ✅ | #45 |
 | Elite monsters | 6% of wild spawns: recoloured with a crown, tougher, ×2.5 EXP/gold, ×2 drops | ✅ | #45 |
 
 ## 2. Roadmap (GitHub issues)

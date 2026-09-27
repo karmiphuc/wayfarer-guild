@@ -10,6 +10,11 @@ import { BIOMES } from './data.js';
 export const DT = 0.1;              // seconds per sim step
 export const WEEK_SECONDS = 30;     // one in-game week at 1x
 
+const RESCUE_DELAY = 4;
+const RESCUE_RANGE = 24;
+const RESCUE_APPROACH_LIMIT = 20;
+const FIELD_RECOVERY = 60;
+
 
 function setTimeoutSim(sim, steps, fn) { (sim.timers || (sim.timers = [])).push({ t: steps, fn }); }
 
@@ -62,6 +67,7 @@ export class Sim {
       if (this.boundary.some(c => c.x === xx && c.y === yy)) return 'Village palisade - use an opening';
       if (!d.road && this.gateApproaches.some(([gx, gy]) => gx === xx && gy === yy)) return 'Keep the village opening clear';
       if (FRONTIERS.some(f => Math.abs(xx - f.x) <= 1 && Math.abs(yy - f.y) <= 1)) return 'Keep the den entrance clear';
+      if ((s.banditCamps || []).some(c => Math.abs(xx - c.x) <= 1 && Math.abs(yy - c.y) <= 1)) return 'Keep the bandit camp entrance clear';
       if (buildingAt(s, xx, yy)) return 'Occupied';
       if (!d.road && roadAt(s, xx, yy)) return 'Road in the way';
       if (d.road && roadAt(s, xx, yy)) return 'Already a road';
@@ -253,6 +259,24 @@ export class Sim {
       dir: 0, tx: at[0], ty: at[1], cd: 0, target: null, deadT: 0, hitT: 0, anim: 0, ...extra };
     s.mons.push(m); return m;
   }
+  raidStrength(kind = 'bandits') {
+    const rank = Math.max(0, Math.min(5, this.s.stars));
+    const squad = this.s.advs.map(a => a.lv).sort((a, b) => b - a).slice(0, 4);
+    const veteran = squad.length ? squad.reduce((n, lv) => n + lv, 0) / squad.length : 0;
+    const level = Math.min(LV_CAP, Math.max([1, 3, 7, 12, 20, 28][rank], rank === 5 ? Math.floor(veteran * 0.85) : 0));
+    return { rank, level, count: (kind === 'stampede' ? [4, 6, 8, 11, 14, 18] : [2, 3, 6, 9, 12, 16])[rank], rewardMult: 1 + Math.max(0, level - 3) * 0.05 };
+  }
+  spawnRaider(spot, level, extra = {}) {
+    const humanJobs = ['warrior', 'archer', 'mage', 'monk', 'brawler', 'merchant', 'scout', 'knight', 'gladiator', 'ninja', 'shaman', 'onmyoji', 'samurai', 'master', 'royal', 'sultan', 'assassin', 'bomber'];
+    const lv = Math.max(1, Math.min(LV_CAP, Math.round(level))), tier = lv >= 20 ? 3 : lv >= 8 ? 2 : 1;
+    const job = humanJobs.includes(extra.job) ? extra.job : this.R.pick(humanJobs.filter(id => JOBS[id].tier <= tier)), J = JOBS[job];
+    const k = 0.95 + (lv - 1) * 0.14;
+    const m = this.spawnMonster(Math.min(4, 1 + Math.floor(lv / 8)), 'cutthroat', spot, extra);
+    if (!m) return null;
+    Object.assign(m, { lv, job, spr: this.R.pick(J.sprites), weapon: J.weapon, className: J.name, range: J.range, healer: !!J.heal,
+      moveSpeed: J.spd, mag: Math.round(J.mag * k), atk: Math.round(J.atk * k), def: Math.round(J.def * k), hp: Math.round(J.hp * k * 1.25), mhp: Math.round(J.hp * k * 1.25) });
+    return m;
+  }
 
   // ---------- adventurer AI ----------
   pmul(a, key) { let v = 1; for (const p of a.persona) { const P = PERSONA[p]; if (P && P[key]) v *= P[key]; } return v; }
@@ -342,6 +366,78 @@ export class Sim {
     sc.sort((p, q) => q[0] - p[0]);
     return sc.length ? sc[0][1] : { type: 'stroll', dur: 5 };
   }
+  rescueCarrier(fallen) {
+    return this.s.advs.find(a => a.id === fallen.rescueBy && !a.ko && !a.inside && !a.dungeon &&
+      a.task?.type === 'rescue' && a.task.target === fallen.id);
+  }
+  rescueTarget(a) {
+    if (a.ko || a.inside || a.dungeon || this.questForPawn(a.id) || a.hp < maxHp(a, this.s) * 0.5) return null;
+    let best = null, bestDist = RESCUE_RANGE + 1;
+    for (const fallen of this.s.advs) {
+      if (fallen === a || !fallen.ko || fallen.inside || fallen.dungeon || this.questForPawn(fallen.id) ||
+          (fallen.koT || 0) < RESCUE_DELAY || (fallen.rescueRetry || 0) > (fallen.koT || 0)) continue;
+      const carrier = fallen.rescueBy && this.rescueCarrier(fallen);
+      if (carrier) continue;
+      if (fallen.rescueBy) fallen.rescueBy = null;
+      const dist = Math.hypot(fallen.x - a.x, fallen.y - a.y);
+      if (dist <= RESCUE_RANGE && dist < bestDist) { best = fallen; bestDist = dist; }
+    }
+    return best;
+  }
+  rescueDestination(fallen, rescuer) {
+    const home = fallen.home && this.s.buildings.find(b => b.id === fallen.home);
+    if (home) return home;
+    return [...this.facilities('sleep'), ...this.facilities('heal'), ...this.s.buildings.filter(b => b.type === 'guild')]
+      .sort((p, q) => {
+        const [px, py] = this.door(p), [qx, qy] = this.door(q);
+        return Math.hypot(px - rescuer.x, py - rescuer.y) - Math.hypot(qx - rescuer.x, qy - rescuer.y);
+      })[0] || null;
+  }
+  releaseRescue(a, drop = false, retry = true) {
+    const t = a.task, fallen = t?.type === 'rescue' && this.s.advs.find(o => o.id === t.target);
+    if (fallen && fallen.rescueBy === a.id) {
+      if (drop && t.carrying) { fallen.x = a.x; fallen.y = a.y; fallen.path = null; }
+      fallen.rescueBy = null;
+      if (retry && fallen.ko) fallen.rescueRetry = (fallen.koT || 0) + 5;
+    }
+    if (a.task === t) a.task = null;
+    a.path = null;
+  }
+  rescueStep(a, t) {
+    const fallen = this.s.advs.find(o => o.id === t.target);
+    if (!fallen || !fallen.ko || fallen.inside || fallen.dungeon || this.questForPawn(fallen.id) || fallen.rescueBy !== a.id) {
+      this.releaseRescue(a, false, false); return;
+    }
+    if (t.carrying) {
+      fallen.x = a.x; fallen.y = a.y; fallen.path = null;
+      let dest = this.s.buildings.find(b => b.id === t.dest);
+      if (!dest) { dest = this.rescueDestination(fallen, a); t.dest = dest?.id; a.path = null; }
+      if (!dest) { this.releaseRescue(a, true); return; }
+      const [dx, dy] = this.door(dest);
+      t.carryLimit ??= Math.min(240, 45 + Math.max(0, Math.hypot(dx - a.x, dy - a.y) - 30) * 2);
+      if (a.taskT > t.carryLimit) { this.releaseRescue(a, true); return; }
+      const arrived = this.walkTo(a, dx, dy, this.speed(a) * DT * 0.7);
+      fallen.x = a.x; fallen.y = a.y;
+      if (!arrived) return;
+      fallen.x = dx; fallen.y = dy - 0.6; fallen.ko = false; fallen.koT = 0; fallen.rescueBy = null; fallen.rescueRetry = 0; fallen.hp = 1;
+      fallen.task = { type: 'visit', b: dest.id, dur: 15, sleep: true };
+      fallen.inside = { b: dest.id, t: 15, task: fallen.task };
+      if (!dest.occ.includes(fallen.id)) dest.occ.push(fallen.id);
+      a.task = null; a.path = null;
+      log(this.s, `${a.name} carried ${fallen.name} to safety.`, 'good');
+      return;
+    }
+    if (a.taskT > RESCUE_APPROACH_LIMIT) { this.releaseRescue(a); return; }
+    if (Math.hypot(fallen.x - a.x, fallen.y - a.y) <= 0.65) {
+      const dest = this.rescueDestination(fallen, a), door = dest && this.door(dest);
+      t.carrying = true; t.dest = dest?.id;
+      t.carryLimit = door ? Math.min(240, 45 + Math.max(0, Math.hypot(door[0] - a.x, door[1] - a.y) - 30) * 2) : 45;
+      a.taskT = 0; a.path = null;
+      fallen.x = a.x; fallen.y = a.y; fallen.path = null;
+      return;
+    }
+    this.walkTo(a, Math.round(fallen.x), Math.round(fallen.y));
+  }
   zoneFor(a) {
     const pw = stat(a, 'atk', this.s) + stat(a, 'mag', this.s) + stat(a, 'def', this.s) * 0.6 + a.lv * 1.5;
     let z = 1; if (pw > 38) z = 2; if (pw > 70) z = 3; if (pw > 110) z = 4;
@@ -359,8 +455,17 @@ export class Sim {
     a.fun = Math.max(0, a.fun - DT * 0.18);
     if (a.ko) return this.koStep(a);
     if (a.hunger >= 100 && s.tick % 50 === 0) { a.sat = Math.max(0, a.sat - 2); this.emote(a, 'hungry'); }
+    if (a.task?.type !== 'rescue' && !this.questForPawn(a.id)) {
+      const fallen = this.rescueTarget(a);
+      if (fallen) { a.task = { type: 'rescue', target: fallen.id, carrying: false }; fallen.rescueBy = a.id; a.taskT = 0; a.path = null; }
+    }
     if (a.task && a.task.type === 'quest') return this.questStep(a);
-    if (!a.task) { const q = this.questForPawn(a.id); a.task = q ? { type: 'quest', qid: q.id } : this.decide(a); a.taskT = 0; a.path = null; if (q) return this.questStep(a); }
+    if (!a.task) {
+      const q = this.questForPawn(a.id);
+      a.task = q ? { type: 'quest', qid: q.id } : this.decide(a);
+      a.taskT = 0; a.path = null;
+      if (q) return this.questStep(a);
+    }
     a.taskT += DT;
     const t = a.task;
     switch (t.type) {
@@ -375,6 +480,7 @@ export class Sim {
         break;
       }
       case 'hunt': case 'return': this.huntStep(a, t); break;
+      case 'rescue': this.rescueStep(a, t); break;
       case 'stroll': {
         if (!t.dest) { const c = this.randomTownCell(); t.dest = c; }
         if (!t.dest || this.walkTo(a, t.dest[0], t.dest[1]) || a.taskT > 20) { a.fun = Math.min(100, a.fun + 12 + this.decorFun(a)); a.task = null; }
@@ -635,11 +741,17 @@ export class Sim {
   }
 
   koStep(a) {
-    a.koT = (a.koT || 0) + DT;
-    if (a.koT < 4) return;
-    const home = (a.home && this.s.buildings.find(b => b.id === a.home)) || this.facilities('sleep')[0] || this.s.buildings.find(b => b.type === 'guild');
-    const [dx, dy] = this.door(home);
-    if (this.walkTo(a, dx, dy)) { a.ko = false; a.koT = 0; a.hp = 1; a.task = { type: 'visit', b: home.id, dur: 15, sleep: true }; a.inside = { b: home.id, t: 15, task: a.task }; }
+    if (a.task?.type === 'rescue') this.releaseRescue(a, true);
+    a.path = null; a.koT = (a.koT || 0) + DT;
+    if (this.questForPawn(a.id)) return;
+    let carrier = a.rescueBy && this.rescueCarrier(a);
+    if (a.rescueBy && !carrier) { a.rescueBy = null; carrier = null; }
+    if (carrier?.task.carrying) { a.x = carrier.x; a.y = carrier.y; return; }
+    if (a.koT < FIELD_RECOVERY) return;
+    if (carrier) this.releaseRescue(carrier, false, false);
+    a.ko = false; a.koT = 0; a.rescueBy = null; a.rescueRetry = 0;
+    a.hp = Math.max(1, Math.round(maxHp(a, this.s) * 0.1)); a.task = { type: 'camp', dur: 10 };
+    log(this.s, `${a.name} recovered in the field.`, 'good');
   }
   hurtAdv(a, dmg, src) {
     const s = this.s; if (a.ko || a.inside || a.dungeon) return;
@@ -650,7 +762,9 @@ export class Sim {
     if (a.hp <= 0 && perkSum(a, 'revive') && !a.revived) { a.revived = true; a.hp = Math.round(maxHp(a, s) / 2); this.bark(a, 'Not yet!'); s.fx.push({ k: 'lvl', x: a.x, y: a.y, t: 0, life: 1.2 }); return; }
     s.fx.push({ k: 'num', x: a.x, y: a.y - 0.8, t: 0, life: 0.8, text: String(dmg), c: '#ff6b6b' });
     if (a.hp <= 0) {
+      if (a.task?.type === 'rescue') this.releaseRescue(a, true);
       a.hp = 0; a.ko = true; a.koT = 0; a.path = null; a.sat = Math.max(0, a.sat - 8);
+      a.rescueBy = null; a.rescueRetry = 0;
       if (a.task && a.task.type !== 'quest') a.task = null;
       log(s, `${a.name} was knocked out by a ${src}!`, 'bad'); this.emote(a, 'skull'); this.emit('sfx', 'ko');
     }
@@ -661,19 +775,33 @@ export class Sim {
     if (m.hp <= 0) return;
     const s = this.s, R = this.R; m.anim += DT; if (m.hitT > 0) m.hitT -= DT; if (m.atkT > 0) m.atkT -= DT;
     const M = m.boss ? BOSSES[m.boss] : MONSTERS[m.type];
-    const spd = (m.boss ? 0.7 : M.spd) * 1.2 * DT;
+    const spd = (m.boss ? 0.7 : m.moveSpeed || M.spd) * 1.2 * DT;
     if (m.flee) return this.fleeStep(m, spd);
     if (m.delay > 0) { m.delay -= DT; return; }
+    if (m.job) {
+      m.cd -= DT;
+      if (m.healer && m.cd <= 0) {
+        const ally = s.mons.find(o => o !== m && o.job && o.hp > 0 && o.hp < o.mhp * 0.7 && o.quest === m.quest && o.raid === m.raid && Math.hypot(o.x - m.x, o.y - m.y) <= 4);
+        if (ally) { ally.hp = Math.min(ally.mhp, ally.hp + Math.max(1, Math.round(m.mag * 1.4))); m.cd = 2; m.atkT = 0.3; s.fx.push({ k: 'heal', x: ally.x, y: ally.y, t: 0, life: 0.8 }); return; }
+      }
+    }
     let tgt = m.target && s.advs.find(a => a.id === m.target && !a.ko && !a.inside && !a.dungeon);
     if (tgt && Math.hypot(tgt.x - m.x, tgt.y - m.y) > 9) { tgt = null; m.target = null; }
     if (!tgt) { // aggro: attack adventurers that wander close
-      for (const a of s.advs) if (!a.ko && !a.inside && !a.dungeon && Math.hypot(a.x - m.x, a.y - m.y) < (m.boss ? 4 : 2.2)) { tgt = a; m.target = a.id; break; }
+      for (const a of s.advs) if (!a.ko && !a.inside && !a.dungeon && Math.hypot(a.x - m.x, a.y - m.y) < (m.boss ? 4 : m.job ? Math.max(4, m.range + 1) : 2.2)) { tgt = a; m.target = a.id; break; }
     }
     if (tgt) {
-      const d = Math.hypot(tgt.x - m.x, tgt.y - m.y), reach = m.boss ? 1.6 : 1.0;
-      if (d > reach) { if (townDist(s, Math.round(m.x), Math.round(m.y)) > 0 || m.boss || m.raid) this.stepToward(m, tgt.x, tgt.y, spd); else { m.target = null; } }
-      m.cd -= DT;
-      if (d <= reach + 0.2 && m.cd <= 0) { m.cd = m.boss ? 1.3 : 1.5; m.atkT = 0.3; this.hurtAdv(tgt, m.atk * R.range(0.8, 1.15), M.name); s.fx.push({ k: M.human ? 'slash' : 'claw', x: tgt.x, y: tgt.y, t: 0, life: 0.3, dir: m.dir }); if (M.human) this.emit('sfx', 'sword'); }
+      const d = Math.hypot(tgt.x - m.x, tgt.y - m.y), reach = m.boss ? 1.6 : m.range || 1.0;
+      if (d > reach) { if (townDist(s, Math.round(m.x), Math.round(m.y)) > 0 || m.boss || m.raid || m.camp) this.stepToward(m, tgt.x, tgt.y, spd); else { m.target = null; } }
+      if (!m.job) m.cd -= DT;
+      if (d <= reach + 0.2 && m.cd <= 0) {
+        const magic = m.job && m.mag > m.atk;
+        m.cd = m.boss ? 1.3 : m.job ? 1.5 / m.moveSpeed : 1.5; m.atkT = 0.3;
+        this.hurtAdv(tgt, (magic ? m.mag * 1.2 : m.atk) * R.range(0.8, 1.15), m.className || M.name);
+        if (m.job && reach > 1) s.fx.push({ k: 'proj', x: m.x, y: m.y, tx: tgt.x, ty: tgt.y, t: 0, life: 0.25, p: magic ? 'fire' : m.weapon === 'Bow' ? 'arrow' : 'shuriken' });
+        else s.fx.push({ k: M.human ? 'slash' : 'claw', x: tgt.x, y: tgt.y, t: 0, life: 0.3, dir: m.dir });
+        if (M.human) this.emit('sfx', 'sword');
+      }
       return;
     }
     if (m.charge) return this.chargeStep(m, spd);
@@ -799,32 +927,33 @@ export class Sim {
       case 'rain': case 'sunny': case 'harvest': case 'fog': break;          // passive: read via this.happening(id)
       case 'bard': { for (const a of s.advs) this.addSat(a, 12); s.pop += 15; const [x, y] = nearGuild(-3); s.npcs.push({ kind: 'bard', spr: 'OldMan2', x, y, dir: 0, anim: 0 }); break; }
       case 'stampede': {
-        const z = Math.min(4, 1 + Math.floor(s.stars / 2)), n = Math.min(10, 4 + Math.round(s.stars * 1.5)), t = s.town, side = R.pick(['n', 'e', 'w']);
-        h.data.mobs = []; h.data.side = side; h.data.breaches = 0;
+        const strength = this.raidStrength('stampede'), z = Math.min(4, 1 + Math.floor(s.stars / 2)), n = strength.count, t = s.town, side = R.pick(['n', 'e', 'w']);
+        h.data.mobs = []; h.data.side = side; h.data.breaches = 0; h.data.rewardMult = strength.rewardMult;
         for (let i = 0; i < n; i++) {
           const x = side === 'w' ? R.int(1, 4) : side === 'e' ? R.int(HOME_W - 5, HOME_W - 2) : R.int(t.x0, t.x1 - 1);
           const y = side === 'n' ? R.int(1, 4) : R.int(t.y0 + 2, t.y1 - 3);
           const tx = side === 'w' ? t.x0 : side === 'e' ? t.x1 - 1 : Math.max(t.x0, Math.min(t.x1 - 1, x));
           const ty = side === 'n' ? t.y0 : Math.max(t.y0, Math.min(t.y1 - 1, y));
           const m = this.spawnMonster(z, null, [x, y], { raid: 'stampede', charge: { x: tx, y: ty }, delay: 2 + i * 1.0 });
-          if (m) h.data.mobs.push(m.id);
+          if (m) {
+            if (s.stars >= 2) { const k = (1 + (strength.level - 1) * 0.12) / (1 + (m.lv - 1) * 0.12); m.lv = strength.level; m.hp = m.mhp = Math.round(m.mhp * k); m.atk = Math.round(m.atk * k); m.def = Math.round(m.def * k); }
+            h.data.mobs.push(m.id);
+          }
         }
         this.rally();
         break;
       }
       case 'bandits': {
-        const n = 2 + Math.min(3, s.stars), bz = s.stars < 2 ? 1 : Math.min(4, 1 + Math.floor(s.stars / 2)); h.data.mobs = [];
-        const gang = s.stars < 2 ? ['cutthroat', 'thief'] : s.stars < 3 ? ['cutthroat', 'thief', 'swine', 'brute'] : s.stars < 4 ? ['thief', 'swine', 'brute', 'ronin'] : ['cutthroat', 'brute', 'ronin', 'ronin'];
-        const f = [0.55, 0.6, 0.75, 0.85, 0.9, 1][s.stars];            // outlaw stats are zone-3/4 grade: scale them to the rank
-        for (let i = 0; i < n + (s.stars >= 4 ? 1 : 0); i++) {
+        const strength = this.raidStrength(); h.data.mobs = []; h.data.rewardMult = strength.rewardMult;
+        for (let i = 0; i < strength.count; i++) {
           let c = null;
           for (let k = 0; k < 60 && !c; k++) {
             const x = R.int(s.town.x0 - 4, s.town.x1 + 3), y = R.int(s.town.y0 - 4, s.town.y1 + 3), d = townDist(s, x, y);
             if (d >= 2 && d <= 4 && this.grid.walkable(x, y) && !(Math.abs(x - 38) < 4 && y >= s.town.y1)) c = [x, y];
           }
           if (!c) continue;
-          const m = this.spawnMonster(bz, i === n ? 'chief' : R.pick(gang), c, { raid: 'bandits', lvBonus: 1 });
-          if (m) { m.hp = m.mhp = Math.round(m.mhp * f); m.atk = Math.round(m.atk * f); m.def = Math.round(m.def * f); h.data.mobs.push(m.id); }
+          const m = this.spawnRaider(c, strength.level, { raid: 'bandits' });
+          if (m) h.data.mobs.push(m.id);
         }
         this.rally();
         break;
@@ -861,15 +990,15 @@ export class Sim {
       case 'stampede': {
         const left = alive(h.data.mobs);
         for (const m of left) { m.hp = 0; m.deadT = 0.3; }
-        if (!left.length && !h.data.breaches) { const tp = Math.round((5 + s.stars * 2) * bonus); s.tp += tp; s.pop += 20; log(s, `Stampede repelled without a single breach! +${tp} TP`, 'title'); this.emit('fanfare', 'Stampede repelled!', `+${tp} Town Points`); }
+        if (!left.length && !h.data.breaches) { const tp = Math.round((5 + s.stars * 2) * bonus * (h.data.rewardMult || 1)); s.tp += tp; s.pop += 20; log(s, `Stampede repelled without a single breach! +${tp} TP`, 'title'); this.emit('fanfare', 'Stampede repelled!', `+${tp} Town Points`); }
         else log(s, `The stampede is over (${h.data.breaches} broke through).`, h.data.breaches ? 'bad' : 'good');
         break;
       }
       case 'bandits': {
         const left = alive(h.data.mobs);
         for (const m of left) { m.hp = 0; m.deadT = 0.3; }
-        if (left.length) { const steal = Math.floor(Math.min(s.gold * 0.1, 200 + s.stars * 150)); s.gold -= steal; log(s, `The bandits made off with ${steal}G!`, 'bad'); this.emit('sfx', 'fail'); }
-        else { const g = Math.round((150 + s.stars * 100) * bonus); s.gold += g; s.tp += 3; log(s, `Bandits driven off! Their loot: +${g}G, +3 TP`, 'title'); this.emit('fanfare', 'Bandits driven off!', `+${g}G`); }
+        if (left.length) { const steal = Math.floor(Math.min(s.gold * 0.1, (200 + s.stars * 150) * (h.data.rewardMult || 1))); s.gold -= steal; log(s, `The bandits made off with ${steal}G!`, 'bad'); this.emit('sfx', 'fail'); }
+        else { const g = Math.round((150 + s.stars * 100) * bonus * (h.data.rewardMult || 1)), tp = Math.round(3 * (h.data.rewardMult || 1)); s.gold += g; s.tp += tp; log(s, `Bandits driven off! Their loot: +${g}G, +${tp} TP`, 'title'); this.emit('fanfare', 'Bandits driven off!', `+${g}G`); }
         break;
       }
       case 'meteor': {
@@ -923,7 +1052,7 @@ export class Sim {
   // Everyone who is free drops what they are doing and defends the village (stampedes, bandits).
   rally() {
     for (const a of this.s.advs) {
-      if (a.inside || a.ko || a.dungeon || this.questForPawn(a.id) || (a.task && a.task.type === 'quest') || a.hp < maxHp(a, this.s) * 0.4) continue;
+      if (a.inside || a.ko || a.dungeon || this.questForPawn(a.id) || (a.task && (a.task.type === 'quest' || a.task.type === 'rescue')) || a.hp < maxHp(a, this.s) * 0.4) continue;
       a.task = { type: 'hunt', zone: 9, defend: true, dur: 90 }; a.taskT = 0; a.path = null; this.emote(a, 'exclaim');
     }
   }
@@ -972,7 +1101,21 @@ export class Sim {
     const f = FRONTIERS.find(f => f.id === id); if (!f) return null;
     return { id: 'frontier:' + id, frontier: id, kind: 'boss', name: f.bossName, desc: `Capture ${f.name}`, boss: f.boss, zone: f.zone, fee: f.fee, rec: f.rec, spot: [f.x, f.y], reward: { gold: f.fee * 2, tp: 10 + f.star * 5, pop: 50 + f.star * 20 } };
   }
-  questById(id) { return String(id).startsWith('frontier:') ? this.frontierQuest(String(id).slice(9)) : this.s.quests.find(q => q.id === +id); }
+  campQuest(id) {
+    const c = this.s.banditCamps?.find(c => c.id === id); if (!c) return null;
+    const rec = Math.min(95, Math.max(4 + c.tier * 6, this.raidStrength().level + c.tier * 2));
+    return { id: 'camp:' + id, camp: id, kind: 'camp', name: c.name, desc: 'Defeat the bandit company and loot its stores.', zone: 9,
+      rec, n: 3 + c.tier * 2, fee: 100 + rec * 15, spot: [c.x, c.y],
+      reward: { gold: 400 + rec * 55, tp: 5 + c.tier * 3, pop: 10 + c.tier * 5, materials: { wood: 3 + c.tier, ore: c.tier * 2, crystal: c.tier } } };
+  }
+  campBlock(id) {
+    const c = this.s.banditCamps?.find(c => c.id === id); if (!c) return 'Unknown bandit camp';
+    if (this.s.activeQuests.some(q => q.camp === id)) return 'A party is already challenging this camp';
+    if (this.s.stars < c.tier) return `Needs a ${c.tier}-star village`;
+    if (c.readyAt > this.s.tick) return `Camp returns in ${Math.ceil((c.readyAt - this.s.tick) * DT)} seconds`;
+    return null;
+  }
+  questById(id) { return String(id).startsWith('camp:') ? this.campQuest(String(id).slice(5)) : String(id).startsWith('frontier:') ? this.frontierQuest(String(id).slice(9)) : this.s.quests.find(q => q.id === +id); }
   frontierBlock(id) {
     const f = FRONTIERS.find(f => f.id === id), s = this.s;
     if (!f) return 'Unknown territory';
@@ -1011,7 +1154,7 @@ export class Sim {
   questForPawn(id) { return this.s.activeQuests.find(q => q.members.includes(id)); }
   questCandidates() {
     const s = this.s;
-    return s.advs.filter(a => !a.ko && a.hp > 0 && !a.dungeon && a.task?.type !== 'quest' && !this.questForPawn(a.id));
+    return s.advs.filter(a => !a.ko && a.hp > 0 && !a.dungeon && a.task?.type !== 'quest' && a.task?.type !== 'rescue' && !a.task?.carrying && !this.questForPawn(a.id));
   }
   questReady(q) { return this.questCandidates().filter(a => a.lv >= this.questLevel(q) && a.hp >= maxHp(a, this.s) * 0.5); }
   autoQuestParty(qid) {
@@ -1024,6 +1167,7 @@ export class Sim {
   instantQuest(qid) {
     const q = this.questById(qid); if (!q) return 'Quest gone';
     if (q.frontier) { const err = this.frontierBlock(q.frontier); if (err) return err; }
+    if (q.camp) { const err = this.campBlock(q.camp); if (err) return err; }
     if (this.s.gold < q.fee) return 'Not enough gold for the quest';
     if (!this.questReady(q).length) return 'No capable adventurers are available right now';
     return this.startQuest(qid, this.autoQuestParty(qid));
@@ -1031,6 +1175,7 @@ export class Sim {
   startQuest(qid, memberIds) {
     const s = this.s, q = this.questById(qid); if (!q) return 'Quest gone';
     if (q.frontier) { const err = this.frontierBlock(q.frontier); if (err) return err; }
+    if (q.camp) { const err = this.campBlock(q.camp); if (err) return err; }
     const ids = [...new Set(memberIds)];
     if (!ids.length) return 'Pick at least one adventurer';
     if (ids.length > 8) return 'A party can have at most 8 adventurers';
@@ -1039,9 +1184,13 @@ export class Sim {
     const cost = this.questCost(q, members.length);
     if (s.gold < cost) return 'Not enough gold for the quest and extra adventurers';
     s.gold -= cost;
-    const cv = cavePos(s), spot = q.frontier ? q.spot : q.kind === 'dungeon' ? [cv.x + 1, cv.y + 1] : (this.randomCellInZone(q.zone) || [38, 50]);
+    const cv = cavePos(s), spot = q.frontier || q.camp ? q.spot : q.kind === 'dungeon' ? [cv.x + 1, cv.y + 1] : (this.randomCellInZone(q.zone) || [38, 50]);
     q.spot = spot; q.mobs = []; q.floor = 0; q.ft = 0;
     if (q.kind === 'dungeon') { /* no field mobs */ }
+    else if (q.camp) for (let i = 0; i < q.n; i++) {
+      const c = this.grid.nearestWalkable(spot[0] + this.R.int(-2, 2), spot[1] + this.R.int(-2, 2)) || spot;
+      const m = this.spawnRaider(c, q.rec, { quest: q.id, camp: q.camp }); q.mobs.push(m.id);
+    }
     else if (q.kind === 'outbreak') for (let i = 0; i < q.n; i++) { const c = this.grid.nearestWalkable(spot[0] + this.R.int(-2, 2), spot[1] + this.R.int(-2, 2)) || spot; const m = this.spawnMonster(q.zone, q.mon, c, { quest: q.id, lvBonus: 1 }); if (m) q.mobs.push(m.id); }
     else {
       const m = this.spawnBoss(q.boss, spot, { quest: q.id, ...(q.frontier ? { frontier: q.frontier, lv: q.rec } : {}) });
@@ -1077,6 +1226,12 @@ export class Sim {
     if (!alive.length) {
       s.gold += q.reward.gold; s.tp += q.reward.tp; s.pop += q.reward.pop; s.cleared++;
       if (q.frontier) this.captureFrontier(q.frontier);
+      else if (q.camp) {
+        const c = s.banditCamps.find(c => c.id === q.camp);
+        c.clears++; c.readyAt = s.tick + Math.round(4 * WEEK_SECONDS / DT);
+        for (const [k, n] of Object.entries(q.reward.materials)) s.mats[k] = (s.mats[k] || 0) + n;
+        if (party.length) this.treasure({ lv: q.rec, x: c.x, y: c.y }, party[0]);
+      }
       else if (q.boss) s.bossesBeaten[q.boss] = true;
       for (const a of party) { if (a.task?.qid === q.id) { a.task = null; a.path = null; } a.work += 5; this.addSat(a, 20); }
       log(s, `Quest cleared: ${q.name}! +${q.reward.gold}G +${q.reward.tp}TP +${q.reward.pop} popularity`, 'title');
@@ -1085,7 +1240,7 @@ export class Sim {
       if (q.boss && !q.frontier) s.quests = s.quests.filter(o => o.boss !== q.boss);
       this.checkStars(); return;
     }
-    if (party.every(a => a.ko) || q.t > WEEK_SECONDS * (q.frontier ? 20 : 8)) {
+    if (party.every(a => a.ko) || q.t > WEEK_SECONDS * (q.frontier || q.camp ? 20 : 8)) {
       for (const m of alive) m.hp = 0;
       for (const a of party) if (a.task?.qid === q.id) { a.task = null; a.path = null; }
       log(s, `Quest failed: ${q.name}. The party retreated.`, 'bad'); this.emit('sfx', 'fail');

@@ -71,6 +71,11 @@ try {
 { const r = run('node', ['tests/palisades.mjs']);
   r.status ? fail('palisade routing checks', r.stdout + (r.stderr || '')) : ok('palisades', r.stdout.trim()); }
 
+for (const name of ['camps', 'raids', 'rescue']) {
+  const r = run('node', [`tests/${name}.mjs`]);
+  r.status ? fail(`${name} regression checks`, r.stdout + (r.stderr || '')) : ok(name, r.stdout.trim());
+}
+
 // 5. bundle builds and parses
 { const out = fs.mkdtempSync(path.join(os.tmpdir(), 'wg-bundle-'));
   const r = run('python3', ['tools/bundle.py', '--out', out]);
