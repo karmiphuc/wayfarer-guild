@@ -1,6 +1,6 @@
 // Classes and mastery perks. A job is MASTERED at job Lv10; its perk stays with the adventurer forever
 // (even after changing jobs), DV2-style. Job levels continue to 99 for small permanent stat growth.
-// wt = weapon types the class can equip; range in tiles; heal = support healer; req = prerequisite jobs to have mastered.
+// wt = preferred weapon types (+10% damage, +1 combat speed); all weapons remain usable. range in tiles; heal = support healer; req = mastered prerequisite jobs.
 
 export const TIER_TP = [0, 5, 15, 30, 60];   // Town Points to change into a job of each tier
 

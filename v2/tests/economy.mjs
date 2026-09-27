@@ -36,7 +36,7 @@ function add(s, type, x = 30, y = 30) {
   assert.equal(weapon.type, 'weapon');
 }
 
-// Item Shops really stock unlocked accessories, and class weapon restrictions are respected.
+// Item Shops stock unlocked accessories; basic shopping can use the cheapest non-preferred weapon.
 {
   const one = setup(), item = add(one.s, 'item');
   one.a.eq.weapon = 'woodSword'; one.a.eq.armor = 'cloth'; one.s.unlocked.luckyCharm = true;
@@ -45,8 +45,8 @@ function add(s, type, x = 30, y = 30) {
 
   const two = setup('archer'); add(two.s, 'weapon');
   Object.assign(two.s.unlocked, { woodSword: true, shortBow: true });
-  assert.deepEqual(two.sim.basicGearNeeds(two.a).map(g => g.id), ['shortBow']);
-  assert.equal(two.sim.decide(two.a).buy, 'shortBow');
+  assert.deepEqual(two.sim.basicGearNeeds(two.a).map(g => g.id), ['woodSword']);
+  assert.equal(two.sim.decide(two.a).buy, 'woodSword');
 }
 
 // A poor resident keeps basic-gear savings instead of repeatedly buying optional meals, lessons or potions.
@@ -93,7 +93,7 @@ function add(s, type, x = 30, y = 30) {
   assert.equal(a.eq.weapon, null); assert.equal(a.gold, gearCost - 1);
 }
 
-// Stale optional visits cannot consume a resident's new reserve, and stale incompatible weapons are not bought.
+// Stale optional visits respect reserves; a class change no longer prevents a planned weapon purchase.
 {
   const { s, sim, a } = setup();
   const weapon = add(s, 'weapon'), dojo = add(s, 'dojo');
@@ -102,14 +102,14 @@ function add(s, type, x = 30, y = 30) {
   assert.equal(a.gold, 70); assert.equal(a.jobXp, beforeXp);
 
   a.job = 'archer'; a.gold = 1000; sim.settleVisit(a, weapon, { buy: 'woodSword' });
-  assert.equal(a.eq.weapon, null); assert.equal(a.gold, 1000);
+  assert.equal(a.eq.weapon, 'woodSword'); assert.equal(a.gold, 1000 - sim.shopPrice('woodSword'));
 }
 
-// Missing shops or compatible stock do not trap decision-making, and raids still take priority over shopping.
+// Non-preferred stock still fills an empty slot, and raids take priority over shopping.
 {
   const { s, sim, a } = setup('archer');
   add(s, 'weapon'); s.unlocked.woodSword = true;
-  assert.deepEqual(sim.basicGearNeeds(a), []);
+  assert.equal(sim.basicGearNeeds(a)[0].id, 'woodSword');
   for (let i = 0; i < 100; i++) assert(sim.decide(a)?.type);
 
   s.unlocked.shortBow = true; a.gold = 1000;

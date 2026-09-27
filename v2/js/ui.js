@@ -360,10 +360,10 @@ export class UI {
     for (const [id, it] of list) {
       const have = s.unlocked[id], dev = it.dev;
       const st = statLine(it);
-      const users = it.slot === 'weapon' ? Object.values(JOBS).filter(j => j.wt.includes(it.type) && j.tier < 4).map(j => j.name) : [];
+      const users = it.slot === 'weapon' ? Object.values(JOBS).filter(j => j.wt.includes(it.type)).map(j => j.name) : [];
       const costs = dev ? Object.entries(dev).map(([k, n]) => `<span class="${(s.mats[k] || 0) >= n ? '' : 'cross'}">${MATS[k].name}×${n}</span>`).join(' ') : 'Starter';
       h += `<div class="card"><div class="thumb"><i data-item="${id}" data-scale="3"></i></div><div class="meta"><div class="name">${it.name}</div>
-        <div class="sub">${st} · ${it.price}G${it.type ? ` · ${it.type}` : ''}</div>${users.length ? `<div class="sub" title="${users.join(', ')}">${esc(users.slice(0, 4).join(', '))}${users.length > 4 ? '…' : ''}</div>` : ''}
+        <div class="sub">${st} · ${it.price}G${it.type ? ` · ${it.type}` : ''}</div>${users.length ? `<div class="sub" title="${users.join(', ')}">Class bonus: ${esc(users.slice(0, 4).join(', '))}${users.length > 4 ? '…' : ''}</div>` : ''}
         ${have ? '<div class="sub check">In stock</div>' : `<div class="sub">${costs} · ${Math.round(it.price * 1.5)}G</div><button class="btn sm" data-act="develop" data-id="${id}" ${smith ? '' : 'disabled'}>Develop</button>`}</div></div>`;
     }
     return h + '</div>';
@@ -373,6 +373,7 @@ export class UI {
     let h = a ? `<div class="row"><i data-face="f_${a.spr}"></i><div><b>${esc(a.name)}</b> · ${JOBS[a.job].name} Job Lv${a.jobLv[a.job] || 1} · <span class="muted">Town Points ${s.tp}</span>
       <div class="muted">Master a job (Job Lv${MASTERY}) to change jobs and keep its perk forever. Perks stack.</div></div></div>` : `<p class="muted">Every class, its mastery perk and what it takes to unlock it.</p>`;
     this.wideGrid = true;
+    h += '<p class="muted">Class changes keep all equipment. Any weapon is usable; a preferred type grants +10% damage and +1 combat speed (faster attacks). Other weapons keep their normal stats with no penalty.</p>';
     const TN = ['Starter', 'Tier 1', 'Tier 2 · advanced', 'Tier 3 · elite', 'Tier 4 · legendary'];
     for (let t = 0; t <= 4; t++) {
       h += `<div class="section">${TN[t]} <span class="muted">${TIER_TP[t] ? TIER_TP[t] + ' TP' : ''}</span></div><div class="grid">`;
@@ -385,7 +386,7 @@ export class UI {
         h += `<div class="card ${a && err && !cur ? 'locked' : ''} ${cur ? 'sel' : ''}" ${a && !err ? `data-act="setJob" data-id="${a.id}" data-job="${id}"` : ''}>
           <div class="thumb"><i data-char="${j.sprites[0]}" data-scale="3"></i></div><div class="meta"><div class="name">${j.name}</div>${status ? `<div>${status}</div>` : ''}
           <div class="sub"><b>${P.name}</b>: ${esc(P.desc)}</div>
-          <div class="sub">${esc(j.desc)} · ${j.wt.length > 6 ? 'any weapon' : j.wt.join(', ')}</div>
+          <div class="sub">${esc(j.desc)} · Preferred: ${j.wt.length > 6 ? 'any weapon' : j.wt.join(', ')}</div>
           ${req ? `<div class="sub">Needs: ${req}</div>` : ''}${a && err && !cur ? `<div class="sub cross">${esc(err)}</div>` : ''}</div></div>`;
       }
       h += '</div>';
@@ -480,6 +481,7 @@ export class UI {
       <div class="row muted"><span>💰 ${a.gold}G</span><span>Potions ${a.potions}</span><span>Kills ${a.kills}</span><span>Hunger ${Math.round(a.hunger)}</span><span>Energy ${Math.round(a.energy)}</span></div>
       <div class="muted">${this.taskLabel(a)}</div>
       <div class="row" style="margin:6px 0">${['weapon', 'armor', 'offhand', 'acc'].map(sl => { const it = a.eq[sl] && ITEMS[a.eq[sl]], label = { weapon: 'Weapon', armor: 'Body armor', offhand: 'Helm / shield', acc: 'Accessory' }[sl]; return `<span class="chip">${label}: ${it ? `<i data-item="${a.eq[sl]}" data-scale="1"></i>${it.name}` : 'None'}</span>`; }).join('')}</div>
+      ${a.eq.weapon ? `<div class="${this.sim.weaponMatch(a) ? 'check' : 'muted'}">${this.sim.weaponMatch(a) ? 'Class match: +10% damage · +1 combat speed' : 'Weapon usable · normal stats, no class bonus'}</div>` : ''}
       ${a.eq.blessing && ITEMS[a.eq.blessing] ? `<div class="relic-summary"><strong class="tag gold">★ Permanent blessing</strong><div><i data-item="${a.eq.blessing}" data-scale="1"></i> ${esc(ITEMS[a.eq.blessing].name)}</div><div class="muted">${esc(statLine(ITEMS[a.eq.blessing]))} · Accessory slot stays free</div></div>` : ''}
       ${a.perks.length ? `<div class="muted">Mastered perks:</div><div class="row">${a.perks.map(p => `<span class="tag gold" title="${esc(PERKS[p].desc)}">★ ${PERKS[p].name}</span>`).join('')}</div>` : ''}
       <div class="muted">Job Lv${a.jobLv[a.job] || 1}/99 · ${(a.jobLv[a.job] || 1) >= MASTERY ? 'mastered' : `${MASTERY - (a.jobLv[a.job] || 1)} to mastery`} · Lv${a.lv}/99</div>`;

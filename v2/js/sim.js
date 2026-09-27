@@ -325,7 +325,7 @@ export class Sim {
     return best;
   }
   capOf(b) { const d = FAC[b.type]; return (d.cap || 3) + (b.lv - 1); }
-  canEquip(a, it) { return it.slot !== 'weapon' || JOBS[a.job].wt.includes(it.type); }
+  weaponMatch(a, it = ITEMS[a.eq.weapon]) { return it?.slot === 'weapon' && JOBS[a.job].wt.includes(it.type); }
   shopPrice(id, count = 1) {
     const it = ITEMS[id]; if (!it) return Infinity;
     return Math.round(this.itemPrice(id) * count * (1 + this.bonus('shopSales') + this.charter('shopSales')) *
@@ -343,13 +343,13 @@ export class Sim {
     const needs = [], order = ['weapon', 'armor', 'offhand', 'acc'];
     for (const slot of order) {
       const equipped = a.eq[slot] && ITEMS[a.eq[slot]];
-      if (equipped && this.canEquip(a, equipped)) continue;
+      if (equipped) continue;
       const shops = this.facilities('shop').filter(b => SHOP_SLOTS[FAC[b.type].slot].includes(slot));
       if (!shops.length) continue;
       let best = null;
       for (const id of Object.keys(this.s.unlocked).sort()) {
         const it = ITEMS[id];
-        if (!it || it.legendary || it.slot !== slot || !this.canEquip(a, it)) continue;
+        if (!it || it.legendary || it.slot !== slot) continue;
         const price = this.shopPrice(id);
         if (!best || price < best.price || (price === best.price && id < best.id)) best = { id, slot, price, shops, gain: this.gearValue(a, it) };
       }
@@ -362,10 +362,10 @@ export class Sim {
     let best = null;
     for (const slot of ['weapon', 'armor', 'offhand', 'acc']) {
       const shops = this.facilities('shop').filter(b => SHOP_SLOTS[FAC[b.type].slot].includes(slot)); if (!shops.length) continue;
-      const cur = a.eq[slot] ? ITEMS[a.eq[slot]] : null, curV = cur && this.canEquip(a, cur) ? this.gearValue(a, cur) : 0;
+      const cur = a.eq[slot] ? ITEMS[a.eq[slot]] : null, curV = cur ? this.gearValue(a, cur) : 0;
       if (cur?.legendary) continue;
       for (const id in this.s.unlocked) {
-        const it = ITEMS[id]; if (!it || it.legendary || it.slot !== slot || !this.canEquip(a, it)) continue;
+        const it = ITEMS[id]; if (!it || it.legendary || it.slot !== slot) continue;
         const v = this.gearValue(a, it), price = this.shopPrice(id);
         if (v > curV + 1 && price <= a.gold && (!best || v - curV > best.gain)) best = { id, gain: v - curV, shops, price };
       }
@@ -374,7 +374,8 @@ export class Sim {
   }
   gearValue(a, it) {
     const j = JOBS[a.job], magic = j.mag > j.atk;
-    return (it.atk || 0) * (magic ? 0.4 : 1) + (it.mag || 0) * (magic ? 1.2 : 0.3) + (it.def || 0) + (it.hp || 0) * 0.3 + (it.crit || 0) * 120 + (it.spd || 0) * 60;
+    const match = this.weaponMatch(a, it), offense = ((it.atk || 0) * (magic ? 0.4 : 1) + (it.mag || 0) * (magic ? 1.2 : 0.3)) * (match ? 1.1 * (j.spd + 1) / j.spd : 1);
+    return offense + (it.def || 0) + (it.hp || 0) * 0.3 + (it.crit || 0) * 120 + (it.spd || 0) * 60;
   }
   potion() { return this.s.unlocked.medipack ? ITEMS.medipack : ITEMS.potion; }
   itemPrice(id) { return Math.round(ITEMS[id].price * (1 + this.bonus('shopSales') * 0) ); }
@@ -641,7 +642,7 @@ export class Sim {
           while (n < 3 - a.potions && this.shopPrice(id, n + 1) <= a.gold - reserve) n++;
           if (n > 0) { paid = n * P.price * (1 + this.bonus('shopSales') + this.charter('shopSales')); a.potions += n; }
         }
-        else if (t.buy && ITEMS[t.buy] && !ITEMS[t.buy].legendary && this.canEquip(a, ITEMS[t.buy]) && !ITEMS[a.eq[ITEMS[t.buy].slot]]?.legendary && a.gold >= this.shopPrice(t.buy)) {
+        else if (t.buy && ITEMS[t.buy] && !ITEMS[t.buy].legendary && !ITEMS[a.eq[ITEMS[t.buy].slot]]?.legendary && a.gold >= this.shopPrice(t.buy)) {
           const it = ITEMS[t.buy]; paid = this.itemPrice(t.buy); a.eq[it.slot] = t.buy; a.hp = Math.min(a.hp, maxHp(a, s));
           log(s, `${a.name} bought a ${it.name}! (+${paid}G)`, 'coin'); this.emote(a, 'star'); this.bark(a, it.name + '!');
           paid *= 1 + this.bonus('shopSales') + this.charter('shopSales');
@@ -802,12 +803,14 @@ export class Sim {
     a.path = null;
     a.dir = Math.abs(m.x - a.x) > Math.abs(m.y - a.y) ? (m.x < a.x ? 2 : 3) : (m.y < a.y ? 1 : 0);
     a.cool -= DT; if (a.cool > 0) return;
-    a.cool = 1.1 / job.spd; a.atkT = 0.3;
+    const match = this.weaponMatch(a);
+    a.cool = 1.1 / (job.spd + (match ? 1 : 0)); a.atkT = 0.3;
     const magic = job.mag > job.atk, P = k => perkSum(a, k);
     // Rallying Roar from nearby allies
     let aura = 0; for (const o of s.advs) if (o !== a && !o.inside && !o.ko && o.perks.includes('roar') && Math.hypot(o.x - a.x, o.y - a.y) < 3) { aura = PERKS.roar.auraAtk; break; }
     const pow = (magic ? stat(a, 'mag', s) * 1.25 : stat(a, 'atk', s)) * (1 + aura);
     let dmg = Math.max(1, Math.round(pow * this.R.range(0.85, 1.2) - m.def * 0.5));
+    if (match) dmg = Math.round(dmg * 1.1);
     const crit = this.R.chance(0.08 + P('crit') + gearSum(a, 'crit')); if (crit) dmg = Math.round(dmg * (1.8 + P('critMul')));
     const wpn = a.eq.weapon && ITEMS[a.eq.weapon];
     if (job.range > 1 || P('range')) s.fx.push({ k: 'proj', x: a.x, y: a.y, tx: m.x, ty: m.y, t: 0, life: 0.25,
@@ -1416,7 +1419,8 @@ export class Sim {
     q.ft += 1; if (q.ft < 7) return; q.ft = 0; q.floor++;
     const zl = [0, 1, 5, 10, 16][q.zone], foe = 3 * (6 + zl * 3) * (1 + q.floor * 0.15);
     const up = inside.filter(a => !a.ko);
-    const pow = up.reduce((n, a) => n + Math.max(stat(a, 'atk', s), stat(a, 'mag', s) * 1.1) + stat(a, 'def', s) * 0.5 + a.lv, 0);
+    const pow = up.reduce((n, a) => n + Math.max(stat(a, 'atk', s), stat(a, 'mag', s) * 1.1) *
+      (this.weaponMatch(a) ? 1.1 * (JOBS[a.job].spd + 1) / JOBS[a.job].spd : 1) + stat(a, 'def', s) * 0.5 + a.lv, 0);
     const heal = up.filter(a => JOBS[a.job].heal).reduce((n, a) => n + stat(a, 'mag', s) * 2, 0);
     for (const a of up) {
       const dmg = Math.max(1, Math.round(maxHp(a, s) * 0.22 * Math.pow(foe / Math.max(1, pow), 1.5) * R.range(0.7, 1.3) - heal / up.length));
@@ -1476,7 +1480,6 @@ export class Sim {
     const err = this.canChangeJob(a, jobId); if (err) return err;
     this.s.tp -= this.jobCost(jobId); a.job = jobId; a.jobLv[jobId] = a.jobLv[jobId] || 1; a.jobXp = 0;
     a.spr = this.R.pick(JOBS[jobId].sprites);
-    if (a.eq.weapon && !this.canEquip(a, ITEMS[a.eq.weapon])) a.eq.weapon = null;
     a.hp = maxHp(a, this.s); log(this.s, `${a.name} became a ${JOBS[jobId].name}!`, 'good'); this.emit('fanfare', `${a.name} → ${JOBS[jobId].name}`, JOBS[jobId].desc);
     return null;
   }
