@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { ITEMS, JOBS } from '../js/data.js';
-import { newGame, migrate, makeAdventurer, stat, maxHp } from '../js/state.js';
+import { newGame, migrate, makeAdventurer, teachJob, stat, maxHp } from '../js/state.js';
 import { Sim } from '../js/sim.js';
 import { UI } from '../js/ui.js';
 
@@ -10,13 +10,19 @@ import { UI } from '../js/ui.js';
   for (const id in JOBS) a.jobLv[id] = 10;
   a.eq.weapon = 'dragonSlayer'; a.eq.armor = 'plate'; a.eq.offhand = 'ironCap'; a.eq.acc = 'luckyCharm';
   const before = structuredClone(a.eq);
+  const appearance = a.spr;
   for (const id in JOBS) {
     if (id !== a.job) assert.equal(sim.changeJob(a, id), null);
     assert.deepEqual(a.eq, before, id);
+    assert.equal(a.spr, appearance, `${id}: class change replaced the pawn's identity`);
   }
   a.job = 'mage';
   const copy = migrate(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(copy.advs[0].eq, before);
+  assert.equal(copy.advs[0].spr, appearance);
+  teachJob(a, 'demon', sim.R);
+  assert.equal(a.spr, appearance, 'teaching a job must preserve the appearance too');
+  a.job = 'mage';
   assert.equal(sim.weaponMatch(a), false);
   const withSword = stat(a, 'atk', s); a.eq.weapon = null;
   assert(withSword > stat(a, 'atk', s), 'mismatched weapon must still contribute its stats');

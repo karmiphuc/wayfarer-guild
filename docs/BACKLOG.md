@@ -29,6 +29,8 @@ Legend:
 
 - Empty weapon slots render empty hands across all pawn classes; held sprites come only from actual equipped items. Outlaws retain their explicitly assigned weapons.
 
+- Pawn appearances and portraits remain permanent through class changes and job teaching, including existing saves and roguelite carryover. New arrivals receive their initial appearance once; no gender or customization system added.
+
 - World pawns, monsters, bosses and pets render 30% larger, including held weapons and projectiles. A shared foot anchor preserves weapon grips and mounted proportions; Alpha pets retain their additional 25% size. Buildings and gameplay distances stay unchanged.
 
 - Weapon affinity: class changes retain all equipped gear. Any weapon remains usable with normal stats; preferred class types grant +10% damage and +1 combat speed. The class screen and pawn inspector explain the bonus, and shopping/cave combat account for it.

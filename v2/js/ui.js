@@ -388,7 +388,7 @@ export class UI {
     let h = a ? `<div class="row"><i data-face="f_${a.spr}"></i><div><b>${esc(a.name)}</b> · ${JOBS[a.job].name} Job Lv${a.jobLv[a.job] || 1} · <span class="muted">Town Points ${s.tp}</span>
       <div class="muted">Master a job (Job Lv${MASTERY}) to change jobs and keep its perk forever. Perks stack.</div></div></div>` : `<p class="muted">Every class, its mastery perk and what it takes to unlock it.</p>`;
     this.wideGrid = true;
-    h += '<p class="muted">Class changes keep all equipment. Any weapon is usable; a preferred type grants +10% damage and +1 combat speed (faster attacks). Other weapons keep their normal stats with no penalty.</p>';
+    h += '<p class="muted">Class changes keep your appearance, portrait and all equipment. Any weapon is usable; a preferred type grants +10% damage and +1 combat speed (faster attacks). Other weapons keep their normal stats with no penalty.</p>';
     const TN = ['Starter', 'Tier 1', 'Tier 2 · advanced', 'Tier 3 · elite', 'Tier 4 · legendary'];
     for (let t = 0; t <= 4; t++) {
       h += `<div class="section">${TN[t]} <span class="muted">${TIER_TP[t] ? TIER_TP[t] + ' TP' : ''}</span></div><div class="grid">`;

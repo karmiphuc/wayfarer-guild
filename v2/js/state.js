@@ -292,10 +292,9 @@ function uniqueName(s, R) {
   return free.length ? R.pick(free) : R.pick(NAMES) + ' ' + 'IVX'[R.int(0, 2)];
 }
 
-// Give an adventurer a job as if they had earned it: prerequisite jobs mastered (with their perks), sprite updated.
+// Give an adventurer a job as if they had earned it; keep their existing appearance.
 export function teachJob(a, jobId, R) {
   a.job = jobId; a.jobLv[jobId] = a.jobLv[jobId] || 1;
-  if (R && !JOBS[jobId].sprites.includes(a.spr)) a.spr = R.pick(JOBS[jobId].sprites);
   const teach = j => { for (const r of JOBS[j].req || []) { teach(r); a.jobLv[r] = Math.max(a.jobLv[r] || 0, MASTERY); if (!a.perks.includes(JOBS[r].perk)) a.perks.push(JOBS[r].perk); } };
   teach(jobId);
   if (JOBS[jobId].tier >= 2 && (a.jobLv.villager || 0) < MASTERY) { a.jobLv.villager = MASTERY; if (!a.perks.includes('allround')) a.perks.push('allround'); }
