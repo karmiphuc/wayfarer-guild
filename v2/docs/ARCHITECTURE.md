@@ -320,7 +320,8 @@ Not in DV2; our own. Everything is driven by the seeded RNG, so **the same world
   row of `frames` frames of `fw×fh`.
 - Palisades choose horizontal halves and vertical pieces from their north/east/south/west neighbors in the combined
   player-wall and village-boundary barrier mask. Corners, T junctions and crosses share this rule with build previews.
-- Held weapons (`drawWeapon`): the grip pixel for every (sheet, dir, row) is detected at load by `computeHands` in
+- Pawn held weapons come only from `eq.weapon`; empty slots never fall back to the class's weapon sprite. Outlaws use
+  their explicit enemy weapon. Held weapons (`drawWeapon`): the grip pixel for every (sheet, dir, row) is detected at load by `computeHands` in
   `assets.js` (outermost opaque pixel on the facing side below the head, 1 px inside the outline). The in-hand sprite is
   rotated around that pixel: carry = blade up leaning forward; attack = swing arc / thrust / raised tome / drawn bow.
   Hidden behind the body when facing up; bows are slung on the back when idle. Tiers are recoloured with `tinted()`.
