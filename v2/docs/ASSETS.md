@@ -10,6 +10,7 @@ mixed packs (isometric buildings on top-down grass, different outline weights, f
 | Ninja Adventure | Pixel-boy & AAA | tiles, buildings, 70+ characters, monsters, bosses, weapons, UI frames, emotes, font, music, SFX | `assets/NINJA_ADVENTURE_CC0_LICENSE.txt` |
 | 16x16 RPG Item Pack | Alex's Assets | armor (`a_*`) and accessory (`c_*`) icons | `assets/ALEX_RPG_ITEMS_CC0_LICENSE.txt` |
 | Medieval Fantasy (Superpowers packs) | Pixel-boy | fountain, stone basin, knight statue, castle (`tiles/mf_*.png`) | `assets/PIXELBOY_MEDIEVAL_FANTASY_CC0_LICENSE.txt` |
+| 16x16 RPG Items (DB32) | ARoachIFoundOnMyPillow | masterwork weapons and additional body armor, helmets and shields | `assets/DB32_RPG_ITEMS_CC0_LICENSE.txt` |
 
 Where the full packs live on the original dev machine (not in the repo): `~/Projects/wayfarer-guild-review/na-full/`
 (Ninja Adventure, cloned from github.com/gainax2k1/godot_adventure) and `~/Projects/wayfarer-guild-review/extra/`.

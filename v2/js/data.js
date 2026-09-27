@@ -88,7 +88,7 @@ export const FAC = {
   weapon: { name: 'Weapon Shop', spr: 'weapon', fp: [4, 2], cat: 'shop', cost: 500, kind: 'shop', slot: 'weapon', rank: 1, appeal: 4,
             desc: 'Sells weapons you have developed.' },
   armor:  { name: 'Armor Shop', spr: 'armor', fp: [4, 2], cat: 'shop', cost: 500, kind: 'shop', slot: 'armor', rank: 2, appeal: 4,
-            desc: 'Sells unlocked armor and accessories.' },
+            desc: 'Sells unlocked body armor, helmets, shields and accessories.' },
   item:   { name: 'Item Shop', spr: 'item', fp: [4, 2], cat: 'shop', cost: 380, kind: 'shop', slot: 'item', rank: 1, appeal: 4,
             desc: 'Sells unlocked potions and accessories.' },
   dojo:   { name: 'Dojo', spr: 'dojo', fp: [4, 2], cat: 'training', cost: 650, kind: 'train', price: 15, rank: 2, appeal: 3,

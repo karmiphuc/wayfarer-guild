@@ -81,10 +81,12 @@ Only when no existing key fits.
 2. Add to `ITEMS` in `js/items.js`:
    ```js
    frostMail:   { name: 'Frost Mail', slot: 'armor', icon: 'a_plate', def: 18, hp: 15, price: 2000, dev: { ore: 16, crystal: 6 } },
+   frostHelm:   { name: 'Frost Helm', slot: 'offhand', icon: 'a_helm', def: 12, price: 1500, dev: { ore: 12, crystal: 4 } },
    windCharm:   { name: 'Wind Charm', slot: 'acc',   icon: 'c_charm', spd: 0.12, crit: 0.02, price: 900, dev: { herb: 8 } },
    ```
    Allowed stat keys: `atk def mag hp` (flat), `crit` (0.05 = +5%), `spd` (0.1 = +10% move speed), `heal` (consumables only).
-   Armor is sold by the Armor Shop; accessories by the Armor Shop and the Item Shop (`SHOP_SLOTS`).
+   Body armor (`armor`) and the shared helm/shield slot (`offhand`) are sold by the Armor Shop;
+   accessories by the Armor Shop and the Item Shop (`SHOP_SLOTS`). Each slot contributes its stats independently.
 3. Verify.
 
 ## 5. Add a monster

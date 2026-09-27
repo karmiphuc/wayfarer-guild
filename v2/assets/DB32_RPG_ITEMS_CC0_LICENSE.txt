@@ -1,0 +1,11 @@
+16x16 RPG Items (DB32)
+Author: ARoachIFoundOnMyPillow
+Primary source: https://opengameart.org/content/16x16-rpg-items-db32
+Download: https://opengameart.org/sites/default/files/db32_rpg_items_0.zip
+License: Creative Commons CC0 1.0 Universal
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+Verified on the author's OpenGameArt submission on 2026-09-27.
+
+Icons are copied without pixel changes. Held weapons are rotated and cropped
+with nearest-neighbor sampling to match Wayfarer's handle-at-top convention.
+Attribution is not required by CC0; this provenance record is retained.

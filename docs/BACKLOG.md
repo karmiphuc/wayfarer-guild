@@ -13,6 +13,8 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Equipment and class progression (#31): separate body armor and helm/shield slots with old-save migration; 15 additional items (85 ordinary items total), CC0 masterwork sprites, and eight additional classes (37 total). Every tier-3 class has a tier-4 successor, including a complete archer progression.
+
 - Gear clarity and resident essentials (#26): show earned legendary rewards prominently in the guild vault, expose accessory stock in Armor and Item Shops, and prioritize affordable missing basic equipment while reserving savings from optional spending. Urgent food and recovery remain available.
 
 - Palisades: build and remove wooden barriers to direct traffic; the main village has a free perimeter with eight broad openings, following paid expansion. Routes respect walls and preserve existing buildings on old saves.
