@@ -149,6 +149,9 @@ the class's preferred `wt` types for +10% hit damage (after defense, before crit
 `1.1 / (job.spd + matchBonus)`; movement and healing speed are unchanged. Abstract cave offense and weapon upgrade scoring
 include the corresponding damage-rate bonus. An unequipped default sprite grants no weapon bonus.
 
+An adventurer's `spr` is assigned once by `makeAdventurer()`. Class changes and `teachJob()` preserve it, so their world
+appearance and portrait stay recognizable. Existing saves keep their current sprite; roguelite carryover preserves it.
+
 `JOBS.attack` identifies bow specialists (`bow`), innate casters (`magic`), and innate throwing classes (`throw`);
 omitted means melee. `attackProfile()` derives range, damage type and projectile from current equipment without saved
 fields. Any equipped bow fires physical arrows at range 3, or the bow specialist's higher class range. Otherwise innate

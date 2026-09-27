@@ -1608,7 +1608,6 @@ export class Sim {
   changeJob(a, jobId) {
     const err = this.canChangeJob(a, jobId); if (err) return err;
     this.s.tp -= this.jobCost(jobId); a.job = jobId; a.jobLv[jobId] = a.jobLv[jobId] || 1; a.jobXp = 0;
-    a.spr = this.R.pick(JOBS[jobId].sprites);
     a.hp = maxHp(a, this.s); log(this.s, `${a.name} became a ${JOBS[jobId].name}!`, 'good'); this.emit('fanfare', `${a.name} → ${JOBS[jobId].name}`, JOBS[jobId].desc);
     return null;
   }
