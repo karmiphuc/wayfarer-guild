@@ -197,7 +197,7 @@ function timeoutChallenge(s, sim, f, party) {
   assert(roadAt(s, 75, 55));
   assert.deepEqual({ x: s.advs[0].x, y: s.advs[0].y, task: s.advs[0].task }, expectedAdv);
   assert.deepEqual(s.activeQuests[0], expectedQuest);
-  assert.deepEqual(s.frontier, { completed: {}, relics: {} });
+  assert.deepEqual(s.frontier, { completed: {}, relics: {}, petRewards: {} });
   assert.equal(s.seed, expectedSeed, 'migration consumed simulation RNG state');
   const once = JSON.stringify(s); migrate(s);
   assert.equal(s.seed, expectedSeed, 'idempotent migration consumed simulation RNG state');

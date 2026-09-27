@@ -180,6 +180,8 @@ export const MATS = {
 
 // ---------- monsters ----------
 export const MONSTERS = {
+  warg:     { name: 'Dread Warg', spr: 'DreadWarg', hp: 120, atk: 29, def: 12, spd: 1.2, xp: 60, gold: 60, drops: {} },
+  emberWarg:{ name: 'Ember Warg', spr: 'EmberWarg', hp: 115, atk: 28, def: 13, spd: 1.2, xp: 60, gold: 60, drops: {} },
   slime:    { name: 'Slime',     spr: 'Slime',       hp: 14, atk: 3,  def: 1, spd: 0.6, xp: 4,  gold: 6,  drops: { herb: 0.4 } },
   slimeB:   { name: 'Blue Slime', spr: 'Slime3',     hp: 20, atk: 4,  def: 2, spd: 0.6, xp: 6,  gold: 8,  drops: { herb: 0.5 } },
   mushroom: { name: 'Shroom',    spr: 'Mushroom',    hp: 18, atk: 5,  def: 1, spd: 0.7, xp: 6,  gold: 7,  drops: { herb: 0.6 } },
@@ -267,6 +269,7 @@ export const MONSTERS = {
 export const VISITOR_CAP = [5, 5, 10, 15, 20, 30];
 // Chance that a wild spawn is an Elite (recoloured, tougher, double-plus rewards).
 export const ELITE_CHANCE = 0.06;
+export const FRONTIER_PETS = ['warg', 'emberWarg', 'drakeY', 'ironRex'];
 
 // Monsters per zone (zone 1 = next to town … zone 4 = map edges). Each new village keeps a random subset
 // (ROSTER_SIZE in happenings.js) so every seed has different wildlife. ZONE_POP = target monsters alive per zone,

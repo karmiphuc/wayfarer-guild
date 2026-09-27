@@ -80,7 +80,7 @@ not stored as extra perimeter buildings or timers; no new top-level save fields 
 | `gold, tp, pop, stars` | money · Town Points · popularity (float) · village rank 0–5 |
 | `mats {wood, hide, herb, ore, crystal}` | village materials (monster drops) used to develop gear |
 | `town {x0,y0,x1,y1}` | buildable rectangle (grows with the Expand event) |
-| `mapWidth, mapHeight`, `frontier {completed, relics}` | 152x112 map; completed site IDs grant additional buildable rectangles and bonuses; relic item IDs map to one resident owner ID or `null` in the vault |
+| `mapWidth, mapHeight`, `frontier {completed, relics, petRewards}` | 152x112 map; completed site IDs grant land and bonuses; relic IDs map to one resident owner or `null`; pet rewards map each rolled site to its species or `null` |
 | `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt,cooldownWeeks,patrolAt}`; `readyAt` ends the persisted 8–20 week recovery; `patrolAt` schedules its next guard wave. `flags.nextCampPatrol` enforces the rank-based interval across all camps |
 | `ground` (string), `roads` (string of '0'/'1'), `props[]` | terrain detail per cell · road flags · trees/rocks/cave `{k,x,y,w,block,soft?}` |
 | `buildings[]` | `{id, type, x, y, lv, sales, visits, occ[], v?, free?}` — `type` is a key of `FAC` or `DECOR`; `free` = charter gift (refunds 0 G) |
@@ -161,8 +161,11 @@ priority over retaliation; returning pawns keep retreating. Quest ownership and 
 ### Late-game investments
 
 At five stars with a Stable, each pet can become Alpha once through `alphaPet(id)`: 10,000 village gold and
-1,000 each wood, hide, herb, ore and crystal. Alpha preserves species and bond, multiplies assist damage and bonded
-passive stat contributions by 1.5, and uses cached gold sprites with a crown (including mounts). The Adventurers panel
+100 each wood, hide, herb, ore and crystal for the first pet, then +100 each per successful upgrade, capped at 500 each.
+The persistent `flags.alphaUpgrades` counts purchases; migration counts existing Alpha pets once. Alpha preserves species
+and bond, multiplies assist damage and bonded passive stat contributions by 1.5, and uses cached gold sprites with a crown
+(including mounts). Alpha sprites are 20px instead of 16px, 25% larger with integer destination dimensions and no smoothing.
+The Adventurers panel
 shows costs, benefits and blocking reasons before an in-game confirmation. Pet `alpha` defaults to false on creation
 and migration; upgrade validation happens before any deduction, so repeat/stale clicks cannot charge twice.
 
@@ -199,6 +202,17 @@ with ID `frontier:<site>`. `startQuest()` validates rank, prerequisites, members
 guardian. It shares normal party selection and extra fees, but allows 600 seconds for the longer journey and fight.
 Failure cleans up the guardian and permits retry. Victory records completion once and grants land, a small permanent
 bonus and one relic. It does not mark the reused boss artwork's regular quest complete. Completed sites cannot repeat.
+
+Each captured site also has a one-time 30% chance to grant a rare companion from `FRONTIER_PETS`. A fixed world/site
+seed prevents reload rerolls and leaves the main RNG untouched. `frontier.petRewards` records species or null for misses.
+Sim initialization awards missing rolls for already completed sites once. These companions have their originating
+`frontier` ID, arrive even without a Stable or when full, and do not consume ordinary taming capacity (at most eight
+bonus pets). The original guaranteed relic reward remains independent.
+
+The regular boss board refills on load, rank-up and completion, keeping the next two undefeated eligible bosses.
+After all 15 first clears, four legendary bosses rotate through repeatable rematches. `flags.bossRematches` persists
+victories; each round adds 20% stats/rewards and five recommended levels, capped at level 99. Failed attempts retry
+the same stage. Rematches cannot duplicate frontier land or relic rewards.
 
 `buildAreas()` combines the original town with captured rectangles; `townDist()` and footprint validation use that union.
 Capture clears blocking scenery and rebuilds paths. Normal paid expansion still expands only the original town.
