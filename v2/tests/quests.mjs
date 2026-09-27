@@ -35,7 +35,8 @@ function startThree() {
   const party = sim.autoQuestParty(q.id);
   assert.deepEqual(party, other.sim.autoQuestParty(q.id));
   assert.equal(new Set(party).size, 4);
-  assert(party.every(id => !ids(s, 0, 3).includes(id)));
+  assert(party.every(id => !ids(s, 0, 2).includes(id)));
+  assert(sim.questReady(q).includes(s.advs[2]));
   assert.notDeepEqual([...party].sort(), ids(s, 20, 4).sort());
   const ui = Object.create(UI.prototype); ui.game = { s, sim }; ui.questPick = q.id; ui.party = party;
   const before = JSON.stringify(s), html = ui.panel_quests();
@@ -57,6 +58,34 @@ function startThree() {
   assert(ui.panel_people().includes('✓ Current job mastered'));
   s.advs = s.advs.slice(3, 5);
   assert.equal(sim.autoQuestParty(q.id).length, 2);
+}
+
+// Suggested levels never exclude healthy novices in favor of four max-level veterans.
+{
+  const { s, sim } = setup(), q = s.quests.find(q => q.kind === 'dungeon');
+  for (const [i, a] of s.advs.entries()) { a.lv = i < 20 ? 1 : 99; a.hp = maxHp(a, s); }
+  assert(sim.questLevel(q) > 1);
+  for (const quest of [...s.quests, sim.frontierQuest(FRONTIERS[0].id), sim.campQuest(s.banditCamps[0].id)]) {
+    assert.equal(sim.questReady(quest).length, 24);
+    const party = sim.autoQuestParty(quest.id);
+    assert.equal(party.length, 4);
+    assert(party.some(id => s.advs.find(a => a.id === id).lv === 1));
+  }
+  const ui = Object.create(UI.prototype); ui.game = { s, sim, audio: { sfx() {} } };
+  ui.renderPanel = () => {};
+  const selected = new Set(), parties = new Set();
+  for (let i = 0; i < 240; i++) {
+    ui.act('pickQuest', { id: String(q.id) });
+    assert.equal(ui.party.length, 4); assert.equal(new Set(ui.party).size, 4);
+    ui.party.forEach(id => selected.add(id));
+    parties.add([...ui.party].sort().join(','));
+    ui.act('pickQuest', { id: String(q.id) });
+    assert.deepEqual(ui.party, []);
+  }
+  assert.equal(selected.size, s.advs.length);
+  assert(parties.size > 200);
+  assert.equal(sim.instantQuest(q.id), null);
+  assert(s.activeQuests[0].members.some(id => s.advs.find(a => a.id === id).lv === 1));
 }
 
 // Charge only validated unique members; failed departures are completely atomic.

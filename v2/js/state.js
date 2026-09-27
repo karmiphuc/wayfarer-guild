@@ -61,7 +61,7 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     quests: [], activeQuests: [], cleared: 0, bossesBeaten: {},
     titles: {}, events: [], log: [],
     stats: { income: 0, lastIncome: 0, kills: 0, monthKills: 0, visitorsTotal: 0, spentBuild: 0 },
-    flags: { tutorial: 0, nextCampPatrol: 0, patrolScaling: true, bossRematches: 0, alphaUpgrades: 0 },
+    flags: { tutorial: 0, nextCampPatrol: 0, patrolScaling: true, bossRematches: 0, alphaUpgrades: 0, pioneer: null, pioneerPet: null },
     world: null, charter: null, charterChoices: [], happen: [], happenLog: [], npcs: [],
   };
   const R = makeRng(s);
@@ -120,6 +120,32 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
   expandWorld(s);
   clearFrontierScenery(s);
   seedBanditCamps(s);
+  return s;
+}
+
+export function legacyGame(previous, pawnId, petId = null, seed) {
+  const source = previous.advs.find(a => a.id === pawnId);
+  const extra = petId == null ? null : previous.monsters.find(p => p.id === petId && p.frontier);
+  if (!source || (petId != null && !extra)) return null;
+  const s = newGame(seed), R = makeRng(s), a = makeAdventurer(s, R);
+  const masteries = shuffle(R, Object.keys(JOBS).filter(id => (source.jobLv[id] || 0) >= MASTERY)).slice(0, 5);
+  Object.assign(a, { name: source.name, spr: source.spr, persona: [...source.persona], base: { ...source.base },
+    lv: 1, gold: 0, resident: true, home: s.buildings.find(b => b.type === 'house').id,
+    jobLv: { villager: 1 }, perks: [], energy: 100, hunger: 0, x: 38, y: 28, px: 38, py: 28 });
+  for (const id of masteries) { a.jobLv[id] = MASTERY; a.perks.push(JOBS[id].perk); }
+  // Keep this pawn's identity without duplicating a new visitor's name.
+  for (const visitor of s.advs) if (visitor.name === a.name) visitor.name = uniqueName({ advs: [...s.advs, a] }, R);
+  const partner = previous.monsters.find(p => p.id === source.partner);
+  for (const old of [partner, extra].filter((p, i, pets) => p && pets.indexOf(p) === i)) {
+    const p = { id: s.nextId++, type: old.type, name: old.name, bond: old.bond, alpha: old.alpha === true,
+      ...(old.frontier ? { frontier: old.frontier } : {}), x: 37, y: 28, tx: 37, ty: 28, dir: 0, anim: 0, path: null, riding: false };
+    s.monsters.push(p);
+    if (old === partner) a.partner = p.id;
+    if (old === extra) s.flags.pioneerPet = p.id;
+  }
+  s.advs.push(a); s.flags.pioneer = a.id;
+  a.hp = maxHp(a, s);
+  log(s, `${a.name} begins a new journey as a level 1 Villager. Kept masteries: ${masteries.map(id => JOBS[id].name).join(', ') || 'none'}.`, 'title');
   return s;
 }
 
@@ -338,6 +364,7 @@ const ITEM_RENAME = { wand: 'oakWand', bow: 'shortBow', axe: 'battleAxe', book: 
 const JOB_RENAME = { princess: 'royal' };
 export function migrate(s) {
   s.flags ??= {}; s.flags.nextCampPatrol ??= 0; s.flags.bossRematches ??= 0;
+  s.flags.pioneer ??= null; s.flags.pioneerPet ??= null;
   s.fx = []; s.folk = s.folk || []; s.animals = s.animals || [];
   for (const m of s.monsters || []) m.alpha = m.alpha === true;
   s.flags.alphaUpgrades ??= (s.monsters || []).filter(m => m.alpha).length;

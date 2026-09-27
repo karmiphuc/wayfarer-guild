@@ -1420,7 +1420,7 @@ export class Sim {
     const s = this.s;
     return s.advs.filter(a => !a.ko && a.hp > 0 && !a.dungeon && a.task?.type !== 'quest' && a.task?.type !== 'rescue' && !a.task?.carrying && !this.questForPawn(a.id));
   }
-  questReady(q) { return this.questCandidates().filter(a => a.lv >= this.questLevel(q) && a.hp >= maxHp(a, this.s) * 0.5); }
+  questReady(q) { return this.questCandidates().filter(a => a.hp >= maxHp(a, this.s) * 0.5); }
   autoQuestParty(qid) {
     const q = this.questById(qid); if (!q) return [];
     const cands = this.questReady(q);
@@ -1433,7 +1433,7 @@ export class Sim {
     if (q.frontier) { const err = this.frontierBlock(q.frontier); if (err) return err; }
     if (q.camp) { const err = this.campBlock(q.camp); if (err) return err; }
     if (this.s.gold < q.fee) return 'Not enough gold for the quest';
-    if (!this.questReady(q).length) return 'No capable adventurers are available right now';
+    if (!this.questReady(q).length) return 'No healthy adventurers are available right now';
     return this.startQuest(qid, this.autoQuestParty(qid));
   }
   startQuest(qid, memberIds) {

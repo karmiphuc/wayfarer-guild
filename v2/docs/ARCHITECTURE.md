@@ -178,10 +178,10 @@ use an available Undying perk first, otherwise consume the charge and restore ha
 the paid charge; the pawn may buy a replacement after using it.
 
 Quest selection calls `autoQuestParty()` once from the UI action, never during rendering. It shuffles available pawns
-with the seeded RNG, selecting up to four at the suggested level and at least half HP. The player can adjust the party
+with the seeded RNG, selecting up to four at least half HP, regardless of level. Suggested levels are advisory. The player can adjust the party
 to 1-8 available non-KO pawns; slots 5-8 each cost `ceil(entry fee * 0.25)` extra. Depart and the total cost appear before
 the pawn grid. `startQuest()` revalidates unique available members and total funds before changing state.
-Instant Depart on each card calls `instantQuest()`: validate the entry fee and capable pool, then launch with the same
+Instant Depart on each card calls `instantQuest()`: validate the entry fee and healthy available pool, then launch with the same
 random default party. Clicking the card itself still opens the party picker. No quest count or type cap applies.
 Active quest membership reserves a pawn even while recovering in the inn; it cannot join another party or rally.
 After recovery it resumes its original quest. Each ending removes only that quest and its own matching pawn tasks.
@@ -414,6 +414,16 @@ torn write never loses everything. `load()` tries the newest slot, then the othe
 including brand-new saves in `check.mjs` — so every transform must be a no-op on a current save: guard on the OLD field's
 presence (`if (a.base.hp !== undefined) {…}`), never on `s.schema`. Autosave every in-game week and when the tab is hidden.
 System panel: Save now, Export (download + clipboard), Import (file), New game (in-game confirm).
+
+New Game and the world-code start open a choice between a fresh village and a roguelite pioneer. `legacyGame()` builds
+a separate fresh state without changing the source village. One selected pawn returns as a level-1 Villager, keeping
+identity and up to five seeded-random mastered jobs (at mastery level 10, with exactly those perks); equipment, money,
+work, experience and activity state reset. The pawn starts as a resident in the initial house. Their bonded pet plus
+one distinct selected frontier-reward pet keep species, name, bond and Alpha status; IDs and positions are rebuilt.
+Old pet frontier origins identify legendary companions but never populate the new conquest/reward ledger.
+`flags.pioneer` and `flags.pioneerPet` default to null and preserve these selections through charter world rerolls.
+The new state is saved before navigation and old-state autosaving is disabled only after success. Cancelling or a
+failed save keeps the current village open. Masteries are rolled after confirmation, never during panel rendering.
 
 ## 10. Performance budget
 

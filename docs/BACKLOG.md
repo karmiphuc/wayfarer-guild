@@ -13,6 +13,10 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- New Game optionally carries one chosen level-1 Villager with up to five random masteries, their bonded pet and
+  one extra legendary camp pet. Pet bond/Alpha status survive, village progress resets, and charter world rerolls
+  retain the pioneer. Quest defaults now draw from all available pawns at half HP or more, ignoring suggested level.
+
 - Alpha pet materials now start at 100 each, increase by 100 per pet and cap at 500; Alpha sprites are 25% larger.
   Boss quests refill immediately and continue as scaling legendary rematches after all first clears. Each world
   camp also rolls once for a 30% rare companion bonus, including camps completed in existing saves.
