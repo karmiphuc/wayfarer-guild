@@ -1,7 +1,7 @@
 // Canvas renderer. Reads state, never mutates it. Integer pixel scale only.
-import { T, MAP_W, MAP_H, SPR, TILE, ROAD_TILES, FAC, DECOR, MONSTERS, BOSSES, MATS, JOBS, ITEMS } from './data.js';
+import { T, MAP_W, MAP_H, FRONTIERS, SPR, TILE, ROAD_TILES, FAC, DECOR, MONSTERS, BOSSES, MATS, JOBS, ITEMS } from './data.js';
 import { IMG, EMOTE, HANDS, tinted, goldified } from './assets.js';
-import { roadAt, defOf, maxHp } from './state.js';
+import { roadAt, defOf, maxHp, buildAreas, townDist } from './state.js';
 import { WEEK_SECONDS } from './sim.js';
 
 export class Renderer {
@@ -42,10 +42,11 @@ export class Renderer {
 
   // ---------- static ground layer ----------
   buildStatic(s) {
-    const key = s.roads + JSON.stringify(s.town);
-    if (key === this.staticKey) return;
-    this.staticKey = key;
-    const c = this.static; c.width = MAP_W * T; c.height = MAP_H * T;
+    const key = JSON.stringify(s.town) + FRONTIERS.map(f => s.frontier?.completed[f.id] ? '1' : '0').join('');
+    if (key === this.staticKey && s.roads === this.staticRoads) return;
+    this.staticKey = key; this.staticRoads = s.roads;
+    const c = this.static;
+    if (c.width !== MAP_W * T || c.height !== MAP_H * T) { c.width = MAP_W * T; c.height = MAP_H * T; }
     const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
     const fl = IMG.floor;
     for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
@@ -63,9 +64,8 @@ export class Renderer {
       g.drawImage(fl, t[0] * T, t[1] * T, T, T, x * T, y * T, T, T);
     }
     // soft vignette outside the village so the buildable area reads at a glance
-    const t = s.town; g.fillStyle = 'rgba(30,50,10,0.07)';
-    g.fillRect(0, 0, MAP_W * T, t.y0 * T); g.fillRect(0, t.y1 * T, MAP_W * T, (MAP_H - t.y1) * T);
-    g.fillRect(0, t.y0 * T, t.x0 * T, (t.y1 - t.y0) * T); g.fillRect(t.x1 * T, t.y0 * T, (MAP_W - t.x1) * T, (t.y1 - t.y0) * T);
+    g.fillStyle = 'rgba(30,50,10,0.07)';
+    for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) if (townDist(s, x, y) > 0) g.fillRect(x * T, y * T, T, T);
   }
 
   // ---------- frame ----------
@@ -83,6 +83,7 @@ export class Renderer {
     const vis = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1;
 
     if (ui.buildMode) this.drawBuildGrid(s);
+    this.drawFrontiers(s, vis);
 
     // collect y-sorted drawables
     const list = [];
@@ -280,13 +281,33 @@ export class Renderer {
     }
   }
   drawBuildGrid(s) {
-    const g = this.g, t = s.town;
+    const g = this.g;
+    for (const t of buildAreas(s)) {
     g.strokeStyle = 'rgba(255,255,255,0.14)'; g.lineWidth = 1 / this.scale;
     g.beginPath();
     for (let x = t.x0; x <= t.x1; x++) { g.moveTo(x * T, t.y0 * T); g.lineTo(x * T, t.y1 * T); }
     for (let y = t.y0; y <= t.y1; y++) { g.moveTo(t.x0 * T, y * T); g.lineTo(t.x1 * T, y * T); }
     g.stroke();
     g.strokeStyle = 'rgba(255,230,120,0.8)'; g.lineWidth = 2 / this.scale; g.strokeRect(t.x0 * T, t.y0 * T, (t.x1 - t.x0) * T, (t.y1 - t.y0) * T);
+    }
+  }
+  drawFrontiers(s, vis) {
+    const g = this.g;
+    for (const f of FRONTIERS) {
+      const done = s.frontier?.completed[f.id], active = s.activeQuests.some(q => q.frontier === f.id);
+      const ready = s.stars >= f.star && f.requires.every(id => s.frontier?.completed[id]);
+      if (this.frontierFocus === f.id) {
+        const r = f.land; g.fillStyle = done ? 'rgba(105,215,130,0.12)' : 'rgba(255,186,65,0.12)';
+        g.fillRect(r.x0 * T, r.y0 * T, (r.x1 - r.x0) * T, (r.y1 - r.y0) * T);
+        g.strokeStyle = '#ffdc75'; g.lineWidth = 1; g.strokeRect(r.x0 * T, r.y0 * T, (r.x1 - r.x0) * T, (r.y1 - r.y0) * T);
+      }
+      if (!vis(f.x, f.y)) continue;
+      this.spr('cave', f.x * T - 16, f.y * T - 25);
+      g.fillStyle = done ? '#5dd17d' : active ? '#ff8057' : ready ? '#ffd65b' : '#a7adb5';
+      g.fillRect(f.x * T + 3, f.y * T - 32, 10, 10);
+      g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillStyle = '#241b22';
+      g.fillText(done ? '+' : active ? '!' : ready ? '?' : '-', f.x * T + 8, f.y * T - 24);
+    }
   }
   drawGhost(s) {
     const gh = this.ghost, d = defOf(gh.type); if (!d) return;

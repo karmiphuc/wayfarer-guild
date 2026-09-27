@@ -14,7 +14,7 @@ export class PathGrid {
   walkable(x, y) { return x >= 0 && y >= 0 && x < this.w && y < this.h && this.cost[y * this.w + x] > 0; }
 
   // Returns [[x,y],...] from start (exclusive) to goal (inclusive), or null.
-  find(sx, sy, gx, gy, maxIter = 6000) {
+  find(sx, sy, gx, gy, maxIter = this.w * this.h * 4) {
     const { w, h, cost, g, from, stamp, closed, heap, f } = this;
     if (!this.walkable(gx, gy)) return null;
     const run = ++this.run, start = sy * w + sx, goal = gy * w + gx;

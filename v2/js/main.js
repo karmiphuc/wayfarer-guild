@@ -6,7 +6,7 @@ import { Sim, DT, WEEK_SECONDS } from './sim.js';
 import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
-import { MAP_W, MAP_H, FAC } from './data.js';
+import { MAP_W, MAP_H, FAC, FRONTIERS } from './data.js';
 
 const MAX_STEPS_PER_FRAME = 40;   // tick budget: never spiral on slow frames or tab resume
 
@@ -173,6 +173,8 @@ function bindInput() {
       const d = Math.hypot(n.x + 0.5 - tx, n.y + 0.3 - ty), rug = n.kind === 'merchant' && tx >= n.x + 1 && tx <= n.x + 3.3 && ty >= n.y && ty <= n.y + 1.2;
       if (d < bd || rug) { bd = rug ? 0 : d; best = { kind: 'npc', id: n.kind }; }
     }
+    // The 48 px den sprite spans x−1..x+2 tiles and rises about 2 tiles above its ground point.
+    if (!best) { const f = FRONTIERS.find(f => tx >= f.x - 1 && tx <= f.x + 2 && ty >= f.y - 2 && ty <= f.y + 1.5); if (f) { game.ui.showFrontier(f.id); return; } }
     if (!best) { const b = buildingAt(s, Math.floor(tx), Math.floor(ty)) || buildingAt(s, Math.floor(tx), Math.floor(ty + 1)); if (b && !defOf(b.type).road) best = { kind: 'b', id: b.id }; }
     if (best) game.ui.select(best); else game.ui.deselect();
   }

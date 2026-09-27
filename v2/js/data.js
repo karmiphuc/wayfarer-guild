@@ -3,7 +3,8 @@
 
 export const T = 16;               // tile size in source pixels
 // The village sits in the middle of a wild field (DV2 style): monsters roam outside and adventurers hunt in view.
-export const MAP_W = 76, MAP_H = 56;
+export const HOME_W = 76, HOME_H = 56;
+export const MAP_W = HOME_W * 2, MAP_H = HOME_H * 2;
 export const TOWN0 = { x0: 26, y0: 18, x1: 50, y1: 38 };  // initial buildable rect (x1/y1 exclusive); grows with Expand events
 export const TOWN_MAX = { x0: 16, y0: 11, x1: 60, y1: 46 };
 
@@ -289,6 +290,18 @@ export const BOSSES = {
   tenguRed:    { name: 'Tengu Sovereign', dir: 'TenguRed', idle: 'Idle.png', fw: 82, fh: 82, frames: 6, hp: 26000, atk: 230, def: 70, rec: 60, star: 5, zone: 4, xp: 2500, gold: 16000, drops: { crystal: 36 } },
   cyclop2:     { name: 'Abyss Cyclops',  dir: 'DemonCyclop2', idle: 'Idle.png', fw: 50, fh: 50, frames: 5, hp: 42000, atk: 300, def: 90, rec: 80, star: 5, zone: 4, xp: 3500, gold: 25000, drops: { crystal: 50, ore: 40 } },
 };
+
+// One-time frontier conquests. Existing boss art/stats are reused; dormant sites have no actors.
+export const FRONTIERS = [
+  { id: 'greenmarch', name: 'Greenmarch Den', bossName: 'Rootbound Guardian', boss: 'bamboo', x: 64, y: 25, land: { x0: 50, y0: 18, x1: 76, y1: 38 }, requires: [], star: 1, rec: 10, fee: 400, bonus: { hp: 0.03 }, benefit: '+3% adventurer HP', relic: 'rootheart', zone: 2 },
+  { id: 'sunken', name: 'Sunken Grotto', bossName: 'Mire Lord', boss: 'racoon', x: 45, y: 49, land: { x0: 26, y0: 38, x1: 50, y1: 58 }, requires: [], star: 1, rec: 13, fee: 600, bonus: { def: 0.03 }, benefit: '+3% adventurer DEF', relic: 'mireSeal', zone: 1 },
+  { id: 'ironvale', name: 'Ironvale Stronghold', bossName: 'Iron Oath Ronin', boss: 'blueSamurai', x: 94, y: 32, land: { x0: 76, y0: 12, x1: 110, y1: 55 }, requires: ['greenmarch'], star: 2, rec: 16, fee: 900, bonus: { matDrops: 0.05 }, benefit: '+5% material drop yield', relic: 'ironOath', zone: 3 },
+  { id: 'moonwood', name: 'Moonwood Hollow', bossName: 'Moonlit Warden', boss: 'spirit', x: 57, y: 70, land: { x0: 26, y0: 58, x1: 76, y1: 82 }, requires: ['sunken'], star: 2, rec: 18, fee: 1100, bonus: { mag: 0.03 }, benefit: '+3% adventurer MAG', relic: 'moonTear', zone: 2 },
+  { id: 'emberreach', name: 'Emberreach Caldera', bossName: 'Cinder Crown', boss: 'flam', x: 128, y: 32, land: { x0: 110, y0: 12, x1: 148, y1: 55 }, requires: ['ironvale'], star: 3, rec: 25, fee: 1500, bonus: { atk: 0.03 }, benefit: '+3% adventurer ATK', relic: 'cinderSignet', zone: 4 },
+  { id: 'stormfen', name: 'Stormfen Shrine', bossName: 'Tempest Keeper', boss: 'tenguBlue', x: 92, y: 67, land: { x0: 76, y0: 55, x1: 110, y1: 82 }, requires: ['ironvale'], star: 3, rec: 24, fee: 1400, bonus: { xp: 0.03 }, benefit: '+3% combat EXP', relic: 'stormKnot', zone: 3 },
+  { id: 'frostveil', name: 'Frostveil Cavern', bossName: 'Pale Ember King', boss: 'magmaSlime', x: 67, y: 96, land: { x0: 26, y0: 82, x1: 110, y1: 108 }, requires: ['moonwood'], star: 4, rec: 36, fee: 2200, bonus: { shopSales: 0.03 }, benefit: '+3% shop revenue', relic: 'paleEmber', zone: 3 },
+  { id: 'crownwaste', name: 'Crownwaste Vault', bossName: 'Last Golden Regent', boss: 'goldTanuki', x: 129, y: 90, land: { x0: 110, y0: 55, x1: 148, y1: 108 }, requires: ['emberreach', 'stormfen'], star: 5, rec: 52, fee: 3200, bonus: { killGold: 0.05 }, benefit: '+5% monster gold', relic: 'regentStar', zone: 4 },
+];
 
 // ---------- world ----------
 // Zone names for quest text only (ZONE_BIOME in state.js maps zone -> biome; only `name` is read). The other fields are
