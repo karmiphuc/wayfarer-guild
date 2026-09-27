@@ -60,6 +60,27 @@ for (const block of ['new-village', 'cooldown', 'challenge', 'tier']) {
   assert(patrol.every(m => m.hp === 0)); assert(unrelated.hp > 0);
   assert(c.cooldownWeeks >= 8 && c.cooldownWeeks <= 20); assert(c.patrolAt >= c.readyAt + 2 * week);
 }
+// Guard patrols are local encounters, never a village-wide alarm (including guards already inside town).
+{
+  const { s, sim } = setup(), a = s.advs[0]; s.advs = [a];
+  Object.assign(a, { x: 28, y: 20, energy: 80, hunger: 0, task: { type: 'stroll', dur: 20 } });
+  a.hp = maxHp(a, s); s.time.t = WEEK_SECONDS * 0.75;
+  const guard = sim.spawnRaider([44, 28], 3, { raid: 'patrol', expiresAt: s.tick + week });
+  const task = a.task; let rallies = 0; sim.rally = () => { rallies++; };
+  sim.monStep(guard);
+  assert.equal(rallies, 0, 'approaching guards must not rally pawns');
+  assert.equal(a.task, task); assert(!sim.villageThreat(guard));
+  assert(sim.nightRest(a), 'patrol elsewhere in town must not block bedtime');
+  for (let i = 0; i < 10; i++) assert(!sim.decide(a).defend);
+  a.task = { type: 'hunt', defend: true, dur: 90 }; sim.defendStep(a, a.task);
+  assert.equal(a.task, null, 'old defense orders must end when only patrols remain');
+  guard.x = a.x + 1; guard.y = a.y;
+  assert.equal(sim.nearestMonster(a, 4), guard, 'nearby guards remain combat targets');
+  assert.equal(sim.nightRest(a), null, 'nearby danger still interrupts rest');
+  const raid = sim.spawnRaider([45, 28], 3, { raid: 'bandits' });
+  assert(sim.villageThreat(raid)); assert.equal(sim.nearestRaider(a), raid, 'real raids retain defense priority');
+  raid.raid = 'stampede'; assert(sim.villageThreat(raid));
+}
 // Old saves get stable schedules without consuming the running RNG or rescheduling on every load.
 {
   const s = newGame(17); delete s.flags.nextCampPatrol;

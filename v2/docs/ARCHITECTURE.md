@@ -152,7 +152,7 @@ include the corresponding damage-rate bonus. An unequipped default sprite grants
 At dusk (70% through the week), `nightRest()` prioritizes home, affordable inn or outdoor village rest when energy is
 below 95. It respects basic-gear savings and urgent hunger, injury, nearby foes, active quests and rescue. Routine
 hunts/strolls reconsider bedtime once per second; existing visits finish, including long journeys to captured land.
-Distant patrols do not keep the village awake; approaching patrols trigger territorial defense.
+Camp patrols never trigger village-wide defense or block distant pawns from resting; nearby danger still interrupts rest.
 
 ### Late-game investments
 
@@ -235,8 +235,9 @@ attempt without changing the ledger.
 
 Live camps at or below the village's star rank also send seeded 2–4 guard patrols every 2–4 weeks when capacity allows.
 There is one group per camp, at most 12 patrol guards globally, and at least half a week between departures. Patrols
-share generated human classes and territorial raid defense, follow a path from the real camp, and expire after their
-travel allowance plus two weeks. They are separate from camp quest defenders and large raid happenings. Clearing a
+use generated human classes without rallying pawns, follow a path from the real camp, and expire after their
+travel allowance plus two weeks. Pawns encounter them through normal nearby combat; only large raid happenings trigger
+territorial defense, and existing defense orders end when only patrols remain. They are separate from camp quest defenders. Clearing a
 camp recalls its patrols and postpones the next departure until 2–4 weeks after its 8–20 week recovery. Initial timers
 migrate with isolated RNG and persist through loads. Scheduling runs once per second; no callback timer is retained.
 

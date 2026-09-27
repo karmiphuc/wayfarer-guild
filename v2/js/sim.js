@@ -381,7 +381,7 @@ export class Sim {
   potion() { return this.s.unlocked.medipack ? ITEMS.medipack : ITEMS.potion; }
   itemPrice(id) { return Math.round(ITEMS[id].price * (1 + this.bonus('shopSales') * 0) ); }
 
-  villageThreat(m) { return m.hp > 0 && m.raid && (m.raid !== 'patrol' || townDist(this.s, Math.round(m.x), Math.round(m.y)) <= 4); }
+  villageThreat(m) { return m.hp > 0 && m.raid && m.raid !== 'patrol'; }
   nightRest(a, reserve) {
     const s = this.s;
     // Start heading home at dusk, before the brief visible night. Emergencies still take priority.
@@ -767,7 +767,7 @@ export class Sim {
       if (!t.dest || this.walkTo(a, t.dest[0], t.dest[1])) t.dest = this.randomCellInZone(t.zone) || [38, 44];
     }
   }
-  nearestRaider(a) { let best = null, bd = 1e9; for (const m of this.s.mons) { if (!m.raid || m.hp <= 0) continue; const d = Math.hypot(m.x - a.x, m.y - a.y); if (d < bd) { bd = d; best = m; } } return best; }
+  nearestRaider(a) { let best = null, bd = 1e9; for (const m of this.s.mons) { if (!this.villageThreat(m)) continue; const d = Math.hypot(m.x - a.x, m.y - a.y); if (d < bd) { bd = d; best = m; } } return best; }
   defensePoint(x, y) {
     let best = null, distance = Infinity;
     for (const r of buildAreas(this.s)) {
@@ -971,7 +971,6 @@ export class Sim {
     const s = this.s, R = this.R; m.anim += DT; if (m.hitT > 0) m.hitT -= DT; if (m.atkT > 0) m.atkT -= DT;
     if (m.raid === 'patrol') {
       if (s.tick >= m.expiresAt) { m.hp = 0; m.deadT = 0.3; m.path = null; return; }
-      if (!m.rallied && this.villageThreat(m)) { m.rallied = true; this.rally(); }
     }
     if (m.raid === 'bandits' && townDist(s, Math.round(m.x), Math.round(m.y)) === 0) {
       const raid = this.happening('bandits'); if (raid) raid.data.arrived = true;
