@@ -13,6 +13,8 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Palisades: build and remove wooden barriers to direct traffic; the main village has a free perimeter with eight broad openings, following paid expansion. Routes respect walls and preserve existing buildings on old saves.
+
 - Frontier conquest: fourfold map area, eight dormant den sites, connected territory capture, permanent small village bonuses and single-copy legendary accessories. Existing villages keep their coordinates; regular population limits remain. This is continuous-map expansion, not the separate multi-map/reset roadmap in #41.
 
 - Quest parties and parallel quests (#25): random capable defaults (up to four), paid extras up to eight, no concurrent quest cap while pawns are available, Instant Depart on quest cards, and Depart before the pawn list. Legacy active quests migrate without losing their party or progress. The broader volunteer-personality, Counterattack and autonomous-quest slices remain pending.

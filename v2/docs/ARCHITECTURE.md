@@ -48,7 +48,22 @@ Dependency order (also the bundle order in `tools/bundle.py`):
    - camera follow, `rnd.draw(...)`, `ui.tick()` every 0.25 s, autosave when the in-game week changes,
      music choice (boss/cave/battle near the active quest, night, seasonal town theme).
 5. Input: pointer drag = pan, wheel/pinch/+/- = zoom (integer 1–6), tap = select or place, WASD/arrows = pan,
-   Space = pause, 1/2/3 = speed. Road and Remove tools paint while dragging.
+   Space = pause, 1/2/3 = speed. Road, Palisade and Remove tools paint while dragging.
+
+### Palisades and village openings
+
+`DECOR.palisade` is a removable one-tile barrier in Build > Defense. It uses the existing House sheet,
+costs 20 G per tile before charter adjustments, and persists as an ordinary building. Leave gaps for passage.
+The free home perimeter is derived by `villageBoundary(s)` just outside `s.town`: two three-tile openings
+on each side (eight total). Expand moves that perimeter; captured frontier land keeps its existing shape.
+Legacy buildings and facility doors take precedence over automatic fence segments. The immediate approaches
+to the eight openings are reserved from new construction; roads are allowed, and blocking scenery is cleared.
+
+`Sim.rebuildGrid` caches perimeter cells and a fixed-size barrier mask. Walls block the same path grid used by
+adventurers and townsfolk; direct-moving monsters and pets switch to cached paths when obstructed.
+Unreachable goals no longer move actors through obstacles. Failed paths retry at most once per simulated
+second for an unchanged target, and grid changes/load invalidate cached routes. These caches are rebuilt,
+not stored as extra perimeter buildings or timers; no new top-level save fields are required.
 
 ## 3. Game state (`s`) — plain JSON, saved as-is
 
