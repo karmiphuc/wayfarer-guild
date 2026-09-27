@@ -1,0 +1,11 @@
+import { newGame, maxHp } from '../js/state.js';
+import { Sim } from '../js/sim.js';
+const s = newGame(7), sim = new Sim(s, {});
+s.stars = 1; s.advs.forEach(a => { a.lv = 10; a.resident = true; a.hp = maxHp(a, s); });
+sim.refreshQuests();
+const q = s.quests.find(q => q.kind === 'dungeon'); console.log('dungeon quest', q && q.name);
+console.log('start', sim.startQuest(q.id, s.advs.map(a => a.id)));
+for (let i = 0; i < 6000 && s.quest; i++) sim.step();
+console.log('quest over:', !s.quest, 'cleared', s.cleared, 'unlocked', Object.keys(s.unlocked).join(','));
+console.log(s.log.slice(0, 8).map(l => l.text).join('\n'));
+console.log(s.advs.map(a => `${a.name} hp${Math.round(a.hp)} ko${a.ko} dng${!!a.dungeon} @${a.x.toFixed(0)},${a.y.toFixed(0)}`).join(' | '));
