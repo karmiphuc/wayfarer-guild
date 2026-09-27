@@ -26,6 +26,7 @@ export const SPR = {
   weapon: H(464, 0, 64, 48), torii: H(0, 80, 48, 32), hutA: H(0, 112, 48, 48), hutB: H(48, 112, 48, 48),
   igloo: H(0, 176, 48, 46), smith: H(466, 64, 45, 63), tavern: H(385, 226, 78, 78),
   dojoSign: H(128, 64, 48, 16), statue: H(49, 242, 30, 30), statueBig: H(0, 241, 48, 63),
+  palisadeH: H(160, 80, 16, 16), palisadeV: H(230, 64, 8, 32),
   fountain: { img: 'deco_fountain', x: 0, y: 0, w: 16, h: 16 }, basin: { img: 'deco_basin', x: 0, y: 0, w: 14, h: 12 },
   knightStatue: { img: 'deco_statue', x: 0, y: 0, w: 16, h: 26 }, castle: { img: 'deco_castle', x: 0, y: 0, w: 30, h: 39 },
   cave: H(0, 112, 48, 48), stableHut: { img: 'towers', x: 192, y: 64, w: 32, h: 32 },
@@ -105,6 +106,7 @@ export const FAC = {
 // Decor boosts appeal of facilities within `r` tiles.
 export const DECOR = {
   road:      { name: 'Road', cost: 5, fp: [1, 1], road: true, desc: 'Adventurers walk faster on roads.' },
+  palisade:  { name: 'Palisade', cost: 20, fp: [1, 1], spr: ['palisadeH', 'palisadeV'], barrier: true, cat: 'defense', desc: 'Blocks movement. Leave openings so people can pass.' },
   flower:    { name: 'Flowers', cost: 20, fp: [1, 1], spr: ['flowerSun', 'flowerRed', 'flowerWhite', 'flowerSun2'], appeal: 1, r: 2 },
   bush:      { name: 'Bush', cost: 15, fp: [1, 1], spr: ['bush', 'bush2'], appeal: 1, r: 2 },
   treeGreen: { name: 'Oak Tree', cost: 40, fp: [2, 1], spr: ['treeGreen'], appeal: 2, r: 3 },
@@ -132,7 +134,7 @@ export const FAC_TRAITS = {
   shrine: { Culture: 8, Safe: 2 }, smith: { Battle: 4, Culture: 2 }, tower: { Safe: 8 }, stable: { Monster: 10 },
   flower: { Nature: 2, Cute: 2 }, bush: { Nature: 1 }, treeGreen: { Nature: 3 }, treePink: { Nature: 4, Cute: 3 },
   bigPink: { Nature: 8, Cute: 6, Culture: 2 }, lamp: { Safe: 2, Culture: 1 }, well: { Rest: 2, Culture: 2 },
-  bench: { Rest: 3 }, fountain: { Culture: 4, Cute: 3, Rest: 2 }, basin: { Rest: 2, Nature: 1 }, knightStatue: { Culture: 8, Safe: 4 }, castle: { Culture: 30, Safe: 20, Battle: 10 }, cart: { Shopping: 4, Food: 1 }, statue: { Culture: 10, Battle: 3 }, crystal: { Nature: 4, Cute: 4 },
+  bench: { Rest: 3 }, palisade: {}, fountain: { Culture: 4, Cute: 3, Rest: 2 }, basin: { Rest: 2, Nature: 1 }, knightStatue: { Culture: 8, Safe: 4 }, castle: { Culture: 30, Safe: 20, Battle: 10 }, cart: { Shopping: 4, Food: 1 }, statue: { Culture: 10, Battle: 3 }, crystal: { Nature: 4, Cute: 4 },
 };
 export const TITLES = [
   { id: 'rest',    name: 'Travelers Rest',   need: { Rest: 15, Food: 10 },               bonus: { visitors: 0.15 }, pop: 60,  gold: 300,  desc: '+15% visitors' },

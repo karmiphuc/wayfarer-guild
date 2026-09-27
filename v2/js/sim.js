@@ -4,7 +4,7 @@ import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, FAC, DECOR, JOBS, ITEMS, MONST
   ZONE_MONS, ZONE_POP, ZONE_LV, HAPPENINGS, HAPPEN_CHANCE, CHARTERS, VISITOR_CAP, ELITE_CHANCE } from './data.js';
 import { PathGrid } from './path.js';
 import { makeRng } from './rng.js';
-import { defOf, buildingAt, roadAt, setRoad, place, spawnAdventurer, stat, maxHp, log, zoneAt, townDist, frontierBonus, ZONE_BIOME, CAVE, cavePos, shuffle, teachJob, perkSum, gearSum, LV_CAP, JOB_CAP, MASTERY } from './state.js';
+import { defOf, buildingAt, roadAt, setRoad, place, spawnAdventurer, stat, maxHp, log, zoneAt, townDist, frontierBonus, villageBoundary, ZONE_BIOME, CAVE, cavePos, shuffle, teachJob, perkSum, gearSum, LV_CAP, JOB_CAP, MASTERY } from './state.js';
 import { BIOMES } from './data.js';
 
 export const DT = 0.1;              // seconds per sim step
@@ -17,21 +17,35 @@ export class Sim {
   constructor(s, hooks = {}) {
     this.s = s; this.R = makeRng(s); this.hooks = hooks;   // hooks: sfx(name), toast(text,kind), fanfare(text)
     this.grid = new PathGrid(MAP_W, MAP_H);
-    this.rebuildGrid(); this.recomputeTraits(true);
+    this.barriers = new Uint8Array(MAP_W * MAP_H);
+    this.rebuildGrid(); this.invalidatePaths(); this.recomputeTraits(true);
   }
   emit(kind, ...a) { this.hooks[kind] && this.hooks[kind](...a); }
 
   // ---------- grid ----------
   rebuildGrid() {
     const g = this.grid, s = this.s;
+    const perimeter = villageBoundary(s);
+    this.boundary = perimeter.walls; this.gates = perimeter.gates; this.gateApproaches = perimeter.approaches;
+    this.barriers.fill(0);
+    s.props = s.props.filter(p => !p.block || p.k === 'cave' || !perimeter.approaches.some(([x, y]) => y === p.y && x >= p.x && x < p.x + p.w));
     for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) g.set(x, y, roadAt(s, x, y) ? 0.55 : 1);
     for (const p of s.props) if (p.block) for (let dx = 0; dx < p.w; dx++) g.set(p.x + dx, p.y, 0);
     for (const b of s.buildings) {
       const d = defOf(b.type); if (d.road) continue;
       const [w, h] = d.fp;
-      for (let y = b.y; y < b.y + h; y++) for (let x = b.x; x < b.x + w; x++) if (x < MAP_W && y < MAP_H) g.set(x, y, d.fp[0] === 1 && !FAC[b.type] ? 1.2 : 0);
+      for (let y = b.y; y < b.y + h; y++) for (let x = b.x; x < b.x + w; x++) if (x < MAP_W && y < MAP_H) {
+        g.set(x, y, d.fp[0] === 1 && !FAC[b.type] && !d.barrier ? 1.2 : 0);
+        if (d.barrier) this.barriers[y * MAP_W + x] = 1;
+      }
     }
+    for (const { x, y } of this.boundary) { g.set(x, y, 0); this.barriers[y * MAP_W + x] = 1; }
     g.version++;
+    // A moving perimeter may meet an existing actor. Move only that actor off the new fence.
+    for (const a of [...s.advs, ...s.mons, ...s.monsters, ...s.folk, ...s.animals, ...s.npcs]) {
+      if (a.inside || !this.barriers[Math.round(a.y) * MAP_W + Math.round(a.x)]) continue;
+      const c = g.nearestWalkable(a.x, a.y); if (c) { [a.x, a.y] = c; a.path = null; }
+    }
   }
   door(b) { const [w, h] = defOf(b.type).fp; return [b.x + (w >> 1), b.y + h]; }
 
@@ -45,13 +59,17 @@ export class Sim {
     if (!free && d.unique && s.buildings.some(b => b.type === type)) return 'Only one allowed';
     for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) {
       if (townDist(s, xx, yy) > 0) return 'Outside the village - capture this territory first';
+      if (this.boundary.some(c => c.x === xx && c.y === yy)) return 'Village palisade - use an opening';
+      if (!d.road && this.gateApproaches.some(([gx, gy]) => gx === xx && gy === yy)) return 'Keep the village opening clear';
       if (FRONTIERS.some(f => Math.abs(xx - f.x) <= 1 && Math.abs(yy - f.y) <= 1)) return 'Keep the den entrance clear';
       if (buildingAt(s, xx, yy)) return 'Occupied';
       if (!d.road && roadAt(s, xx, yy)) return 'Road in the way';
       if (d.road && roadAt(s, xx, yy)) return 'Already a road';
       if (s.props.some(p => p.block && xx >= p.x && xx < p.x + p.w && yy === p.y)) return 'Blocked';
+      if (d.barrier && s.buildings.some(b => FAC[b.type] && this.door(b)[0] === xx && this.door(b)[1] === yy)) return 'Keep the building entrance clear';
+      if (d.barrier && [...s.advs, ...s.mons, ...s.monsters, ...s.folk, ...s.animals, ...s.npcs].some(a => !a.inside && Math.round(a.x) === xx && Math.round(a.y) === yy)) return 'Someone is standing here';
     }
-    if (FAC[type]) { const [dx, dy] = [x + (w >> 1), y + h]; if (buildingAt(s, dx, dy)) return 'Door is blocked'; }
+    if (FAC[type]) { const [dx, dy] = [x + (w >> 1), y + h]; if (buildingAt(s, dx, dy) || this.barriers[dy * MAP_W + dx]) return 'Door is blocked'; }
     if (!free && s.gold < this.cost(type)) return 'Not enough gold';
     return null;
   }
@@ -85,7 +103,7 @@ export class Sim {
     const c = this.upgradeCost(b); if (b.lv >= 5) return 'Max level'; if (this.s.gold < c) return 'Not enough gold';
     this.s.gold -= c; b.lv++; this.recomputeTraits(); this.emit('sfx', 'levelup'); return null;
   }
-  invalidatePaths() { for (const a of this.s.advs) if (a.path) a.path = null; }
+  invalidatePaths() { for (const group of ['advs', 'mons', 'monsters', 'folk', 'animals', 'npcs']) for (const a of this.s[group]) a.path = null; }
 
   // ---------- traits & titles ----------
   recomputeTraits(silent) {
@@ -457,18 +475,18 @@ export class Sim {
   xpNeed(a) { return Math.round(12 * Math.pow(a.lv, 1.3)); }
 
   // ---------- movement ----------
-  walkTo(a, gx, gy) {
+  walkTo(a, gx, gy, step = this.speed(a) * DT) {
     if (Math.abs(a.x - gx) < 0.15 && Math.abs(a.y - gy) < 0.15) { a.path = null; return true; }
-    if (!a.path || a.pathGoal !== gx + ',' + gy || a.pathV !== this.grid.version) {
+    if (!a.path || a.pathGoal !== gx + ',' + gy || a.pathV !== this.grid.version || (!a.path.length && this.s.tick >= a.pathRetry)) {
       const sx = Math.round(a.x), sy = Math.round(a.y);
       const start = this.grid.walkable(sx, sy) ? [sx, sy] : (this.grid.nearestWalkable(sx, sy) || [sx, sy]);
       const goal = this.grid.walkable(gx, gy) ? [gx, gy] : this.grid.nearestWalkable(gx, gy);
-      if (!goal) return true;
+      if (!goal) return false;
       a.path = this.grid.find(start[0], start[1], goal[0], goal[1]) || []; a.pathGoal = gx + ',' + gy; a.pathV = this.grid.version; a.pi = 0;
-      if (!a.path.length) { a.x += (gx - a.x) * 0.2; a.y += (gy - a.y) * 0.2; return Math.hypot(a.x - gx, a.y - gy) < 0.5; }
+      a.pathEnd = goal; a.pathRetry = this.s.tick + 10;
     }
-    const node = a.path[a.pi]; if (!node) { a.path = null; return true; }
-    const sp = this.speed(a) * DT, dx = node[0] - a.x, dy = node[1] - a.y, d = Math.hypot(dx, dy);
+    const node = a.path[a.pi]; if (!node) return !!a.pathEnd && Math.hypot(a.x - a.pathEnd[0], a.y - a.pathEnd[1]) < 0.5;
+    const sp = step, dx = node[0] - a.x, dy = node[1] - a.y, d = Math.hypot(dx, dy);
     if (d <= sp) { a.x = node[0]; a.y = node[1]; a.pi++; if (a.pi >= a.path.length) { a.path = null; return Math.abs(a.x - gx) < 0.6 && Math.abs(a.y - gy) < 0.6; } }
     else { a.x += dx / d * sp; a.y += dy / d * sp; a.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 2 : 3) : (dy < 0 ? 1 : 0); }
     return false;
@@ -483,8 +501,10 @@ export class Sim {
   stepToward(e, tx, ty, sp) {
     const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy); if (d < 0.01) return true;
     const nx = e.x + dx / d * Math.min(sp, d), ny = e.y + dy / d * Math.min(sp, d);
-    if (this.grid.walkable(Math.round(nx), Math.round(ny)) || !this.grid.walkable(Math.round(e.x), Math.round(e.y))) { e.x = nx; e.y = ny; }
-    else if (this.grid.walkable(Math.round(nx), Math.round(e.y))) e.x = nx; else if (this.grid.walkable(Math.round(e.x), Math.round(ny))) e.y = ny;
+    const x = Math.round(e.x), y = Math.round(e.y), xx = Math.round(nx), yy = Math.round(ny);
+    const clear = this.grid.walkable(xx, yy) && (x === xx || y === yy || (this.grid.walkable(xx, y) && this.grid.walkable(x, yy)));
+    if (e.path || !clear) return this.walkTo(e, Math.round(tx), Math.round(ty), sp);
+    e.x = nx; e.y = ny;
     e.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 2 : 3) : (dy < 0 ? 1 : 0);
     return d <= sp;
   }
@@ -682,7 +702,7 @@ export class Sim {
     const want = Math.min(14, Math.floor(total / 30));
     if (s.folk.length < want) {
       const c = this.randomTownCell(); if (!c) return;
-      s.folk.push({ id: s.nextId++, spr: this.R.pick(['Child', 'OldMan2', 'Inspector', 'OldMan', 'Woman', 'Villager2', 'Boy']), x: 38, y: s.town.y1, dir: 1, anim: 0, path: null, task: null, taskT: 0 });
+      s.folk.push({ id: s.nextId++, spr: this.R.pick(['Child', 'OldMan2', 'Inspector', 'OldMan', 'Woman', 'Villager2', 'Boy']), x: c[0], y: c[1], dir: 1, anim: 0, path: null, task: null, taskT: 0 });
     } else if (s.folk.length > want) s.folk.pop();
   }
   folkStep(f) {

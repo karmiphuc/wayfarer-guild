@@ -16,6 +16,20 @@ export function townDist(s, x, y) {
   return d;
 }
 export function buildAreas(s) { return [s.town, ...FRONTIERS.filter(f => s.frontier?.completed[f.id]).map(f => f.land)]; }
+// Two three-tile openings per side. The free perimeter sits outside the buildable home rectangle.
+export function villageBoundary(s) {
+  const t = s.town, walls = [], gates = [], approaches = [];
+  const openings = (lo, hi) => [Math.round(lo + (hi - lo - 1) / 3), Math.round(lo + (hi - lo - 1) * 2 / 3)];
+  const xs = openings(t.x0, t.x1), ys = openings(t.y0, t.y1);
+  const add = (x, y, vertical, open) => {
+    const cell = { x, y, vertical };
+    if (open) { gates.push(cell); for (let i = -1; i <= 1; i++) approaches.push([x + (vertical ? i : 0), y + (vertical ? 0 : i)]); }
+    else if (!buildingAt(s, x, y) && !s.buildings.some(b => FAC[b.type] && x === b.x + (defOf(b.type).fp[0] >> 1) && y === b.y + defOf(b.type).fp[1])) walls.push(cell);
+  };
+  for (let x = t.x0 - 1; x <= t.x1; x++) for (const y of [t.y0 - 1, t.y1]) add(x, y, false, xs.some(c => Math.abs(x - c) <= 1));
+  for (let y = t.y0; y < t.y1; y++) for (const x of [t.x0 - 1, t.x1]) add(x, y, true, ys.some(c => Math.abs(y - c) <= 1));
+  return { walls, gates, approaches };
+}
 export function frontierBonus(s, key) { let v = 0; for (const f of FRONTIERS) if (s.frontier?.completed[f.id]) v += f.bonus[key] || 0; return v; }
 // Zone (0 town, 1 meadow, 2 forest, 3 hills, 4 ashen) from distance to the ORIGINAL town rect, so zones stay put.
 export function zoneAt(x, y) {

@@ -89,6 +89,7 @@ export class Renderer {
     const list = [];
     for (const p of s.props) if (vis(p.x, p.y)) list.push([p.y + 1, 0, p]);
     for (const b of s.buildings) { const d = defOf(b.type); if (!d.road && vis(b.x, b.y)) list.push([b.y + d.fp[1], 1, b]); }
+    for (const p of ui.boundary || []) if (vis(p.x, p.y)) list.push([p.y + 1, 8, p]);
     for (const m of s.monsters) if (!m.riding && vis(m.x, m.y)) list.push([m.y + 0.5, 3, m]);
     for (const m of s.mons) if ((m.hp > 0 || m.deadT > 0) && vis(m.x, m.y)) list.push([m.y + 0.5, 4, m]);
     for (const a of s.advs) if (!a.inside && !a.dungeon && vis(a.x, a.y)) list.push([a.y + 0.55, 2, a]);
@@ -104,9 +105,10 @@ export class Renderer {
       else if (k === 4) this.drawMon(o);
       else if (k === 5) { this.drawShadow(o.x, o.y); this.drawChar('c_' + o.spr, o.x, o.y, o.dir, o.path ? Math.floor(o.anim * 6) % 4 : 0, 0); }
       else if (k === 6) this.drawAnimal(o);
+      else if (k === 8) this.drawPalisade(o.x, o.y, o.vertical);
       else this.drawNpc(s, o);
     }
-    if (this.ghost) this.drawGhost(s);
+    if (this.ghost) this.drawGhost(s, ui);
     this.drawFx(s);
     let caveIndex = 0;
     for (const q of s.activeQuests) if (q.spot) this.drawQuestMarker(q, q.kind === 'dungeon' ? caveIndex++ : 0);
@@ -135,6 +137,13 @@ export class Renderer {
     const d = defOf(b.type), key = Array.isArray(d.spr) ? d.spr[b.v || 0] : d.spr;
     const sp = SPR[key]; if (!sp) return;
     const [w, h] = d.fp;
+    if (d.barrier) {
+      this.drawPalisade(b.x, b.y, this.palisadeVertical(b.x, b.y, ui.barriers));
+      if (this.selected && this.selected.kind === 'b' && this.selected.id === b.id) {
+        this.g.strokeStyle = '#ffe36e'; this.g.lineWidth = 1; this.g.strokeRect(b.x * T + 0.5, b.y * T + 0.5, T - 1, T - 1);
+      }
+      return;
+    }
     const bx = b.x * T + (w * T - sp.w) / 2, by = (b.y + h) * T - sp.h;
     const busy = b.occ && b.occ.length > 0 && FAC[b.type];
     const bob = busy ? Math.round(Math.sin(this.time * 8 + b.id) * 0.6) : 0;
@@ -148,6 +157,16 @@ export class Renderer {
     if (this.selected && this.selected.kind === 'b' && this.selected.id === b.id) {
       g.strokeStyle = '#ffe36e'; g.lineWidth = 1; g.strokeRect(b.x * T + 0.5, b.y * T + 0.5, w * T - 1, h * T - 1);
     }
+  }
+  palisadeVertical(x, y, barriers) {
+    if (!barriers) return false;
+    const at = (xx, yy) => xx >= 0 && yy >= 0 && xx < MAP_W && yy < MAP_H && barriers[yy * MAP_W + xx];
+    const ns = +!!at(x, y - 1) + +!!at(x, y + 1), ew = +!!at(x - 1, y) + +!!at(x + 1, y);
+    return ns > ew;
+  }
+  drawPalisade(x, y, vertical) {
+    const key = vertical ? 'palisadeV' : 'palisadeH', sp = SPR[key];
+    this.spr(key, x * T + (T - sp.w) / 2, (y + 1) * T - sp.h);
   }
   drawChar(sheet, x, y, dir, frame, row) {
     const im = IMG[sheet]; if (!im) return;
@@ -309,13 +328,13 @@ export class Renderer {
       g.fillText(done ? '+' : active ? '!' : ready ? '?' : '-', f.x * T + 8, f.y * T - 24);
     }
   }
-  drawGhost(s) {
+  drawGhost(s, ui) {
     const gh = this.ghost, d = defOf(gh.type); if (!d) return;
     const g = this.g, [w, h] = d.fp;
     g.fillStyle = gh.ok ? 'rgba(120,255,140,0.35)' : 'rgba(255,80,80,0.4)';
     g.fillRect(gh.x * T, gh.y * T, w * T, h * T);
     if (d.road) return;
-    const key = Array.isArray(d.spr) ? d.spr[0] : d.spr, sp = SPR[key];
+    const key = d.barrier && this.palisadeVertical(gh.x, gh.y, ui.barriers) ? 'palisadeV' : Array.isArray(d.spr) ? d.spr[0] : d.spr, sp = SPR[key];
     if (sp) { g.save(); g.globalAlpha = 0.75; this.spr(key, gh.x * T + (w * T - sp.w) / 2, (gh.y + h) * T - sp.h); g.restore(); }
     if (FAC[gh.type]) { g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect((gh.x + (w >> 1)) * T + 5, (gh.y + h) * T + 5, 6, 6); }  // door marker
     if (d.appeal && d.r) { g.strokeStyle = 'rgba(255,200,255,0.6)'; g.lineWidth = 1 / this.scale; g.strokeRect((gh.x - d.r) * T, (gh.y - d.r) * T, (w + d.r * 2) * T, (h + d.r * 2) * T); }

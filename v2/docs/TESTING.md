@@ -9,6 +9,7 @@ Run from the repository root.
 | `node v2/tests/check.mjs --full` | + 30-month bot soak + boss ladder | last line `all checks passed (full)` |
 | `node v2/tests/quests.mjs` | instant departure, random capable defaults, extra fees/party cap, six concurrent parties including duplicate kinds, independent cave progress, ownership and endings, KO recovery, legacy saves, Depart ordering | final line ends in `passed` |
 | `node v2/tests/frontier.mjs` | dormant sites, prerequisites, one-time land/bonus/relic rewards, failure cleanup, unique ownership, old-map migration and distant paths | final line ends in `passed` |
+| `node v2/tests/palisades.mjs` | eight perimeter openings, blocked movement, gap routing, removal, placement guards, expansion and save/reload | final line ends in `passed` |
 | `node --expose-gc v2/tests/frontier.mjs --soak` | repeated failed challenges plus a three-hour simulation soak; bounded ledgers, actors, logs, save size and forced-GC heap samples | final line ends in `passed (soak)` |
 | `node v2/tests/validate.mjs` | data integrity: sprites exist and have the right sheet size, perk/item keys valid and consumed by the sim, job prerequisites sane, boss frame math, SPR rects inside images, atlas fresh | `0 error(s)` |
 | `node v2/tests/used-assets.mjs` | every file the code loads exists (`missing: 0`); lists unused files | `missing: 0` |

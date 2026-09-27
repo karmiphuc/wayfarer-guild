@@ -134,7 +134,8 @@ export class UI {
     const s = this.s;
     let h = `<div class="tabs">${CATS.map(([k, n]) => `<button class="btn sm ${this.buildCat === k ? 'on' : ''}" data-act="cat" data-k="${k}">${n}</button>`).join('')}
       <button class="btn sm" data-act="tool" data-k="bulldoze">Remove</button></div><div class="grid">`;
-    const entries = this.buildCat === 'decor' ? Object.entries(DECOR) : Object.entries(FAC).filter(([k, d]) => d.cat === this.buildCat && k !== 'guild');
+    const entries = this.buildCat === 'decor' ? Object.entries(DECOR).filter(([, d]) => !d.cat || d.cat === 'decor')
+      : [...Object.entries(FAC).filter(([k, d]) => d.cat === this.buildCat && k !== 'guild'), ...Object.entries(DECOR).filter(([, d]) => d.cat === this.buildCat)];
     for (const [k, d] of entries) {
       const lockStars = d.rank ? d.rank - 1 : 0, locked = s.stars < lockStars, have = d.unique && s.buildings.some(b => b.type === k);
       const spr = d.road ? null : Array.isArray(d.spr) ? d.spr[0] : d.spr;
@@ -485,7 +486,7 @@ export class UI {
   exitBuild() { this.buildMode = null; this.game.rnd.ghost = null; $('#view').classList.remove('building'); $('#buildbar').classList.add('hidden'); }
   renderBuildbar() {
     const t = this.buildMode; if (!t) return;
-    const label = t === 'bulldoze' ? 'Remove: tap a road, decoration or building' : `${defOf(t).name} · ${this.sim.cost(t)}G — ${defOf(t).road ? 'drag to paint roads' : 'tap to place'}`;
+    const label = t === 'bulldoze' ? 'Remove: tap a road, decoration or building' : `${defOf(t).name} · ${this.sim.cost(t)}G — ${defOf(t).road ? 'drag to paint roads' : defOf(t).barrier ? 'drag to build a wall' : 'tap to place'}`;
     this.setBody($('#buildbar'), `<span>${esc(label)}</span><span class="muted" style="color:#ffcf3f">${this.s.gold}G</span><button class="btn sm" data-act="exitBuild">Done</button>`, 'bb');
   }
 

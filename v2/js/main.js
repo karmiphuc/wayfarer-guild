@@ -71,7 +71,7 @@ function frame(now) {
     if (n >= MAX_STEPS_PER_FRAME) acc = 0;
   }
   if (game.follow) { const a = s.advs.find(o => o.id === game.follow); if (a && !a.inside) { rnd.cam.x += (a.x + 0.5 - rnd.cam.x) * 0.1; rnd.cam.y += (a.y + 0.5 - rnd.cam.y) * 0.1; } }
-  rnd.draw(s, dt, { buildMode: ui.buildMode, showNames: ui.showNames });
+  rnd.draw(s, dt, { buildMode: ui.buildMode, showNames: ui.showNames, boundary: sim.boundary, barriers: sim.barriers });
   uiT += dt; if (uiT > 0.25) { uiT = 0; ui.tick(); }
   const wk = s.time.year * 100 + s.time.month * 5 + s.time.week;
   if (wk !== lastWeek) { if (lastWeek !== -1 && !game.noSave) save(s); lastWeek = wk; }
@@ -94,7 +94,7 @@ function bindInput() {
     if (pts.size === 1) {
       drag = { x: e.clientX, y: e.clientY, cx: rnd.cam.x, cy: rnd.cam.y };
       const mode = game.ui.buildMode;
-      if (mode && (defOf(mode)?.road || mode === 'bulldoze')) { painting = true; paint(e); }
+      if (mode && (defOf(mode)?.road || defOf(mode)?.barrier || mode === 'bulldoze')) { painting = true; paint(e); }
     } else if (pts.size === 2) {
       const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: rnd.cam.zoom }; drag = null; painting = false;
     }
