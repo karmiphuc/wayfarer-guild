@@ -153,9 +153,10 @@ At dusk (70% through the week), `nightRest()` prioritizes home, affordable inn o
 below 95. It respects basic-gear savings and urgent hunger, injury, nearby foes, active quests and rescue. Routine
 hunts/strolls reconsider bedtime once per second; existing visits finish, including long journeys to captured land.
 Camp patrols never trigger village-wide defense or block distant pawns from resting. Outdoors in owned land, pawns
-interrupt routines to fight raiders within four tiles (or their attacker's range), retaining their current task to resume
+interrupt routine errands or outdoor rest only when a raider targets them within four tiles (or attack range), retaining their task to resume
 after danger passes. Local defense routes stay on owned land and do not chase outside it. Indoor pawns, cave parties,
-KO pawns and rescuers carrying someone stay protected by their existing behavior.
+KO pawns and rescuers carrying someone retain their existing behavior. Hunt retreat/potions and quest healing take
+priority over retaliation; returning pawns keep retreating. Quest ownership and the interrupted task are preserved.
 
 ### Late-game investments
 

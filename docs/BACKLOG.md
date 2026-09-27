@@ -13,7 +13,7 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
-- Local self-defense interrupts errands and outdoor rest to fight nearby intruders, then resumes the pawn's task without a village rally or chase outside owned land. Camp patrols now scale count, interval and level by stars, with a shared interval across camps; old rapid schedules and over-level patrols migrate once.
+- Local self-defense interrupts errands and outdoor rest only when the pawn is targeted in town, preserving quest/rescue/recovery priorities and then resuming the pawn's task without a village rally or chase outside owned land. Camp patrols now scale count, interval and level by stars, with a shared interval across camps; old rapid schedules and over-level patrols migrate once.
 
 - Camp guard patrols no longer rally the village, attract distant defenders or prevent distant pawns from resting. Nearby encounters still use normal combat; real bandit raids and stampedes retain territorial defense.
 
