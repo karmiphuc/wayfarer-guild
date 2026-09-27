@@ -9,6 +9,7 @@ import { BIOMES } from './data.js';
 
 export const DT = 0.1;              // seconds per sim step
 export const WEEK_SECONDS = 30;     // one in-game week at 1x
+export const ALPHA_PET_COST = Object.freeze({ gold: 10000, wood: 1000, hide: 1000, herb: 1000, ore: 1000, crystal: 1000 });
 
 const RESCUE_DELAY = 4;
 const RESCUE_RANGE = 24;
@@ -433,6 +434,10 @@ export class Sim {
         const b = this.pickFacility(a, 'shop', b => FAC[b.type].slot === 'item');
         if (b && a.gold > 60 && canSpend(cost)) add(18 * this.pmul(a, 'shop'), { type: 'visit', b: b.id, dur: 3, buy: 'potion' });
       }
+      if (!basics.length && !a.reviveCharge && s.unlocked.phoenixSigil && s.stars >= ITEMS.phoenixSigil.star && canSpend(this.shopPrice('phoenixSigil'))) {
+        const b = this.pickFacility(a, 'shop', b => FAC[b.type].slot === 'item');
+        if (b) add(70 * this.pmul(a, 'shop'), { type: 'visit', b: b.id, dur: 4, buy: 'phoenixSigil' });
+      }
     }
     // train
     { const b = this.pickFacility(a, 'train', b => canSpend(this.visitPrice(a, b))); if (b) add(16 * this.pmul(a, 'train') + (a.jobLv[a.job] < 10 ? 6 : 0), { type: 'visit', b: b.id, dur: 8, train: true }); }
@@ -642,7 +647,13 @@ export class Sim {
           while (n < 3 - a.potions && this.shopPrice(id, n + 1) <= a.gold - reserve) n++;
           if (n > 0) { paid = n * P.price * (1 + this.bonus('shopSales') + this.charter('shopSales')); a.potions += n; }
         }
-        else if (t.buy && ITEMS[t.buy] && !ITEMS[t.buy].legendary && !ITEMS[a.eq[ITEMS[t.buy].slot]]?.legendary && a.gold >= this.shopPrice(t.buy)) {
+        else if (ITEMS[t.buy]?.revive) {
+          const it = ITEMS[t.buy];
+          if (FAC[b.type].slot !== 'item' || !s.unlocked[t.buy] || s.stars < it.star || a.reviveCharge || a.gold < this.shopPrice(t.buy)) return;
+          a.reviveCharge = true; paid = this.itemPrice(t.buy) * (1 + this.bonus('shopSales') + this.charter('shopSales'));
+          log(s, `${a.name} bought a ${it.name}! One resurrection is ready.`, 'coin'); this.emote(a, 'star');
+        }
+        else if (t.buy && ITEMS[t.buy] && ITEMS[t.buy].slot !== 'item' && !ITEMS[t.buy].legendary && !ITEMS[a.eq[ITEMS[t.buy].slot]]?.legendary && a.gold >= this.shopPrice(t.buy)) {
           const it = ITEMS[t.buy]; paid = this.itemPrice(t.buy); a.eq[it.slot] = t.buy; a.hp = Math.min(a.hp, maxHp(a, s));
           log(s, `${a.name} bought a ${it.name}! (+${paid}G)`, 'coin'); this.emote(a, 'star'); this.bark(a, it.name + '!');
           paid *= 1 + this.bonus('shopSales') + this.charter('shopSales');
@@ -824,7 +835,11 @@ export class Sim {
     const splash = magic ? 0.5 * (1 + P('splash')) : 0, splashAll = P('splashAll'), sp = Math.max(splash, splashAll);
     if (sp) for (const o of s.mons) if (o !== m && o.hp > 0 && Math.hypot(o.x - m.x, o.y - m.y) < 1.5) this.hitMonster(o, Math.round(dmg * sp), a);
     // partner monster joins in
-    if (a.partner) { const p = s.monsters.find(p => p.id === a.partner); if (p && this.R.chance(0.5)) this.hitMonster(m, Math.max(1, Math.round((MONSTERS[p.type]?.atk || 4) * (1 + p.bond / 50) * (1 + P('bondPct') * 0.5))), a); }
+    if (a.partner) { const p = s.monsters.find(p => p.id === a.partner); if (p && this.R.chance(0.5)) this.hitMonster(m, this.partnerAssistDamage(a, p), a); }
+  }
+  partnerAssistDamage(a, p) {
+    const base = (MONSTERS[p.type]?.atk || 4) * (1 + p.bond / 50) * (1 + perkSum(a, 'bondPct') * 0.5);
+    return Math.max(1, Math.round(base * (p.alpha ? 1.5 : 1)));
   }
   hitMonster(m, dmg, a, crit) {
     const s = this.s; if (m.hp <= 0) return;
@@ -857,7 +872,7 @@ export class Sim {
     // taming
     const stable = s.buildings.find(b => b.type === 'stable');
     if (!m.boss && !M.human && stable && s.monsters.length < FAC.stable.cap + stable.lv - 1 && !m.raid && R.chance(0.03 * (1 + this.bonus('tame') + perkSum(a, 'tamePct') + this.charter('tamePct')))) {
-      s.monsters.push({ id: s.nextId++, type: m.type, name: MONSTERS[m.type].name, bond: 0, x: m.x, y: m.y, dir: 0, anim: 0, tx: m.x, ty: m.y });
+      s.monsters.push({ id: s.nextId++, type: m.type, name: MONSTERS[m.type].name, bond: 0, alpha: false, x: m.x, y: m.y, dir: 0, anim: 0, tx: m.x, ty: m.y });
       log(s, `The ${MONSTERS[m.type].name} wants to join the village! It moved into the Stable.`, 'good');
       this.emit('fanfare', `${MONSTERS[m.type].name} joined!`, 'Assign it as a partner in the Adventurers menu.');
       this.recomputeTraits();
@@ -865,7 +880,7 @@ export class Sim {
   }
   treasure(m, a) {
     const s = this.s;
-    const pool = Object.keys(ITEMS).filter(id => !ITEMS[id].legendary && !s.unlocked[id] && ITEMS[id].dev && this.itemTier(id) <= 1 + Math.floor(m.lv / 6));
+    const pool = Object.keys(ITEMS).filter(id => !ITEMS[id].legendary && !ITEMS[id].researchOnly && !s.unlocked[id] && ITEMS[id].dev && this.itemTier(id) <= 1 + Math.floor(m.lv / 6));
     s.fx.push({ k: 'chest', x: m.x, y: m.y, t: 0, life: 1.6 });
     if (pool.length) {
       const id = this.R.pick(pool); s.unlocked[id] = true;
@@ -878,6 +893,7 @@ export class Sim {
   develop(id) {
     if (!ITEMS[id] || ITEMS[id].legendary) return 'This relic must be earned by capturing its territory';
     const s = this.s; if (!s.buildings.some(b => b.type === 'smith')) return 'Build a Blacksmith first';
+    if (s.stars < (ITEMS[id].star || 0)) return `Reach ${ITEMS[id].star} stars first`;
     if (s.unlocked[id]) return 'Already developed';
     const cost = this.devCost(id), gold = Math.round(ITEMS[id].price * 1.5);
     for (const k in cost) if ((s.mats[k] || 0) < cost[k]) return `Need ${cost[k]} ${MATS[k].name}`;
@@ -885,6 +901,26 @@ export class Sim {
     for (const k in cost) s.mats[k] -= cost[k];
     s.gold -= gold; s.unlocked[id] = true;
     log(s, `Developed ${ITEMS[id].name}! Shops now stock it.`, 'good'); this.emit('fanfare', 'Development complete!', ITEMS[id].name);
+    return null;
+  }
+  alphaPetBlock(id) {
+    const s = this.s, pet = s.monsters.find(m => m.id === id);
+    if (!pet) return 'Pet not found';
+    if (pet.alpha) return 'Already an Alpha pet';
+    if (s.stars < 5) return 'Reach 5 stars first';
+    if (!s.buildings.some(b => b.type === 'stable')) return 'Build a Stable first';
+    if (s.gold < ALPHA_PET_COST.gold) return `Need ${ALPHA_PET_COST.gold.toLocaleString('en-US')} village gold`;
+    for (const k of ['wood', 'hide', 'herb', 'ore', 'crystal']) if ((s.mats[k] || 0) < ALPHA_PET_COST[k]) return `Need ${ALPHA_PET_COST[k].toLocaleString('en-US')} ${MATS[k].name}`;
+    return null;
+  }
+  alphaPet(id) {
+    const block = this.alphaPetBlock(id); if (block) return block;
+    const s = this.s, pet = s.monsters.find(m => m.id === id);
+    s.gold -= ALPHA_PET_COST.gold;
+    for (const k of ['wood', 'hide', 'herb', 'ore', 'crystal']) s.mats[k] -= ALPHA_PET_COST[k];
+    pet.alpha = true;
+    log(s, `${pet.name} became an Alpha pet!`, 'title');
+    this.emit('fanfare', `Alpha ${pet.name}!`, '+50% assist damage and bonded stat contribution');
     return null;
   }
 
@@ -901,13 +937,24 @@ export class Sim {
     a.hp = Math.max(1, Math.round(maxHp(a, this.s) * 0.1)); a.task = { type: 'camp', dur: 10 };
     log(this.s, `${a.name} recovered in the field.`, 'good');
   }
+  tryRevive(a) {
+    if (a.hp > 0) return false;
+    const innate = perkSum(a, 'revive') && !a.revived;
+    if (!innate && !a.reviveCharge) return false;
+    if (innate) a.revived = true; else a.reviveCharge = false;
+    a.hp = Math.max(1, Math.round(maxHp(a, this.s) * ITEMS.phoenixSigil.revive));
+    this.bark(a, innate ? 'Not yet!' : 'Reborn!');
+    if (!innate) log(this.s, `${a.name}'s Phoenix Sigil was consumed: revived at half health.`, 'good');
+    this.s.fx.push({ k: 'lvl', x: a.x, y: a.y, t: 0, life: 1.2 });
+    return true;
+  }
   hurtAdv(a, dmg, src) {
     const s = this.s; if (a.ko || a.inside || a.dungeon) return;
     if (this.R.chance(Math.min(0.35, perkSum(a, 'dodge')))) { s.fx.push({ k: 'num', x: a.x, y: a.y - 0.8, t: 0, life: 0.7, text: 'Miss', c: '#bfe6ff' }); return; }
     if (this.happening('fog')) dmg *= 1.15;
     dmg = Math.max(1, Math.round(dmg - stat(a, 'def', s) * 0.45));
     a.hp -= dmg; a.hitT = 0.2;
-    if (a.hp <= 0 && perkSum(a, 'revive') && !a.revived) { a.revived = true; a.hp = Math.round(maxHp(a, s) / 2); this.bark(a, 'Not yet!'); s.fx.push({ k: 'lvl', x: a.x, y: a.y, t: 0, life: 1.2 }); return; }
+    if (this.tryRevive(a)) return;
     s.fx.push({ k: 'num', x: a.x, y: a.y - 0.8, t: 0, life: 0.8, text: String(dmg), c: '#ff6b6b' });
     if (a.hp <= 0) {
       if (a.task?.type === 'rescue') this.releaseRescue(a, true);
@@ -1171,7 +1218,7 @@ export class Sim {
       case 'wanderer': { const a = s.advs.find(o => o.id === h.data.adv); if (a && !a.resident) log(s, `${a.name} the wanderer moved on.`); break; }
     }
   }
-  merchantPool() { const s = this.s, cap = 2 + Math.floor(s.stars / 2); return Object.keys(ITEMS).filter(id => !ITEMS[id].legendary && !s.unlocked[id] && ITEMS[id].dev && this.itemTier(id) <= cap); }
+  merchantPool() { const s = this.s, cap = 2 + Math.floor(s.stars / 2); return Object.keys(ITEMS).filter(id => !ITEMS[id].legendary && !ITEMS[id].researchOnly && !s.unlocked[id] && ITEMS[id].dev && this.itemTier(id) <= cap); }
   merchantOffer() {
     return shuffle(this.R, this.merchantPool()).slice(0, 3).map(id => ({ id, price: Math.round(ITEMS[id].price * 2.5) }));
   }
@@ -1425,7 +1472,7 @@ export class Sim {
     for (const a of up) {
       const dmg = Math.max(1, Math.round(maxHp(a, s) * 0.22 * Math.pow(foe / Math.max(1, pow), 1.5) * R.range(0.7, 1.3) - heal / up.length));
       if (a.potions > 0 && a.hp - dmg < maxHp(a, s) * 0.35) { a.potions--; a.hp = Math.min(maxHp(a, s), Math.round(a.hp + this.potion().heal)); }
-      a.hp -= dmg; if (a.hp <= 0) { a.hp = 0; a.ko = true; a.koT = 0; }
+      a.hp -= dmg; if (a.hp <= 0 && !this.tryRevive(a)) { a.hp = 0; a.ko = true; a.koT = 0; }
       this.gainXp(a, Math.round(foe * 0.35));
     }
     s.stats.kills += 3; s.stats.monthKills += 3;

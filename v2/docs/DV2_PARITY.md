@@ -29,7 +29,7 @@ playthrough. Never hard-code them as targets: our numbers come from the bot soak
 | Job passive ("Bonus") | active while in the job: Merchant +store sales, Ninja faster dungeons, Cook +food sales… | — (we only have mastery perks) | ❌ | #23 |
 | Mastery bonus | permanent +20/30 base stat or a learned spell | permanent stacking perks | 🟡 | #30, #20 |
 | Magic & status | Fire/Ice/Lightning/Dark/Heal spells; Burn, Freeze, Paralysis, Poison, Confusion, Sleep, Blind | fireball splash, burn perk | 🟡 | #30 |
-| Equipment | 4 slots: Weapon, Armor 1 (head/shield), Armor 2 (body), Accessory; shops stock unlocked gear | 4 slots (weapon/body/helm-or-shield/accessory), 85 ordinary items + 8 single-copy frontier relics; old equipped helmets/shields migrate | ✅ | #31 |
+| Equipment | 4 slots: Weapon, Armor 1 (head/shield), Armor 2 (body), Accessory; shops stock unlocked gear | 4 slots (weapon/body/helm-or-shield/accessory), 86 ordinary items + 8 single-copy frontier relics; old equipped helmets/shields migrate | ✅ | #31 |
 | Treasure & gear unlocks | gold chests unlock gear; Luck affects contents | chests unlock gear | ✅ | #20 |
 | Collectible items | food, merch, ores, gems, spellbooks as drops/purchases; used for gifts, facility boosts, Cauldron | — | ❌ | #18 |
 | Cauldron | throw items → Fire/Ice/Lightning/Dark essences + knowledge; recipes: weapons, spellbooks, houses, castles; enlarge events | Blacksmith develop (materials) | ❌ | #40 |
@@ -39,8 +39,8 @@ playthrough. Never hard-code them as targets: our numbers come from the bot soak
 | Farmland | produce vegetables/fruit; Farmer speeds it | — | ❌ | #35 |
 | Quests | Dungeon / Mob group (Outbreak) / Boss / Counterattack; start fee + recruitment fee for non-volunteers; sales dip while away | no concurrent quest cap; Instant Depart or 4 random capable defaults, up to 8 with paid extras; Depart above party picker | 🟡 | #25 |
 | Dungeons | multi-floor, treasure; Ninja/Mercenary speed up | one cave, floors, treasure | 🟡 | #39 |
-| KO & rescue | KO'd adventurer rescued by another or revived by item, taken to the Inn | one pawn claims and carries the fallen pawn to a reachable bed; field recovery fallback; no revive item | 🟡 | #24 |
-| Monsters & taming | Monster Tamer in party on Outbreak quests; partners; Monster Farm; mount at 50 friendship; flying mounts ignore roads | random taming with a Stable; partners; mounts at bond 50 | 🟡 | #37 |
+| KO & rescue | KO'd adventurer rescued by another or revived by item, taken to the Inn | one pawn claims and carries the fallen pawn to a reachable bed; field recovery fallback; research-only, slot-free Phoenix Sigil restores half HP once | 🟡 | #24 |
+| Monsters & taming | Monster Tamer in party on Outbreak quests; partners; Monster Farm; mount at 50 friendship; flying mounts ignore roads | random taming with a Stable; partners; mounts at bond 50; permanent Alpha upgrades at five stars | 🟡 | #37 |
 | Rank | ★1–★5 per map with conditions (popularity, monthly income, events held, build X) | ★1–★5 conditions | ✅ | — |
 | Maps | Plains → Forest → Tropics → Arctic → Magic → Eastern → Underworld; beat boss → move with ≤ 5 adventurers; money/TP/rank reset; cauldron shared | one 152x112 continuous map, 4 home zones + 8 capturable frontier territories with distinct landmarks; no map reset/transfer | ❌ | #41, #42 |
 | Popularity milestones | every 100 popularity: visitor wave / returning adventurer / medal | — | ❌ | #28 |

@@ -51,6 +51,7 @@ for (let w = 0; w < months * 4; w++) {
   const order = Object.keys(JOBS).sort((p, q) => JOBS[q].tier - JOBS[p].tier);
   for (const a of s.advs) if (a.resident) for (const j of order) if (!sim.canChangeJob(a, j) && (JOBS[j].tier > JOBS[a.job].tier || (a.jobLv[a.job] >= 10 && !a.jobLv[j]))) { sim.changeJob(a, j); break; }
   if (w % 4 === 3) {
+    const pet = s.monsters.find(m => !sim.alphaPetBlock(m.id)); if (pet) sim.alphaPet(pet.id);
     const r = s.advs.filter(a => a.resident);
     console.log(`Y${s.time.year}M${String(s.time.month).padStart(2)} ★${s.stars} gold=${String(s.gold).padStart(6)} inc=${String(s.stats.lastIncome).padStart(5)} tp=${String(s.tp).padStart(3)} pop=${String(Math.floor(s.pop)).padStart(5)} res=${String(r.length).padStart(2)}/${String(s.advs.length).padStart(2)} avgLv=${(r.reduce((n, a) => n + a.lv, 0) / Math.max(1, r.length)).toFixed(1).padStart(4)} maxLv=${String(Math.max(0, ...s.advs.map(a => a.lv))).padStart(2)} blds=${s.buildings.length} quests=${s.cleared} bosses=${Object.keys(s.bossesBeaten).length} titles=${Object.keys(s.titles).length} gear=${Object.keys(s.unlocked).length} pets=${s.monsters.length}`);
   }

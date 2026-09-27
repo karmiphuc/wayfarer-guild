@@ -197,7 +197,7 @@ export class Renderer {
     // mount: draw the partner monster under the rider
     const pet = a.partner && s.monsters.find(m => m.id === a.partner && m.riding);
     let lift = 0;
-    if (pet) { const M = MONSTERS[pet.type]; this.monFrame('m_' + M.spr, a.x, a.y + 0.15, a.dir, Math.floor(a.anim * 7), null, M.sheetRows); lift = 0.35; }
+    if (pet) { const M = MONSTERS[pet.type], key = 'm_' + M.spr; this.monFrame(key, a.x, a.y + 0.15, a.dir, Math.floor(a.anim * 7), pet.alpha ? goldified(key) : null, M.sheetRows); lift = 0.35; }
     if (a.ko) {
       const carrier = a.rescueBy && s.advs.find(o => o.id === a.rescueBy && o.task?.type === 'rescue' && o.task.carrying);
       const side = carrier ? (carrier.dir === 0 ? -0.35 : carrier.dir === 1 ? 0.35 : 0) : 0;
@@ -209,6 +209,7 @@ export class Renderer {
     this.drawChar('c_' + a.spr, a.x, a.y - lift, a.dir, frame, row);
     if (a.hitT > 0) this.g.restore();
     if (wk && !behind) this.drawWeapon(a, wk, lift, frame);
+    if (pet?.alpha) this.crown(a.x, a.y + 0.15);
     if (this.selected && this.selected.kind === 'adv' && this.selected.id === a.id) {
       this.g.strokeStyle = '#ffe36e'; this.g.beginPath(); this.g.ellipse(a.x * T + 8, a.y * T + 12, 7, 3, 0, 0, Math.PI * 2); this.g.stroke();
     }
@@ -289,7 +290,9 @@ export class Renderer {
   drawPet(m) {
     const M = MONSTERS[m.type]; if (!M) return;
     this.drawShadow(m.x, m.y, 10);
-    this.monFrame('m_' + M.spr, m.x, m.y, m.dir, Math.floor(m.anim * 5), null, M.sheetRows);
+    const key = 'm_' + M.spr;
+    this.monFrame(key, m.x, m.y, m.dir, Math.floor(m.anim * 5), m.alpha ? goldified(key) : null, M.sheetRows);
+    if (m.alpha) this.crown(m.x, m.y);
     // little heart to mark village monsters
     const e = IMG['e27']; if (e && Math.floor(this.time * 0.5 + m.id) % 6 === 0) this.g.drawImage(e, Math.round(m.x * T + 2), Math.round(m.y * T - 12), 12, 11);
   }

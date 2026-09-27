@@ -249,7 +249,7 @@ export function makeAdventurer(s, R, jobId = 'villager') {
     hp: 1, gold: R.int(60, 160), sat: R.int(15, 35), work: 100,
     hunger: R.int(20, 50), energy: R.int(60, 90), fun: R.int(30, 60),
     persona: [R.pick(personaKeys)], resident: false, home: null, partner: null,
-    eq: { weapon: null, armor: null, offhand: null, acc: null, blessing: null }, perks: [], potions: 1,
+    eq: { weapon: null, armor: null, offhand: null, acc: null, blessing: null }, perks: [], potions: 1, reviveCharge: false,
     x: 0, y: 0, px: 0, py: 0, dir: 0, path: null, task: null, taskT: 0, cool: 0, stay: R.int(3, 6) * 7, days: 0,
     ko: false, rescueBy: null, rescueRetry: 0, emote: null, emoteT: 0, anim: 0, atkT: 0, bark: null, barkT: 0, kills: 0,
   };
@@ -289,6 +289,13 @@ export const LV_CAP = 99, JOB_CAP = 99, MASTERY = 10;
 export function titleBonus(s, key) { let v = 0; for (const t of TITLES) if (s.titles && s.titles[t.id] && t.bonus[key]) v += t.bonus[key]; return v; }
 export function perkSum(a, key) { let v = 0; for (const p of a.perks || []) { const P = PERKS[p]; if (P && P[key]) v += P[key]; } return v; }
 export function gearSum(a, key) { let v = 0; for (const slot of ['weapon', 'armor', 'offhand', 'acc', 'blessing']) { const it = a.eq[slot] && ITEMS[a.eq[slot]]; if (it && it[key]) v += it[key]; } return v; }
+export function bondedPetBonus(a, k, s) {
+  if (!a.partner || !s) return 0;
+  const m = s.monsters.find(m => m.id === a.partner);
+  if (!m) return 0;
+  const base = (m.bond / 20) * (({ hp: 4, atk: 1, def: 1, mag: 1 }[k]) || 0) * (1 + perkSum(a, 'bondPct') * 0.5);
+  return base * (m.alpha ? 1.5 : 1);
+}
 export function stat(a, k, s) {
   const job = JOBS[a.job], v0 = JOBS.villager;
   let v = a.base[k] + (job[k] - v0[k]) + (a.lv - 1) * GROW[k] * (1 + job[k] / 25);
@@ -297,7 +304,7 @@ export function stat(a, k, s) {
   const jl = Object.values(a.jobLv).reduce((n, l) => n + l, 0);
   v *= 1 + Math.min(0.6, jl * 0.004) + perkSum(a, 'allPct') + perkSum(a, PCT[k]);
   v *= 1 + (a.work - 100) / 400;
-  if (a.partner && s) { const m = s.monsters.find(m => m.id === a.partner); if (m) v += (m.bond / 20) * ({ hp: 4, atk: 1, def: 1, mag: 1 }[k]) * (1 + perkSum(a, 'bondPct') * 0.5); }
+  v += bondedPetBonus(a, k, s);
   if (s) v *= 1 + titleBonus(s, k) + frontierBonus(s, k);
   return Math.max(1, Math.round(v));
 }
@@ -330,6 +337,7 @@ const JOB_RENAME = { princess: 'royal' };
 export function migrate(s) {
   s.flags ??= {}; s.flags.nextCampPatrol ??= 0;
   s.fx = []; s.folk = s.folk || []; s.animals = s.animals || [];
+  for (const m of s.monsters || []) m.alpha = m.alpha === true;
   if (!Array.isArray(s.activeQuests)) s.activeQuests = [];
   if (s.quest && !s.activeQuests.some(q => q.id === s.quest.id)) s.activeQuests.push(s.quest);
   delete s.quest;
@@ -360,6 +368,7 @@ export function migrate(s) {
   s.unlocked.ironCap = true;
   for (const a of s.advs) {
     a.rescueBy ??= null; a.rescueRetry ??= 0;
+    a.reviveCharge = a.reviveCharge === true;
     a.perks = a.perks || []; a.eq = a.eq || {}; a.eq.acc = a.eq.acc || null;
     a.eq.blessing ??= null;
     // Older saves used the body slot for helmets and shields. Move the exact owned item once.

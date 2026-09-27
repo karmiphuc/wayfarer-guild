@@ -62,6 +62,11 @@ and the new weapon sprites in carried/attack poses. Every tier-3 class must have
 `blessings.mjs` covers all eight legacy relic migrations, unique transfers, independent accessory stats and save/load.
 `weapon-affinity.mjs` covers gear retention across every class, save/load, melee/magic damage and attack cooldown, cave combat and shopping. In the browser, change a sword user to Mage and back: the sword stays visible and only the class-match bonus changes.
 `night-rest.mjs` covers dusk decisions, routine hunt interruption, home recovery, urgent exceptions and protected savings.
+`alpha-pets.mjs` covers upgrade gates, atomic costs, repeat clicks, combat/stat bonuses, rendering and save migration.
+`resurrection.mjs` covers paid research, single-charge shopping, basic gear reserves, field/cave revival, Undying priority
+and save persistence. In a five-star village, upgrade a pet through Adventurers and verify its Alpha label and gold crown
+on foot and mounted. Research Phoenix Sigil in Develop > Items, let a wealthy equipped pawn buy it, and verify one lethal
+hit consumes the charge at half HP while the next causes KO. Equipment must stay unchanged.
 `patrols.mjs` covers seeded guard waves, camp eligibility, staggering, population/lifetime bounds, capture recall and migration.
 `rendering.mjs` checks palisade connectivity and monster direction/frame axes; visually check all corner orientations,
 boundary joins and Panda/TRex walking in each direction as well.

@@ -13,6 +13,8 @@ Legend:
 
 ## v2 quality-of-life maintenance
 
+- Late-game investments: one-time Alpha pets cost 10,000 village gold plus 1,000 of every material at five stars with a Stable, granting +50% assist damage and bonded stat bonuses. Research-only Phoenix Sigils cost 15,000 gold plus materials to unlock; pawns buy one slot-free resurrection charge at a 10,000-gold base price, consumed to return at half health in field or cave battles.
+
 - Empty weapon slots render empty hands across all pawn classes; held sprites come only from actual equipped items. Outlaws retain their explicitly assigned weapons.
 
 - Weapon affinity: class changes retain all equipped gear. Any weapon remains usable with normal stats; preferred class types grant +10% damage and +1 combat speed. The class screen and pawn inspector explain the bonus, and shopping/cave combat account for it.
