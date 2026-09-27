@@ -129,6 +129,13 @@ then × (1 + `titleBonus(s, k)`) — e.g. the Iron Fortress title gives `def: 0.
 
 Hooks passed to `new Sim(s, hooks)`: `sfx(name)`, `fanfare(title, subtitle)`, `report({income, upkeep, tp, kills})`.
 
+Residents reserve the total cost of the cheapest compatible unlocked weapon, armor and accessory for each missing
+slot, considering only shops that exist. They buy the cheapest missing basic before upgrades. Optional meals,
+lessons and potions respect that reserve; urgent hunger, exhaustion and injury can spend it. While saving, urgent
+meals favor cost per hunger restored; residents still prefer their free home for rest. `shopPrice()` and
+`visitPrice()` include current surcharges so decisions budget the checkout price. Settlement rechecks optional
+purchases and weapon compatibility; inn recovery already delivered during a visit is still billed. No new save fields.
+
 Quest selection calls `autoQuestParty()` once from the UI action, never during rendering. It shuffles available pawns
 with the seeded RNG, selecting up to four at the suggested level and at least half HP. The player can adjust the party
 to 1-8 available non-KO pawns; slots 5-8 each cost `ceil(entry fee * 0.25)` extra. Depart and the total cost appear before
@@ -164,6 +171,10 @@ Legendary accessories have `legendary: true` and cannot be developed, discovered
 `equipRelic()` moves the one physical copy between the vault and residents, returning a replaced relic to the vault;
 owners away on quests or KO must return first. Autonomous shopping cannot replace an equipped relic. Migration
 reconciles equipped copies against the eight-entry ownership ledger.
+
+Victory stores the relic in the guild vault, not a pawn inventory. The vault appears before the territory list in
+Frontiers, with unassigned rewards and their current owners shown explicitly. Armor and Item Shops both sell ordinary
+accessories through `SHOP_SLOTS`; their stock displays use the same mapping as autonomous shopping.
 
 The Frontiers panel is reached from the Quest Board or by tapping a den. It shows locks, rewards, party controls,
 capture status and the relic vault. Show on map centers and outlines the territory. The renderer reuses one fixed

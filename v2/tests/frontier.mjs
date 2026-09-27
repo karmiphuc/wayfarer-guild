@@ -158,6 +158,15 @@ function timeoutChallenge(s, sim, f, party) {
   const copy = migrate(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(copy.frontier, s.frontier);
   assert.equal(Object.keys(copy.frontier.completed).length, FRONTIERS.length);
+
+  // Completed older saves recover missing vault entries without replaying a conquest or duplicating rewards.
+  const missing = JSON.parse(JSON.stringify(s));
+  delete missing.frontier.relics;
+  migrate(missing);
+  assert.deepEqual(missing.frontier.relics, Object.fromEntries(FRONTIERS.map(f => [f.relic, null])));
+  const repaired = JSON.stringify(missing);
+  migrate(missing);
+  assert.equal(JSON.stringify(missing), repaired);
 }
 
 // A pre-frontier 76x56 save expands without changing any old tile stride, RPG
