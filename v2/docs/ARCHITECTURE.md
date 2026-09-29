@@ -104,7 +104,8 @@ perks [PERKS keys], potions, x, y, dir (0 down,1 up,2 left,3 right), path, task,
 
 **Stat formula** (`stat(a, k, s)` in `state.js`):
 `(base + jobBonus + (lv-1)·growth + gear) × (1 + min(0.6, totalJobLevels·0.004) + allPct + <k>Pct perks) × (1 + (work-100)/400) + partner bonus`,
-then × (1 + `titleBonus(s, k)`) — e.g. the Iron Fortress title gives `def: 0.15`. `maxHp(a, s) = stat(a, 'hp', s)`.
+then × title/frontier bonuses and × percentage gear bonuses. Ordinary equipment stays flat; legendary relic HP/ATK/DEF/MAG
+bonuses scale the fully developed pawn. `maxHp(a, s) = stat(a, 'hp', s)`.
 
 ## 4. The simulation (`sim.js`, class `Sim`)
 
@@ -244,15 +245,15 @@ Bonuses derive from the completion ledger via `frontierBonus()`, never from repe
 
 Legendary relics have `legendary: true`, `slot: 'blessing'` and cannot be developed, stocked, purchased or duplicated.
 `equipRelic()` assigns one permanent blessing per resident in `eq.blessing`, returning a replaced blessing to the vault.
-Each relic has one owner; owners away on quests or KO must return first. Bonuses add to all four ordinary equipment
-slots and have no timer. Migration moves ledger-owned legendary accessories into the blessing slot once, frees the
+Each relic has one owner; owners away on quests or KO must return first. Their percentage bonuses multiply the final
+developed stats on top of all four ordinary equipment slots and have no timer. Migration moves ledger-owned legendary accessories into the blessing slot once, frees the
 accessory slot, preserves ordinary accessories and removes unowned duplicates against the eight-entry ledger.
 
-`relics.js` adds two distinct bonus traits to each of the eight unique rewards: HP, attack, defense, magic, movement
-speed or critical chance, with bounded rolled values. `frontier.rolls[relicId]` stores them once; world code plus item ID
+`relics.js` adds two distinct percentage bonus traits to each of the eight unique rewards: HP, attack, defense, magic,
+movement speed or critical chance, with bounded rolled quality values. `frontier.rolls[relicId]` stores them once; world code plus item ID
 makes capture order, retries and reloads unable to reroll. Existing earned relics gain rolls on migration without losing
-base stats or ownership. `relicItem(s,id)` supplies the combined item to stat calculations and UI; shared `ITEMS` stays
-unchanged. `gearSum(a,key,s)` requires state to include the rolled bonuses. There are no additional relic copies/drops.
+base quality or ownership. `relicItem(s,id)` maps saved quality to the current percentage range for stat calculations and
+UI; the roll shape stays unchanged. `gearSum(a,key,s)` requires state to include the rolled bonuses. There are no additional relic copies/drops.
 
 Victory stores the relic in the guild vault, not a pawn inventory. The vault appears before the territory list in
 Frontiers, with unassigned rewards and their current owners shown explicitly. Armor and Item Shops both sell ordinary

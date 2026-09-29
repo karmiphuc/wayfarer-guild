@@ -11,7 +11,8 @@ const $ = sel => document.querySelector(sel);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const CATS = [['lodging', 'Lodging'], ['food', 'Food'], ['shop', 'Shops'], ['training', 'Training'], ['defense', 'Defense'], ['special', 'Special'], ['decor', 'Decor']];
 const statLine = it => ['atk', 'mag', 'def', 'hp', 'heal'].filter(k => it[k]).map(k => `${k.toUpperCase()}${it[k] > 0 ? '+' : ''}${it[k]}`)
-  .concat(it.crit ? [`CRIT+${Math.round(it.crit * 100)}%`] : [], it.spd ? [`SPD+${Math.round(it.spd * 100)}%`] : [], it.revive ? [`One revival at ${Math.round(it.revive * 100)}% HP`] : []).join(' ');
+  .concat(['atk', 'mag', 'def', 'hp'].filter(k => it[`${k}Pct`]).map(k => `${k.toUpperCase()}+${Math.round(it[`${k}Pct`] * 100)}%`),
+    it.crit ? [`CRIT+${Math.round(it.crit * 100)}%`] : [], it.spd ? [`SPD+${Math.round(it.spd * 100)}%`] : [], it.revive ? [`One revival at ${Math.round(it.revive * 100)}% HP`] : []).join(' ');
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const alphaCostText = cost => `${cost.gold.toLocaleString('en-US')}G · ${['wood', 'hide', 'herb', 'ore', 'crystal'].map(k => `${MATS[k].name}×${cost[k].toLocaleString('en-US')}`).join(' · ')}`;
 const ALPHA_BENEFIT_TEXT = '+50% pet assist hit damage · +50% bonded passive stat contribution · 25% larger';
