@@ -2,7 +2,7 @@
 import { FAC, DECOR, SPR, JOBS, ITEMS, SHOP_SLOTS, MATS, MONSTERS, BOSSES, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
 import { IMG, iconCanvas, itemIcon, keyIcon, goldified, tinted } from './assets.js';
 import { defOf, maxHp, stat, save, valid, migrate, newGame, legacyGame, seedCode, parseSeed, MASTERY } from './state.js';
-import { CAMP_PATROLS } from './data.js';
+import { CAMP_PATROLS, VISITOR_CAP } from './data.js';
 import { getFrontiers } from './world.js';
 import { campProfile } from './camps.js';
 import { relicItem, relicRollText } from './relics.js';
@@ -170,7 +170,7 @@ export class UI {
   }
   panel_people() {
     const s = this.s, advs = s.advs.slice().sort((a, b) => (b.resident - a.resident) || b.lv - a.lv);
-    let h = `<div class="muted">${advs.filter(a => a.resident).length} residents · ${advs.filter(a => !a.resident).length} visitors · ${s.monsters.length} village monsters</div><div class="grid" style="margin-top:6px">`;
+    let h = `<div class="muted"><strong>${advs.length}/${VISITOR_CAP[s.stars] ?? 30} total pawns</strong> · ${advs.filter(a => a.resident).length} residents · ${advs.filter(a => !a.resident).length} visitors · ${s.monsters.length} village monsters</div><div class="grid" style="margin-top:6px">`;
     for (const a of advs) {
       const hpR = a.hp / maxHp(a, s), jobLv = a.jobLv[a.job] || 1, mastered = jobLv >= MASTERY;
       h += `<div class="card" data-act="selAdv" data-id="${a.id}"><div class="thumb"><i data-face="f_${a.spr}" data-scale="1"></i></div><div class="meta">

@@ -216,19 +216,21 @@ export class Sim {
   spawner() {
     const s = this.s, R = this.R;
     // visitors
-    const visitors = s.advs.filter(a => !a.resident).length;
+    const adventurers = s.advs.length;
     const beds = s.buildings.filter(b => b.type === 'inn').reduce((n, b) => n + FAC.inn.cap + b.lv - 1, 0);
-    // hard cap per rank (VISITOR_CAP: 5/5/10/15/20/30); below it, popularity and inn beds decide how many come
+    // hard total cap per rank (VISITOR_CAP: 5/5/10/15/20/30); below it, popularity and inn beds decide how many come
     const cap = Math.min(VISITOR_CAP[s.stars] ?? 30, 4 + s.stars * 2 + Math.floor(s.pop / 400) + beds);
     // arrival chance per spawner tick (every 0.5 s): ~1 visitor/week at the start, at most ~6/week before bonuses
     let rate = Math.min(0.1, 0.015 + s.pop / 80000) * (1 + this.bonus('visitors') + this.charter('visitors')) * (this.eventOn('festival') ? 2 : 1) * (this.happening('sunny') ? 1.4 : 1);
-    if (visitors < cap && R.chance(rate)) {
+    if (adventurers < cap && R.chance(rate)) {
       const edge = this.edgeSpawn();
       const a = spawnAdventurer(s, R, edge);
-      a.lv = Math.max(1, Math.min(40, R.int(1, 2 + s.stars * 3)));
-      if (a.lv > 6 && a.job === 'villager') a.job = R.pick(['warrior', 'archer', 'mage', 'monk']);
-      a.hp = maxHp(a, s); a.gold += 80 + a.lv * 25;
-      log(s, `${a.name} the ${JOBS[a.job].name} (Lv${a.lv}) arrived.`);
+      if (a) {
+        a.lv = Math.max(1, Math.min(40, R.int(1, 2 + s.stars * 3)));
+        if (a.lv > 6 && a.job === 'villager') a.job = R.pick(['warrior', 'archer', 'mage', 'monk']);
+        a.hp = maxHp(a, s); a.gold += 80 + a.lv * 25;
+        log(s, `${a.name} the ${JOBS[a.job].name} (Lv${a.lv}) arrived.`);
+      }
     }
     // monsters per zone
     for (let z = 1; z <= 4; z++) {
@@ -1127,9 +1129,12 @@ export class Sim {
     if (st.gold) s.gold = Math.max(0, s.gold + st.gold);
     for (const t of [...(st.build || []), ...(st.decor || [])]) this.placeFree(t);
     if (st.adv) {
-      const a = spawnAdventurer(s, this.R, { x: 37, y: 28 }); teachJob(a, st.adv, this.R);
-      a.lv = 4; a.resident = true; a.sat = 80; a.hp = maxHp(a, s);
-      const home = this.facilities('home').find(b => s.advs.filter(o => o.home === b.id).length < this.capOf(b)); a.home = home ? home.id : null;
+      const a = spawnAdventurer(s, this.R, { x: 37, y: 28 });
+      if (a) {
+        teachJob(a, st.adv, this.R);
+        a.lv = 4; a.resident = true; a.sat = 80; a.hp = maxHp(a, s);
+        const home = this.facilities('home').find(b => s.advs.filter(o => o.home === b.id).length < this.capOf(b)); a.home = home ? home.id : null;
+      }
     }
     this.rebuildGrid(); this.recomputeTraits(true); this.invalidatePaths();
     log(s, `Charter signed: ${C.name}. ${C.up}.`, 'title'); this.emit('fanfare', C.name, C.up);
@@ -1155,7 +1160,7 @@ export class Sim {
     const s = this.s, R = this.R;
     if (!R.chance(Math.min(0.95, HAPPEN_CHANCE + this.charter('happenChance')))) return;
     const recent = new Set(s.happenLog.slice(-3).map(h => h.id));
-    const pool = HAPPENINGS.filter(h => s.stars >= h.minStars && !this.happening(h.id) && !recent.has(h.id) && (h.id !== 'merchant' || this.merchantPool().length) && (h.id !== 'bandits' || this.raidCamps().length));
+    const pool = HAPPENINGS.filter(h => s.stars >= h.minStars && !this.happening(h.id) && !recent.has(h.id) && (h.id !== 'merchant' || this.merchantPool().length) && (h.id !== 'bandits' || this.raidCamps().length) && (h.id !== 'wanderer' || s.advs.length < (VISITOR_CAP[s.stars] ?? 30)));
     if (!pool.length) return;
     const w = h => h.weight * this.charterHappen(h.id);
     let r = R.range(0, pool.reduce((n, h) => n + w(h), 0));
@@ -1167,6 +1172,7 @@ export class Sim {
     if (this.happening(id)) return 'Already happening';
     if (id === 'merchant' && !this.merchantPool().length) return 'The merchant has nothing left to sell';
     if (id === 'bandits' && !this.raidCamps().length) return 'No active camp can launch a raid';
+    if (id === 'wanderer' && s.advs.length >= (VISITOR_CAP[s.stars] ?? 30)) return 'The village is at its adventurer capacity';
     const h = { id, weeks: H.weeks, data: {} };
     s.happen.push(h); s.happenLog.push({ id, t: `Y${s.time.year} M${s.time.month} W${s.time.week}` }); if (s.happenLog.length > 24) s.happenLog.shift();
     const guild = s.buildings.find(b => b.type === 'guild');
@@ -1218,6 +1224,7 @@ export class Sim {
       case 'meteor': h.data.crystals = 2 + s.stars; break;
       case 'wanderer': {
         const a = spawnAdventurer(s, R, this.edgeSpawn());
+        if (!a) { s.happen = s.happen.filter(x => x !== h); s.happenLog.pop(); return 'The village is at its adventurer capacity'; }
         const pool = Object.keys(JOBS).filter(j => JOBS[j].tier >= 2 && JOBS[j].tier <= Math.min(4, 2 + Math.floor(s.stars / 2)));
         teachJob(a, R.pick(pool), R);
         a.lv = 8 + s.stars * 5; a.gold += 400 + s.stars * 150; a.sat = 45; a.legend = true; a.stay = 21; a.hp = maxHp(a, s);
@@ -1597,7 +1604,12 @@ export class Sim {
       for (const m of s.mons) if (townDist(s, Math.round(m.x), Math.round(m.y)) <= 1 && !m.quest) m.hp = 0;
       this.rebuildGrid(); this.invalidatePaths();
     } else if (id === 'recruit') {
-      s.tp -= e.tp; for (let i = 0; i < 3; i++) { const a = spawnAdventurer(s, this.R, this.edgeSpawn()); a.lv = this.R.int(2, 4 + s.stars * 3); a.hp = maxHp(a, s); }
+      if (s.advs.length >= (VISITOR_CAP[s.stars] ?? 30)) return 'The village is at its adventurer capacity';
+      s.tp -= e.tp;
+      for (let i = 0; i < 3; i++) {
+        const a = spawnAdventurer(s, this.R, this.edgeSpawn()); if (!a) break;
+        a.lv = this.R.int(2, 4 + s.stars * 3); a.hp = maxHp(a, s);
+      }
     } else {
       if (this.eventOn(id)) return 'Already running'; s.tp -= e.tp; s.events.push({ id, weeks: e.weeks });
     }

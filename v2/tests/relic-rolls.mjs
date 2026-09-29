@@ -4,6 +4,27 @@ import { newGame, migrate, gearSum, stat } from '../js/state.js';
 import { Sim } from '../js/sim.js';
 import { RELIC_AFFIXES, relicItem, relicRollText, seedRelicRolls } from '../js/relics.js';
 
+assert.deepEqual(
+  Object.fromEntries(Object.entries(RELIC_AFFIXES).map(([id, a]) => [id, [a.pctMin, a.pctMax]])),
+  { vital: [8, 12], fierce: [5, 8], warded: [5, 8], mystic: [5, 8], fleet: [4, 7], keen: [2, 4] },
+);
+assert.deepEqual(
+  Object.fromEntries(FRONTIERS.map(({ relic }) => {
+    const { hpPct, atkPct, defPct, magPct, spd, crit } = ITEMS[relic];
+    return [relic, { hpPct, atkPct, defPct, magPct, spd, crit }];
+  })),
+  {
+    rootheart: { hpPct: 0.12, atkPct: undefined, defPct: 0.08, magPct: undefined, spd: undefined, crit: undefined },
+    mireSeal: { hpPct: 0.08, atkPct: undefined, defPct: 0.15, magPct: undefined, spd: undefined, crit: undefined },
+    ironOath: { hpPct: undefined, atkPct: 0.12, defPct: 0.10, magPct: undefined, spd: undefined, crit: undefined },
+    moonTear: { hpPct: 0.10, atkPct: undefined, defPct: undefined, magPct: 0.15, spd: undefined, crit: undefined },
+    cinderSignet: { hpPct: undefined, atkPct: 0.15, defPct: undefined, magPct: undefined, spd: undefined, crit: 0.04 },
+    stormKnot: { hpPct: undefined, atkPct: undefined, defPct: undefined, magPct: 0.15, spd: 0.10, crit: undefined },
+    paleEmber: { hpPct: 0.20, atkPct: undefined, defPct: 0.12, magPct: undefined, spd: undefined, crit: undefined },
+    regentStar: { hpPct: undefined, atkPct: 0.15, defPct: 0.12, magPct: 0.15, spd: undefined, crit: undefined },
+  },
+);
+
 const variants = new Set();
 for (let seed = 1; seed <= 40; seed++) {
   const s = newGame(seed), sim = new Sim(s), [a, b] = s.advs;
@@ -55,7 +76,7 @@ assert(variants.size > 30);
   const plainLv1 = stat(a, 'atk', s); assert.equal(sim.equipRelic('rootheart', a.id), null);
   const blessedLv1 = stat(a, 'atk', s), lv1Gain = blessedLv1 - plainLv1;
   assert.equal(gearSum(a, 'atk', s), ITEMS.woodSword.atk);
-  assert.equal(gearSum(a, 'atkPct', s), 0.20);
+  assert.equal(gearSum(a, 'atkPct', s), 0.07);
   a.lv = 99; const blessedLv99 = stat(a, 'atk', s);
   a.eq.blessing = null; const plainLv99 = stat(a, 'atk', s);
   assert(blessedLv1 > plainLv1); assert(blessedLv99 - plainLv99 > lv1Gain);
