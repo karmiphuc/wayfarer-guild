@@ -88,6 +88,8 @@ function frame(now) {
 function bindInput() {
   const cv = document.getElementById('view'), rnd = game.rnd;
   const pts = new Map(); let drag = null, pinch = null, moved = false, painting = false, paintLast = null;
+  let pendingTap = null;
+  const clearTap = () => { if (pendingTap) clearTimeout(pendingTap.timer); pendingTap = null; };
   const tileAt = e => { const r = cv.getBoundingClientRect(); return rnd.toTile(e.clientX - r.left, e.clientY - r.top); };
   document.addEventListener('dragstart', e => e.preventDefault());
   cv.addEventListener('contextmenu', e => e.preventDefault());
@@ -100,6 +102,7 @@ function bindInput() {
       const mode = game.ui.buildMode;
       if (mode && (defOf(mode)?.road || defOf(mode)?.barrier || mode === 'bulldoze')) { painting = true; paint(e); }
     } else if (pts.size === 2) {
+      clearTap();
       const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: rnd.cam.zoom }; drag = null; painting = false;
     }
   });
@@ -113,6 +116,7 @@ function bindInput() {
       rnd.cam.zoom = Math.max(1, Math.min(6, Math.round(pinch.z * d / pinch.d))); return;
     }
     if (drag && Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 6) moved = true;
+    if (moved) clearTap();
     if (painting) { e.preventDefault(); paint(e); return; }
     if (drag) {
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
@@ -122,11 +126,23 @@ function bindInput() {
   const end = e => {
     const wasTap = pts.size === 1 && !moved && !pinch;
     pts.delete(e.pointerId); if (pts.size < 2) pinch = null;
-    if (wasTap && !painting) tap(e);
+    if (wasTap && !painting && e.button === 0) {
+      if (game.ui.buildMode) { clearTap(); tap(e); }
+      else if (pendingTap && Math.hypot(e.clientX - pendingTap.x, e.clientY - pendingTap.y) < 12) {
+        clearTap();
+        const err = game.sim.placeBounty(...tileAt(e));
+        game.ui.toast(err || 'Bounty posted: 2 weeks, 500G. See Quests for your patrol.');
+        game.audio.sfx(err ? 'cancel' : 'click');
+      } else {
+        if (pendingTap) { const prior = pendingTap.event; clearTap(); tap(prior); }
+        pendingTap = { x: e.clientX, y: e.clientY, event: e, timer: setTimeout(() => { clearTap(); if (!game.ui.buildMode) tap(e); }, 350) };
+      }
+    } else if (moved || painting) clearTap();
     if (!pts.size) { drag = null; painting = false; paintLast = null; }
   };
-  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', e => { pts.delete(e.pointerId); drag = null; pinch = null; painting = false; paintLast = null; });
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', e => { clearTap(); pts.delete(e.pointerId); drag = null; pinch = null; painting = false; paintLast = null; });
   cv.addEventListener('wheel', e => {
+    clearTap();
     e.preventDefault();
     const before = tileAt(e); rnd.cam.zoom = Math.max(1, Math.min(6, rnd.cam.zoom + (e.deltaY < 0 ? 1 : -1)));
     const after = tileAt(e); rnd.cam.x += before[0] - after[0]; rnd.cam.y += before[1] - after[1];
@@ -135,7 +151,7 @@ function bindInput() {
   const keys = new Set();
   window.addEventListener('keydown', e => { if (e.target.closest?.('button, input, select, textarea, [contenteditable]')) return; keys.add(e.key.toLowerCase()); if (e.key === '+' || e.key === '=') rnd.cam.zoom = Math.min(6, rnd.cam.zoom + 1); if (e.key === '-') rnd.cam.zoom = Math.max(1, rnd.cam.zoom - 1); });
   window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
-  window.addEventListener('blur', () => keys.clear());
+  window.addEventListener('blur', () => { keys.clear(); clearTap(); });
   setInterval(() => {
     const v = 0.6 / Math.max(1, rnd.cam.zoom - 1);
     if (keys.has('a') || keys.has('arrowleft')) rnd.cam.x -= v; if (keys.has('d') || keys.has('arrowright')) rnd.cam.x += v;
