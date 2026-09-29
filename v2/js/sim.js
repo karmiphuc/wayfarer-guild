@@ -574,6 +574,7 @@ export class Sim {
   }
 
   advStep(a) {
+    if (a.dead) return;
     const s = this.s;
     a.anim += DT; if (a.atkT > 0) a.atkT -= DT; if (a.emoteT > 0) a.emoteT -= DT; if (a.barkT > 0) a.barkT -= DT;
     if (a.dungeon) return;
@@ -888,7 +889,7 @@ export class Sim {
     return Math.max(1, Math.round(base * (p.alpha ? 1.5 : 1)));
   }
   hitMonster(m, dmg, a, crit) {
-    const s = this.s; if (m.hp <= 0) return;
+    const s = this.s; if (m.hp <= 0 || a.dead) return;
     m.hp -= dmg; m.hitT = 0.2; m.target = a.id;
     s.fx.push({ k: 'num', x: m.x, y: m.y - 0.7, t: 0, life: 0.8, text: String(dmg), c: crit ? '#ffd23f' : '#fff', big: crit });
     this.emit('sfx', crit ? 'crit' : 'hit');
@@ -1001,20 +1002,58 @@ export class Sim {
     return true;
   }
   hurtAdv(a, dmg, src) {
-    const s = this.s; if (a.ko || a.inside || a.dungeon) return;
+    const s = this.s; if (a.dead || a.ko || a.inside || a.dungeon) return;
     if (this.R.chance(Math.min(0.35, perkSum(a, 'dodge')))) { s.fx.push({ k: 'num', x: a.x, y: a.y - 0.8, t: 0, life: 0.7, text: 'Miss', c: '#bfe6ff' }); return; }
     if (this.happening('fog')) dmg *= 1.15;
     dmg = Math.max(1, Math.round(dmg - stat(a, 'def', s) * 0.45));
     a.hp -= dmg; a.hitT = 0.2;
-    if (this.tryRevive(a)) return;
     s.fx.push({ k: 'num', x: a.x, y: a.y - 0.8, t: 0, life: 0.8, text: String(dmg), c: '#ff6b6b' });
-    if (a.hp <= 0) {
+    if (a.hp <= 0) this.fall(a, src);
+  }
+  fall(a, src, spot = null) {
+    const s = this.s;
+    if (a.dead || a.ko || a.hp > 0 || this.tryRevive(a)) return;
+    if (this.R.chance(0.25)) {
+      if (a.task?.type === 'rescue') this.releaseRescue(a, true);
+      const carrier = this.rescueCarrier(a); if (carrier) this.releaseRescue(carrier, false, false);
+      const item = a.eq?.weapon;
+      if (ITEMS[item]?.slot === 'weapon') s.weaponDrops.push({ id: s.nextId++, item, x: spot ? spot[0] : a.x, y: spot ? spot[1] : a.y, name: a.name });
+      for (const id of Object.keys(s.frontier.relics)) if (s.frontier.relics[id] === a.id) s.frontier.relics[id] = null;
+      for (const b of s.buildings) if (b.occ) b.occ = b.occ.filter(id => id !== a.id);
+      for (const m of s.mons) if (m.target === a.id) { m.target = null; m.path = null; }
+      const pet = s.monsters.find(m => m.id === a.partner); if (pet) { pet.riding = false; pet.path = null; }
+      for (const q of s.activeQuests) q.members = q.members.filter(id => id !== a.id);
+      a.dead = true; a.hp = 0; a.task = null; a.path = null; a.inside = null; a.dungeon = false; a.rescueBy = null;
+      s.advs = s.advs.filter(o => o !== a);
+      log(s, `${a.name} died fighting ${src}.${ITEMS[item]?.slot === 'weapon' ? ' Their weapon can be recovered from the map or Guild Stash.' : ''}`, 'bad');
+      this.emit('sfx', 'ko');
+    } else {
       if (a.task?.type === 'rescue') this.releaseRescue(a, true);
       a.hp = 0; a.ko = true; a.koT = 0; a.path = null; a.sat = Math.max(0, a.sat - 8);
       a.rescueBy = null; a.rescueRetry = 0;
       if (a.task && a.task.type !== 'quest') a.task = null;
       log(s, `${a.name} was knocked out by a ${src}!`, 'bad'); this.emote(a, 'skull'); this.emit('sfx', 'ko');
     }
+  }
+  recoverWeapon(dropId) {
+    const s = this.s, drop = s.weaponDrops.find(d => d.id === dropId);
+    if (!drop || ITEMS[drop.item]?.slot !== 'weapon') return 'Weapon already recovered or unavailable';
+    s.weaponStash[drop.item] = (s.weaponStash[drop.item] || 0) + 1;
+    s.weaponDrops = s.weaponDrops.filter(d => d.id !== dropId);
+    log(s, `${ITEMS[drop.item].name} recovered to the Guild Stash.`, 'good');
+    return null;
+  }
+  equipRecoveredWeapon(itemId, pawnId) {
+    const s = this.s, a = s.advs.find(o => o.id === pawnId);
+    if (ITEMS[itemId]?.slot !== 'weapon' || !(s.weaponStash[itemId] > 0)) return 'Weapon unavailable';
+    if (!a?.resident || a.ko || a.inside || a.dungeon || this.questForPawn(a.id)) return 'Choose an available, conscious resident outside';
+    const old = a.eq.weapon;
+    if (old === itemId) return 'Already equipped';
+    s.weaponStash[itemId]--; if (!s.weaponStash[itemId]) delete s.weaponStash[itemId];
+    if (ITEMS[old]?.slot === 'weapon') s.weaponStash[old] = (s.weaponStash[old] || 0) + 1;
+    a.eq.weapon = itemId;
+    log(s, `${a.name} equipped ${ITEMS[itemId].name} from the Guild Stash.`, 'good');
+    return null;
   }
 
   // ---------- monsters ----------
@@ -1526,7 +1565,7 @@ export class Sim {
     const party = s.advs.filter(a => q.members.includes(a.id));
     if (q.kind === 'dungeon') return this.dungeonTick(q, party);
     const alive = s.mons.filter(m => m.quest === q.id && m.hp > 0);
-    if (!alive.length) {
+    if (!alive.length && party.length) {
       s.gold += q.reward.gold; s.tp += q.reward.tp; s.pop += q.reward.pop; s.cleared++;
       if (q.frontier) this.captureFrontier(q.frontier);
       else if (q.camp) {
@@ -1568,12 +1607,13 @@ export class Sim {
     for (const a of up) {
       const dmg = Math.max(1, Math.round(maxHp(a, s) * 0.22 * Math.pow(foe / Math.max(1, pow), 1.5) * R.range(0.7, 1.3) - heal / up.length));
       if (a.potions > 0 && a.hp - dmg < maxHp(a, s) * 0.35) { a.potions--; a.hp = Math.min(maxHp(a, s), Math.round(a.hp + this.potion().heal)); }
-      a.hp -= dmg; if (a.hp <= 0 && !this.tryRevive(a)) { a.hp = 0; a.ko = true; a.koT = 0; }
-      this.gainXp(a, Math.round(foe * 0.35));
+      a.hp -= dmg; if (a.hp <= 0) this.fall(a, 'the Old Cave', q.spot);
+      if (!a.dead) this.gainXp(a, Math.round(foe * 0.35));
     }
     s.stats.kills += 3; s.stats.monthKills += 3;
     const zm = ['herb', 'wood', 'hide', 'ore', 'crystal'];
     const mat = zm[Math.min(4, q.zone + R.int(-1, 1))]; s.mats[mat] = (s.mats[mat] || 0) + R.int(1, 2 + q.zone);
+    party = party.filter(a => !a.dead);
     if (party.every(a => a.ko)) { log(s, `The party was overwhelmed on floor ${q.floor} of the Old Cave.`, 'bad'); this.endDungeon(q, party, false); return; }
     log(s, `Old Cave floor ${q.floor}/${q.floors} cleared (${MATS[mat].name} found).`);
     if (q.floor >= q.floors) this.endDungeon(q, party, true);
@@ -1617,6 +1657,8 @@ export class Sim {
     return null;
   }
   canChangeJob(a, jobId) {
+    if (!a || a.dead || !JOBS[jobId]) return 'Adventurer or class unavailable';
+    if (a.ko || a.dungeon || this.questForPawn(a.id)) return 'Wait until this adventurer is conscious and back from their quest';
     const j = JOBS[jobId]; if (jobId === a.job) return 'Current job';
     if (!a.jobLv[jobId] && (a.jobLv[a.job] || 1) < MASTERY) return `Master ${JOBS[a.job].name} first (Lv${a.jobLv[a.job] || 1}/${MASTERY})`;
     for (const r of j.req || []) if ((a.jobLv[r] || 0) < MASTERY) return `Master ${JOBS[r].name} first`;
@@ -1624,6 +1666,20 @@ export class Sim {
     return null;
   }
   jobCost(jobId) { return TIER_TP[JOBS[jobId].tier]; }
+  changeMasteredJobs(choices) {
+    const entries = Object.entries(choices), s = this.s;
+    if (!entries.length) return 'Choose at least one next class';
+    let cost = 0;
+    for (const [id, job] of entries) {
+      const a = s.advs.find(a => a.id === +id);
+      if (!a?.resident || (a.jobLv[a.job] || 0) < MASTERY) return 'The mastered resident list changed; review your choices';
+      const err = this.canChangeJob(a, job); if (err) return `${a.name}: ${err}`;
+      cost += this.jobCost(job);
+    }
+    if (s.tp < cost) return `${cost} TP needed for all selected changes`;
+    for (const [id, job] of entries) this.changeJob(s.advs.find(a => a.id === +id), job);
+    return null;
+  }
   changeJob(a, jobId) {
     const err = this.canChangeJob(a, jobId); if (err) return err;
     this.s.tp -= this.jobCost(jobId); a.job = jobId; a.jobLv[jobId] = a.jobLv[jobId] || 1; a.jobXp = 0;

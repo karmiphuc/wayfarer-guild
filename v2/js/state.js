@@ -60,6 +60,7 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     frontier: { completed: {}, relics: {}, petRewards: {}, rolls: {} },
     ground: [], roads: '', props: [],
     buildings: [], advs: [], mons: [], monsters: [], fx: [], folk: [], animals: [],
+    weaponDrops: [], weaponStash: {},
     unlocked: { woodSword: true, cloth: true, ironCap: true, potion: true },
     quests: [], activeQuests: [], cleared: 0, bossesBeaten: {},
     titles: {}, events: [], log: [],
@@ -298,7 +299,14 @@ function uniqueName(s, R) {
   return free.length ? R.pick(free) : R.pick(NAMES) + ' ' + 'IVX'[R.int(0, 2)];
 }
 
-// Give an adventurer a job as if they had earned it; keep their existing appearance.
+// Portrait identity is permanent; the field outfit follows the current class without rerolling.
+export function pawnSprite(a) {
+  const sprites = JOBS[a.job]?.sprites;
+  if (!sprites?.length || sprites.includes(a.spr)) return a.spr;
+  return sprites[Math.abs(a.id || 0) % sprites.length];
+}
+
+// Give an adventurer a job as if they had earned it; keep their existing portrait.
 export function teachJob(a, jobId, R) {
   a.job = jobId; a.jobLv[jobId] = a.jobLv[jobId] || 1;
   const teach = j => { for (const r of JOBS[j].req || []) { teach(r); a.jobLv[r] = Math.max(a.jobLv[r] || 0, MASTERY); if (!a.perks.includes(JOBS[r].perk)) a.perks.push(JOBS[r].perk); } };
@@ -373,6 +381,7 @@ export function migrate(s) {
   s.flags ??= {}; s.flags.nextCampPatrol ??= 0; s.flags.bossRematches ??= 0;
   s.flags.pioneer ??= null; s.flags.pioneerPet ??= null;
   s.fx = []; s.folk = s.folk || []; s.animals = s.animals || [];
+  s.weaponDrops ??= []; s.weaponStash ??= {};
   for (const m of s.monsters || []) m.alpha = m.alpha === true;
   s.flags.alphaUpgrades ??= (s.monsters || []).filter(m => m.alpha).length;
   if (!Array.isArray(s.activeQuests)) s.activeQuests = [];

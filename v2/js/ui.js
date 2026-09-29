@@ -1,7 +1,7 @@
 // DOM UI: top bar, ticker, bottom menu panels, inspector, fanfares. Uses event delegation via data-act.
 import { FAC, DECOR, SPR, JOBS, ITEMS, SHOP_SLOTS, MATS, MONSTERS, BOSSES, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
 import { IMG, iconCanvas, itemIcon, keyIcon, goldified, tinted } from './assets.js';
-import { defOf, maxHp, stat, save, valid, migrate, newGame, legacyGame, seedCode, parseSeed, MASTERY } from './state.js';
+import { defOf, maxHp, stat, save, valid, migrate, newGame, legacyGame, seedCode, parseSeed, pawnSprite, MASTERY } from './state.js';
 import { CAMP_PATROLS, VISITOR_CAP } from './data.js';
 import { getFrontiers } from './world.js';
 import { campProfile } from './camps.js';
@@ -22,6 +22,7 @@ export class UI {
     this.game = game; this.panel = null; this.buildCat = 'lodging'; this.pointerDown = false; this.lastHtml = {};
     this.questPick = null; this.frontierPick = null; this.frontierParty = []; this.relicPick = null; this.campPick = null; this.campParty = [];
     this.jobPick = false; this.partnerPick = false; this.seenLog = 0;
+    this.masteryChoices = {}; this.stashPick = null;
     this.buildMode = null; this.showNames = false;
     this.bind();
   }
@@ -30,6 +31,11 @@ export class UI {
   bind() {
     document.querySelectorAll('.mbtn').forEach(b => b.addEventListener('click', () => { this.game.audio.sfx('open'); this.toggle(b.dataset.panel); }));
     $('#panel-close').addEventListener('click', () => this.close());
+    $('#panel-body').addEventListener('change', e => {
+      const id = e.target.dataset.masterPawn; if (!id) return;
+      if (e.target.value) this.masteryChoices[id] = e.target.value; else delete this.masteryChoices[id];
+      this.renderPanel();
+    });
     for (const el of [$('#panel'), $('#inspector'), $('#buildbar'), $('#charter')]) {
       el.addEventListener('pointerdown', () => { this.pointerDown = true; });
       el.addEventListener('pointerup', () => { setTimeout(() => this.pointerDown = false, 150); });
@@ -40,7 +46,7 @@ export class UI {
     $('#btn-names').addEventListener('click', () => { this.showNames = !this.showNames; $('#btn-names').classList.toggle('on', this.showNames); });
     $('#tb-happen').addEventListener('click', () => { this.game.audio.sfx('open'); this.open('village'); });
     window.addEventListener('keydown', e => {
-      if (e.target.tagName === 'INPUT' || this.game.modal) return;
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || this.game.modal) return;
       if (e.key === 'Escape') { if (this.buildMode) this.exitBuild(); else if (this.panel) this.close(); else this.deselect(); }
       if (e.target.closest?.('button, input, select, textarea, [contenteditable]')) return;
       if (e.key === ' ') { this.setSpeed(this.game.speed ? 0 : 1); e.preventDefault(); }
@@ -109,7 +115,7 @@ export class UI {
     this.lastHtml[key] = html; el.innerHTML = html; return true;
   }
   renderPanel() {
-    const titles = { jobs: 'Class Hall', build: 'Build', people: 'Adventurers', quests: 'Quest Board', frontiers: 'Frontiers', camps: 'Bandit Camps', develop: 'Blacksmith · Develop', village: 'Village', system: 'System', newgame: 'New Game' };
+    const titles = { mastered: 'Mastered Residents', stash: 'Guild Stash', jobs: 'Class Hall', build: 'Build', people: 'Adventurers', quests: 'Quest Board', frontiers: 'Frontiers', camps: 'Bandit Camps', develop: 'Blacksmith · Develop', village: 'Village', system: 'System', newgame: 'New Game' };
     $('#panel-title').textContent = titles[this.panel];
     const body = $('#panel-body');
     const active = document.activeElement, focusKey = body.contains(active) ? active.dataset.focusKey : null;
@@ -171,6 +177,7 @@ export class UI {
   panel_people() {
     const s = this.s, advs = s.advs.slice().sort((a, b) => (b.resident - a.resident) || b.lv - a.lv);
     let h = `<div class="muted"><strong>${advs.length}/${VISITOR_CAP[s.stars] ?? 30} total pawns</strong> · ${advs.filter(a => a.resident).length} residents · ${advs.filter(a => !a.resident).length} visitors · ${s.monsters.length} village monsters</div><div class="grid" style="margin-top:6px">`;
+    h = `<div class="row"><button class="btn" data-act="open" data-k="mastered">Mastered residents (${advs.filter(a => a.resident && (a.jobLv[a.job] || 0) >= MASTERY).length})</button><button class="btn" data-act="open" data-k="stash">Guild Stash (${s.weaponDrops.length} to recover)</button></div>` + h;
     for (const a of advs) {
       const hpR = a.hp / maxHp(a, s), jobLv = a.jobLv[a.job] || 1, mastered = jobLv >= MASTERY;
       h += `<div class="card" data-act="selAdv" data-id="${a.id}"><div class="thumb"><i data-face="f_${a.spr}" data-scale="1"></i></div><div class="meta">
@@ -199,11 +206,44 @@ export class UI {
     if (t.type === 'hunt' && t.defend) return 'Defending village territory';
     if (a.dungeon) return 'Exploring the Old Cave'; return { visit: 'Heading into town', hunt: 'Hunting monsters', return: 'Returning to town', stroll: 'Strolling', camp: 'Napping outside', leave: 'Leaving the village', quest: 'On a quest!' }[t.type] || t.type;
   }
+  panel_stash() {
+    const s = this.s;
+    let h = '<p class="muted">At zero HP, revival saves a pawn first. Otherwise: 25% permanent death, 75% rescuable knockout. Dropped weapons never expire; relic blessings return to the vault.</p><div class="section">Weapons to recover</div>';
+    for (const d of s.weaponDrops) h += `<div class="card"><i data-item="${d.item}"></i><div class="meta"><b>${esc(ITEMS[d.item].name)}</b><div class="sub">Left by ${esc(d.name)}</div><button class="btn sm" data-act="recoverWeapon" data-id="${d.id}">Recover</button><button class="btn sm" data-act="mapWeapon" data-id="${d.id}">Show on map</button></div></div>`;
+    if (!s.weaponDrops.length) h += '<p class="muted">No weapons awaiting recovery.</p>';
+    h += '<div class="section">Recovered weapons</div><p class="muted">Choose a weapon, then an available resident. Their previous weapon returns here.</p>';
+    for (const [id, count] of Object.entries(s.weaponStash)) if (count > 0) h += `<button class="btn ${this.stashPick === id ? 'sel' : ''}" data-act="pickStash" data-id="${id}" aria-pressed="${this.stashPick === id}">${esc(ITEMS[id].name)} ×${count}</button>`;
+    if (!Object.keys(s.weaponStash).length) h += '<p class="muted">The stash is empty.</p>';
+    if (s.weaponStash[this.stashPick] > 0) {
+      h += `<div class="section">Assign ${esc(ITEMS[this.stashPick].name)}</div>`;
+      for (const a of s.advs.filter(a => a.resident)) {
+        const blocked = a.ko || a.inside || a.dungeon || this.sim.questForPawn(a.id) || a.eq.weapon === this.stashPick;
+        h += `<button class="btn" data-act="equipStash" data-id="${this.stashPick}" data-pawn="${a.id}" ${blocked ? 'disabled' : ''}>${esc(a.name)} · ${JOBS[a.job].name}${blocked ? ' (unavailable)' : ''}</button>`;
+      }
+    }
+    return h;
+  }
+  panel_mastered() {
+    const s = this.s, choices = this.masteryChoices || {}, pawns = s.advs.filter(a => a.resident && (a.jobLv[a.job] || 0) >= MASTERY);
+    const selected = Object.entries(choices), cost = selected.reduce((n, [, j]) => n + (JOBS[j] ? this.sim.jobCost(j) : 0), 0);
+    let h = `<p class="muted">Residents who mastered their current class. Choose their next classes and apply them together. Portraits, mastery perks and equipment are kept.</p><div class="row"><b>${selected.length} selected · ${cost} TP / ${s.tp} available</b><button class="btn" data-act="applyMastered" ${!selected.length || cost > s.tp ? 'disabled' : ''}>Apply selected changes</button><button class="btn sm" data-act="clearMastered">Clear choices</button></div>`;
+    if (!pawns.length) h += '<p class="muted">No residents have mastered their current class yet.</p>';
+    for (const a of pawns) {
+      h += `<div class="card"><i data-face="f_${a.spr}"></i><div class="meta"><b>${esc(a.name)}</b><div class="sub">${JOBS[a.job].name} · Mastered · ${esc(this.taskLabel(a))}</div><select class="btn" aria-label="Next class for ${esc(a.name)}" data-master-pawn="${a.id}" data-focus-key="mastery:${a.id}"><option value="">Keep current class</option>`;
+      for (const [id, j] of Object.entries(JOBS)) {
+        if (id === a.job) continue;
+        const block = this.sim.canChangeJob(a, id);
+        h += `<option value="${id}" ${choices[a.id] === id ? 'selected' : ''} ${block ? 'disabled' : ''}>${j.name} · ${this.sim.jobCost(id)} TP${(a.jobLv[id] || 0) >= MASTERY ? ' · already mastered' : ''}${block ? ' · ' + esc(block) : ''}</option>`;
+      }
+      h += '</select></div></div>';
+    }
+    return h;
+  }
   partyChoice(a, selected, action, rec) {
     const job = JOBS[a.job], visitor = a.resident ? '' : ' · visitor', low = a.lv < rec ? ' · below suggested level' : '';
     const label = `${a.name}, ${job.name}, level ${a.lv}${a.resident ? '' : ', visitor'}`;
     return `<button type="button" class="card party-choice ${selected ? 'sel' : ''}" data-act="${action}" data-id="${a.id}" data-focus-key="${action}:${a.id}" aria-pressed="${selected}" aria-label="${esc(label)}">
-      <span class="thumb"><i data-char="${a.spr}"></i></span><span class="meta"><span class="name">${esc(a.name)}</span><span class="sub">${job.name} Lv${a.lv}${visitor}${low}</span></span>
+      <span class="thumb"><i data-char="${pawnSprite(a)}"></i></span><span class="meta"><span class="name">${esc(a.name)}</span><span class="sub">${job.name} Lv${a.lv}${visitor}${low}</span></span>
       <strong class="party-state">${selected ? '<span aria-hidden="true">✓</span> Selected' : 'Select'}</strong></button>`;
   }
   panel_quests() {
@@ -396,7 +436,7 @@ export class UI {
     let h = a ? `<div class="row"><i data-face="f_${a.spr}"></i><div><b>${esc(a.name)}</b> · ${JOBS[a.job].name} Job Lv${a.jobLv[a.job] || 1} · <span class="muted">Town Points ${s.tp}</span>
       <div class="muted">Master a job (Job Lv${MASTERY}) to change jobs and keep its perk forever. Perks stack.</div></div></div>` : `<p class="muted">Every class, its mastery perk and what it takes to unlock it.</p>`;
     this.wideGrid = true;
-    h += '<p class="muted">Class changes keep your appearance, portrait and all equipment. Any weapon is usable; a preferred type grants +10% damage and +1 combat speed (faster attacks). Other weapons keep their normal stats with no penalty.</p>';
+    h += '<p class="muted">Class changes keep your portrait and all equipment; your field outfit changes to match the class. Any weapon is usable; a preferred type grants +10% damage and +1 combat speed (faster attacks). Other weapons keep their normal stats with no penalty.</p>';
     const TN = ['Starter', 'Tier 1', 'Tier 2 · advanced', 'Tier 3 · elite', 'Tier 4 · legendary'];
     for (let t = 0; t <= 4; t++) {
       h += `<div class="section">${TN[t]} <span class="muted">${TIER_TP[t] ? TIER_TP[t] + ' TP' : ''}</span></div><div class="grid">`;
@@ -663,6 +703,12 @@ export class UI {
       case 'tool': this.enterBuild(d.k); break;
       case 'exitBuild': this.exitBuild(); break;
       case 'selAdv': { const adv = s.advs.find(o => o.id === +d.id); if (adv) { this.select({ kind: 'adv', id: adv.id }); this.game.centerOn(adv.x, adv.y); } break; }
+      case 'recoverWeapon': err(sim.recoverWeapon(+d.id)); this.renderPanel(); break;
+      case 'mapWeapon': { const drop = s.weaponDrops.find(o => o.id === +d.id); if (drop) { this.close(); this.game.centerOn(drop.x, drop.y); } break; }
+      case 'pickStash': this.stashPick = d.id; this.renderPanel(); break;
+      case 'equipStash': err(sim.equipRecoveredWeapon(d.id, +d.pawn)); this.renderPanel(); this.lastHtml.insp = null; break;
+      case 'clearMastered': this.masteryChoices = {}; this.renderPanel(); break;
+      case 'applyMastered': if (err(sim.changeMasteredJobs(this.masteryChoices))) this.masteryChoices = {}; this.renderPanel(); this.lastHtml.insp = null; break;
       case 'deselect': this.deselect(); break;
       case 'gift': err(sim.gift(s.advs.find(o => o.id === +d.id), 50)); break;
       case 'jobs': this.jobFor = +d.id; this.open('jobs'); break;

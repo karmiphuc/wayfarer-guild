@@ -121,7 +121,7 @@ bonuses scale the fully developed pawn. `maxHp(a, s) = stat(a, 'hp', s)`.
 | Spawning | `spawner, edgeSpawn, spawnMonster, spawnBoss, randomCellInZone, zoneMons` | residents and visitors together are limited to `VISITOR_CAP[stars]` (5/5/10/15/20/30). All arrival routes obey this limit; existing over-cap saves retain their pawns and block new arrivals. Regular visitors arrive from the south edge, fewer while popularity and inn beds are low; arrival chance per 0.5 s tick = min(0.1, 0.015 + pop/80000) × bonuses. Wild spawns roll `ELITE_CHANCE` (6%) for an Elite (hp ×1.8, atk ×1.4, def ×1.3; rewards ×2.5, drops ×2, treasure ×3). Zones keep `ZONE_POP` monsters (× charter) picked from `zoneMons(z)` = this world's roster (falls back to `ZONE_MONS` in `data.js`), levels from `ZONE_LV` |
 | Adventurer AI | `decide, advStep, insideStep, settleVisit, addSat, tryMoveIn, rescueTarget, rescueStep, releaseRescue` | utility scores (hunger, energy, HP, gear upgrade on sale, potions, training, hunting, fun, leaving) × personality multipliers (`pmul`). Tasks: `visit, hunt, return, stroll, camp, leave, quest, rescue`. Visits hide the adventurer inside for `dur` seconds, then `settleVisit` charges money (village income) and adds satisfaction. Satisfaction ≥ 60 + free home → moves in. |
 | Movement | `walkTo, speed, stepToward` | A* path cached per goal + grid version; an optional `PathGrid.find()` predicate constrains defenders to owned land; monsters/pets use straight steps with collision |
-| Combat | `huntStep, fight, hitMonster, killMonster, treasure, hurtAdv, koStep` | adventurers hunt in the zone their power allows (`zoneFor`); healers heal first; perks applied here (see §5). Kills: XP shared with adventurers within 5 tiles, gold to the killer, materials to the village, 2.5% treasure chest (unlocks gear), taming chance if a Stable exists. At 0 HP a pawn stays fallen; one free healthy pawn claims it, carries it to a usable bed, or stabilizes it in the field after 60 seconds when no bed is reachable. Rescue claims release safely if the carrier becomes invalid. |
+| Combat | `huntStep, fight, hitMonster, killMonster, treasure, hurtAdv, koStep` | adventurers hunt in the zone their power allows (`zoneFor`); healers heal first; perks applied here (see §5). Kills: XP shared with adventurers within 5 tiles, gold to the killer, materials to the village, 2.5% treasure chest (unlocks gear), taming chance if a Stable exists. At 0 HP revival resolves first, then an unrevived pawn has one 25% permanent-death roll. The other 75% stay fallen; one free healthy pawn claims it, carries it to a usable bed, or stabilizes it in the field after 60 seconds when no bed is reachable. Rescue claims release safely if the carrier becomes invalid. |
 | Monsters | `monStep, petStep, towerStep, fleeStep, chargeStep, raidStrength, spawnRaider` | ordinary outlaws and generated raiders use human sheets and visible weapons and cannot be tamed. Raid strength follows village rank and, at ★5, the leading party's average level; generated classes can use melee, range, magic or healing. Aggro radius 2.2 (boss 4), leash 9 tiles, never enter town — except raiders: stampedes charge the town edge and bandits may chase into town. The Golden Slime flees adventurers. Pets follow their partner and become mounts at bond ≥ 50. Towers credit kills to `s.advs[0]` (known bug, #17). |
 | Quests | `refreshQuests, frontierQuest, campQuest, autoQuestParty, questCandidates, questReady, questCost, instantQuest, startQuest, questStep, questCheck, checkQuest, dungeonTick, endDungeon` | any available quests concurrently; each owns its party, targets and completion. Outbreak: kill N mobs; boss: next 2 undefeated and inactive bosses with `star ≤ stars`; dungeon: cave at `cavePos(s)`, floors every 7 s; frontier and camp entries are virtual quests resolved by string ID |
 | Happenings & charters | `rollHappening, startHappening, tickHappenings, endHappening, happening(id), merchantOffer, rally, npcStep, charter(key), charterHappen(id), chooseCharter, placeFree, refund` | see §4b |
@@ -150,8 +150,11 @@ the class's preferred `wt` types for +10% hit damage (after defense, before crit
 `1.1 / (job.spd + matchBonus)`; movement and healing speed are unchanged. Abstract cave offense and weapon upgrade scoring
 include the corresponding damage-rate bonus. An unequipped default sprite grants no weapon bonus.
 
-An adventurer's `spr` is assigned once by `makeAdventurer()`. Class changes and `teachJob()` preserve it, so their world
-appearance and portrait stay recognizable. Existing saves keep their current sprite; roguelite carryover preserves it.
+An adventurer's `spr` is assigned once by `makeAdventurer()`. Class changes and `teachJob()` preserve this portrait identity.
+`pawnSprite()` derives a stable field outfit from the current class and pawn ID, including matching weapon grip and KO art.
+Existing saves and roguelite carryover preserve portraits without new saved appearance fields.
+Adventurers > Mastered residents lists residents whose current job is mastered. Choose each next job, then apply the batch;
+`changeMasteredJobs()` validates all prerequisites, availability and the total TP cost before changing anyone.
 
 `JOBS.attack` identifies bow specialists (`bow`), innate casters (`magic`), and innate throwing classes (`throw`);
 omitted means melee. `attackProfile()` derives range, damage type and projectile from current equipment without saved
@@ -468,3 +471,14 @@ failed save keeps the current village open. Masteries are rolled after confirmat
 Measured with `node v2/tests/bot.mjs 30 1`: ≈100–130 µs per sim step with ~65 adventurers (budget: < 400 µs).
 Rules: no allocation-heavy work per step (cache grids/paths), no per-frame DOM rebuilds, cull off-screen drawing,
 keep visitors capped, keep `s.log` bounded (60).
+
+### Mortality and weapon recovery
+
+`fall()` handles field and cave defeats: innate revival, then Phoenix Sigil, then one seeded 25% death roll.
+A surviving KO cannot roll again until recovered. Death removes the pawn, frees home/occupancy and quest membership,
+releases rescue claims and pet riding, and returns owned legendary blessings to the frontier vault. Delayed attacks from
+removed pawns cannot award XP or loot. Empty parties fail their quests without victory rewards.
+`weaponDrops[]` stores `{id,item,x,y,name}` for the equipped weapon, with no expiry; cave drops appear at the entrance.
+Click a map crate or use Adventurers > Guild Stash to recover it. `weaponStash` counts original weapon IDs.
+Assignment to an available resident exchanges the previous weapon back into the stash. Recovery is idempotent;
+new games and migrations default both collections empty. Old KOs remain KOs and are not retrospectively rolled for death.

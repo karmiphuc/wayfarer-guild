@@ -183,6 +183,8 @@ function bindInput() {
       else if (FAC[mode]) { game.ui.exitBuild(); const b = s.buildings[s.buildings.length - 1]; game.ui.select({ kind: 'b', id: b.id }); game.ui.toast(`${defOf(mode).name} built!`); }
       return;
     }
+    const drop = !mode && s.weaponDrops.find(d => Math.hypot(d.x + 0.5 - tx, d.y + 0.3 - ty) < 0.9);
+    if (drop) { game.ui.toast(game.sim.recoverWeapon(drop.id) || 'Weapon recovered to Guild Stash'); return; }
     // pick: adventurers > monsters > buildings (sprites extend upward, so test a little above)
     let best = null, bd = 0.9;
     for (const a of s.advs) { if (a.inside) continue; const d = Math.hypot(a.x + 0.5 - tx, a.y + 0.3 - ty); if (d < bd) { bd = d; best = { kind: 'adv', id: a.id }; } }

@@ -35,15 +35,21 @@ for (let w = 0; w < months * 4; w++) {
   if (s.quests.length) {
     const choices = s.quests.filter(q => q.fee < s.gold - 200).sort((a, b) => (b.boss ? 1 : 0) - (a.boss ? 1 : 0) || a.zone - b.zone);
     for (const q of choices) {
-      if (sim.questReady(q).length < 4 || s.gold < q.fee + 200) continue;
-      if (s.gold < q.fee + 1500) { const e = sim.instantQuest(q.id); if (e) throw new Error('instant quest: ' + e); continue; }
-      const party = sim.autoQuestParty(q.id);
+      // With permanent death, send fit, level-ready pawns rather than repeatedly sacrificing random juniors.
+      const ready = sim.questReady(q).filter(a => a.lv >= sim.questLevel(q) && a.hp >= maxHp(a, s) * 0.8).sort((a, b) => b.lv - a.lv);
+      if (ready.length < 4 || s.gold < q.fee + 200) continue;
+      const party = ready.slice(0, 4).map(a => a.id);
       if (party.length < 4) continue;
-      const extra = sim.questCandidates().filter(a => !party.includes(a.id) && a.lv >= sim.questLevel(q)).slice(0, 4);
+      const extra = ready.slice(4, 8);
       if (s.gold > sim.questCost(q, party.length + extra.length) + 1500) party.push(...extra.map(a => a.id));
       if (s.gold < sim.questCost(q, party.length) + 200) continue;
       const e = sim.startQuest(q.id, party); if (e) throw new Error('quest: ' + e);
     }
+  }
+  for (const drop of [...s.weaponDrops]) sim.recoverWeapon(drop.id);
+  for (const a of s.advs.filter(a => a.resident && !a.eq.weapon)) {
+    const item = Object.keys(s.weaponStash).find(id => JOBS[a.job].wt.includes(ITEMS[id].type));
+    if (item) sim.equipRecoveredWeapon(item, a.id);
   }
   // events and jobs
   if (s.tp >= 40 && s.buildings.length > 18) sim.runEvent('expand');
