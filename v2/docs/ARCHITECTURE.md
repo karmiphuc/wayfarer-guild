@@ -479,7 +479,7 @@ Old saves initialize missing tower health at their current level; damaged health
 Enemies without a pawn target acquire towers within four tiles. Tower shots explicitly draw retaliation,
 instead of assigning aggro to the pawn credited with the kill. A pawn hitting the enemy can draw it back.
 Melee enemies path to reachable attack cells outside the blocked tower footprint; ranged and magic enemies
-use their existing weapon profiles. Camp sentries retain their five-tile leash. At zero HP the tower is removed
+use their existing weapon profiles. Camp sentries retain their bounded camp defense area. At zero HP the tower is removed
 without refund, stops firing, clears enemy references, and updates paths and village traits. Other buildings
 and palisades remain unchanged. Damaged towers show a map health bar; the inspector always lists tower HP.
 
@@ -495,7 +495,10 @@ Low HP, exhaustion or starvation releases the pawn to return home; KO/death remo
 Quests lists the patrol, remaining time, Watch and Recall (no refund). No boss challenge starts automatically.
 
 Each live bandit camp maintains two town-level-scaled human `campGuard` sentries, separate from attack waves.
-They wander and fight within five tiles and never rally the whole village. Clearing or challenging the camp
+They wander within five tiles, detect intruders throughout that area, and defend up to ten tiles from camp.
+Both guards respond when either is hit (including tower fire), then return to the roaming area when attackers
+leave the defense area. Movement uses the defense boundary during combat, including targets on its edge;
+displaced guards can always path home. They never rally the whole village. Clearing or challenging the camp
 removes them; a fallen sentry is replaced after one week (`guardAt`, migration default 0). The camp's existing
 8-20 week clear cooldown and outgoing attack schedules are unchanged. At most 32 living sentries exist.
 

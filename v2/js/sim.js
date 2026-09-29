@@ -15,6 +15,7 @@ export const DT = 0.1;              // seconds per sim step
 export const WEEK_SECONDS = 30;     // one in-game week at 1x
 export const BOUNTY_COST = 500;
 export const BOUNTY_RADIUS = 5;
+const CAMP_DEFENSE_RADIUS = 10;
 export const ALPHA_PET_COST = Object.freeze({ gold: 10000, wood: 100, hide: 100, herb: 100, ore: 100, crystal: 100 });
 
 const RESCUE_DELAY = 4;
@@ -839,13 +840,16 @@ export class Sim {
     if (Math.abs(a.x - gx) < 0.15 && Math.abs(a.y - gy) < 0.15) { a.path = null; return true; }
     const defend = (holdTerritory || !!a.task?.defend) && townDist(this.s, Math.round(a.x), Math.round(a.y)) === 0;
     const patrol = a.task?.type === 'bounty' && a.task.arrived ? this.bountyForPawn(a.id) : a.raid === 'campGuard' ? this.s.banditCamps.find(c => c.id === a.sourceCamp) : null;
-    const allowed = patrol ? (x, y) => Math.hypot(x - patrol.x, y - patrol.y) <= (patrol.radius || 5) : defend ? (x, y) => townDist(this.s, x, y) === 0 : null;
-    if (!a.path || a.pathDefend !== defend || a.pathGoal !== gx + ',' + gy || a.pathV !== this.grid.version || (!a.path.length && this.s.tick >= a.pathRetry)) {
+    const campGuard = patrol && a.raid === 'campGuard', distance = patrol ? Math.hypot(a.x - patrol.x, a.y - patrol.y) : 0;
+    const radius = campGuard && (a.target || a.towerTarget || distance > 5) ? CAMP_DEFENSE_RADIUS : patrol?.radius || 5;
+    const pathRadius = patrol && (!campGuard || distance <= radius) ? radius : 0;
+    const allowed = pathRadius ? (x, y) => Math.hypot(x - patrol.x, y - patrol.y) <= pathRadius : defend ? (x, y) => townDist(this.s, x, y) === 0 : null;
+    if (!a.path || a.pathRadius !== pathRadius || a.pathDefend !== defend || a.pathGoal !== gx + ',' + gy || a.pathV !== this.grid.version || (!a.path.length && this.s.tick >= a.pathRetry)) {
       const sx = Math.round(a.x), sy = Math.round(a.y);
       const start = this.grid.walkable(sx, sy) ? [sx, sy] : (this.grid.nearestWalkable(sx, sy) || [sx, sy]);
       const goal = this.grid.walkable(gx, gy) ? [gx, gy] : this.grid.nearestWalkable(gx, gy);
       if (!goal) return false;
-      a.path = this.grid.find(start[0], start[1], goal[0], goal[1], undefined, allowed) || []; a.pathGoal = gx + ',' + gy; a.pathV = this.grid.version; a.pathDefend = defend; a.pi = 0;
+      a.path = this.grid.find(start[0], start[1], goal[0], goal[1], undefined, allowed) || []; a.pathGoal = gx + ',' + gy; a.pathV = this.grid.version; a.pathDefend = defend; a.pathRadius = pathRadius; a.pi = 0;
       a.pathEnd = goal; a.pathRetry = this.s.tick + 10;
     }
     const node = a.path[a.pi]; if (!node) return !!a.pathEnd && Math.hypot(a.x - a.pathEnd[0], a.y - a.pathEnd[1]) < 0.5;
@@ -975,6 +979,7 @@ export class Sim {
   hitMonster(m, dmg, a, crit) {
     const s = this.s; if (m.hp <= 0 || a.dead) return;
     m.hp -= dmg; m.hitT = 0.2; m.target = a.id; m.towerTarget = null;
+    if (m.raid === 'campGuard') for (const mate of s.mons) if (mate.raid === 'campGuard' && mate.sourceCamp === m.sourceCamp && mate.hp > 0) { mate.target = a.id; mate.towerTarget = null; }
     s.fx.push({ k: 'num', x: m.x, y: m.y - 0.7, t: 0, life: 0.8, text: String(dmg), c: crit ? '#ffd23f' : '#fff', big: crit });
     this.emit('sfx', crit ? 'crit' : 'hit');
     if (m.hp <= 0) this.killMonster(m, a);
@@ -1158,7 +1163,7 @@ export class Sim {
     }
     const M = m.boss ? BOSSES[m.boss] : MONSTERS[m.type];
     const spd = (m.boss ? 0.7 : m.moveSpeed || M.spd) * 1.2 * DT;
-    if (guard && Math.hypot(m.x - guard.x, m.y - guard.y) > 5) { m.target = null; this.walkTo(m, guard.x, guard.y, spd); return; }
+    if (guard && Math.hypot(m.x - guard.x, m.y - guard.y) > CAMP_DEFENSE_RADIUS) { m.target = null; m.towerTarget = null; this.walkTo(m, guard.x, guard.y, spd); return; }
     if (m.flee) return this.fleeStep(m, spd);
     if (m.delay > 0) { m.delay -= DT; return; }
     if (m.job) {
@@ -1169,18 +1174,29 @@ export class Sim {
       }
     }
     const attack = m.job ? this.attackProfile(m) : null;
-    let tower = s.buildings.find(b => b.id === m.towerTarget && b.type === 'tower' && b.hp > 0 && this.towerDistance(m, b) <= 12 && (!guard || Math.hypot(b.x - guard.x, b.y - guard.y) <= 5));
+    let tower = s.buildings.find(b => b.id === m.towerTarget && b.type === 'tower' && b.hp > 0 && this.towerDistance(m, b) <= 12 && (!guard || Math.hypot(b.x - guard.x, b.y - guard.y) <= CAMP_DEFENSE_RADIUS));
     if (!tower) m.towerTarget = null;
     if (tower && this.attackTower(m, tower, spd, attack, guard)) return;
     let tgt = m.target && s.advs.find(a => a.id === m.target && !a.ko && !a.inside && !a.dungeon);
-    if (tgt && guard && Math.hypot(tgt.x - guard.x, tgt.y - guard.y) > 5) { tgt = null; m.target = null; }
-    if (tgt && Math.hypot(tgt.x - m.x, tgt.y - m.y) > 9) { tgt = null; m.target = null; }
+    if (guard && !tgt) m.target = null;
+    if (tgt && guard && Math.hypot(tgt.x - guard.x, tgt.y - guard.y) > CAMP_DEFENSE_RADIUS) { tgt = null; m.target = null; }
+    if (tgt && !guard && Math.hypot(tgt.x - m.x, tgt.y - m.y) > 9) { tgt = null; m.target = null; }
     if (!tgt) { // aggro: attack adventurers that wander close
-      for (const a of s.advs) if (!a.ko && !a.inside && !a.dungeon && (!guard || Math.hypot(a.x - guard.x, a.y - guard.y) <= 5) && Math.hypot(a.x - m.x, a.y - m.y) < (m.boss ? 4 : attack ? Math.max(4, attack.range + 1) : 2.2)) { tgt = a; m.target = a.id; break; }
+      for (const a of s.advs) if (!a.ko && !a.inside && !a.dungeon && (guard ? Math.hypot(a.x - guard.x, a.y - guard.y) <= CAMP_DEFENSE_RADIUS && (Math.hypot(a.x - guard.x, a.y - guard.y) <= 5 || Math.hypot(a.x - m.x, a.y - m.y) < Math.max(5, (attack?.range || 1) + 1)) : Math.hypot(a.x - m.x, a.y - m.y) < (m.boss ? 4 : attack ? Math.max(4, attack.range + 1) : 2.2))) { tgt = a; m.target = a.id; break; }
     }
     if (tgt) {
       const d = Math.hypot(tgt.x - m.x, tgt.y - m.y), reach = m.boss ? 1.6 : attack ? attack.range : m.range || 1.0;
-      if (d > reach) { if (guard) this.walkTo(m, Math.round(tgt.x), Math.round(tgt.y), spd); else if (townDist(s, Math.round(m.x), Math.round(m.y)) > 0 || m.boss || m.raid || m.camp) this.stepToward(m, tgt.x, tgt.y, spd); else { m.target = null; } }
+      if (d > reach) {
+        if (guard) {
+          const cells = [];
+          for (let y = Math.floor(tgt.y) - 1; y <= Math.ceil(tgt.y) + 1; y++) for (let x = Math.floor(tgt.x) - 1; x <= Math.ceil(tgt.x) + 1; x++) {
+            if (this.grid.walkable(x, y) && Math.hypot(x - guard.x, y - guard.y) <= CAMP_DEFENSE_RADIUS && Math.hypot(x - tgt.x, y - tgt.y) <= reach) cells.push([x, y]);
+          }
+          cells.sort((a, b) => Math.hypot(a[0] - tgt.x, a[1] - tgt.y) - Math.hypot(b[0] - tgt.x, b[1] - tgt.y));
+          if (cells.length) this.walkTo(m, ...cells[0], spd);
+        } else if (townDist(s, Math.round(m.x), Math.round(m.y)) > 0 || m.boss || m.raid || m.camp) this.stepToward(m, tgt.x, tgt.y, spd);
+        else m.target = null;
+      }
       if (!m.job) m.cd -= DT;
       if (d <= reach + 0.2 && m.cd <= 0) {
         const magic = attack?.magic;
@@ -1192,12 +1208,13 @@ export class Sim {
       }
       return;
     }
-    tower = s.buildings.filter(b => b.type === 'tower' && b.hp > 0 && this.towerDistance(m, b) <= 4 && (!guard || Math.hypot(b.x - guard.x, b.y - guard.y) <= 5))
+    tower = s.buildings.filter(b => b.type === 'tower' && b.hp > 0 && this.towerDistance(m, b) <= 4 && (!guard || Math.hypot(b.x - guard.x, b.y - guard.y) <= CAMP_DEFENSE_RADIUS))
       .sort((a, b) => this.towerDistance(m, a) - this.towerDistance(m, b))[0];
     if (tower && this.attackTower(m, tower, spd, attack, guard)) return;
     if (m.raidGoal) { this.walkTo(m, ...m.raidGoal, spd); return; }
     if (m.charge) return this.chargeStep(m, spd);
     if (guard) {
+      if (Math.hypot(m.x - guard.x, m.y - guard.y) > 5) { this.walkTo(m, guard.x, guard.y, spd); return; }
       if (Math.hypot(m.tx - m.x, m.ty - m.y) < 0.2 || Math.hypot(m.tx - guard.x, m.ty - guard.y) > 5) {
         if (R.chance(0.02)) { const x = guard.x + R.int(-4, 4), y = guard.y + R.int(-4, 4); if (Math.hypot(x - guard.x, y - guard.y) <= 5 && this.grid.walkable(x, y)) { m.tx = x; m.ty = y; } }
       } else this.walkTo(m, m.tx, m.ty, spd * 0.5);
@@ -1476,7 +1493,7 @@ export class Sim {
       const key = `${b.id}:${this.grid.version}`;
       if (m.towerRoute !== key || (!m.towerGoal && s.tick >= m.towerRetry)) {
         m.towerRoute = key; m.towerGoal = null; m.towerRetry = s.tick + 20; m.path = null;
-        const allowed = guard ? (x, y) => Math.hypot(x - guard.x, y - guard.y) <= 5 : null;
+        const allowed = guard ? (x, y) => Math.hypot(x - guard.x, y - guard.y) <= CAMP_DEFENSE_RADIUS : null;
         const cells = [];
         for (let y = b.y - 1; y <= b.y + 1; y++) for (let x = b.x - 1; x <= b.x + 2; x++) if (this.grid.walkable(x, y) && this.towerDistance({ x, y }, b) <= reach + 0.2 && (!allowed || allowed(x, y))) cells.push([x, y]);
         cells.sort((a, c) => Math.hypot(a[0] - m.x, a[1] - m.y) - Math.hypot(c[0] - m.x, c[1] - m.y));
@@ -1516,6 +1533,7 @@ export class Sim {
         const shooter = s.advs[0] || { id: -1, gold: 0, kills: 0, x: cx, y: cy, persona: [] };
         this.hitMonster(m, dmg, shooter);
         if (m.hp > 0) { m.target = null; m.towerTarget = b.id; }
+        if (m.raid === 'campGuard') for (const mate of s.mons) if (mate.raid === 'campGuard' && mate.sourceCamp === m.sourceCamp && mate.hp > 0) { mate.target = null; mate.towerTarget = b.id; }
       }
     }
   }
