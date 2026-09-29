@@ -9,6 +9,7 @@ import { BIOMES, CAMP_PATROLS, FRONTIER_PETS } from './data.js';
 import { getFrontiers } from './world.js';
 import { campMember, campProfile } from './camps.js';
 import { relicItem, seedRelicRolls } from './relics.js';
+import { buildingMaxHp } from './state.js';
 
 export const DT = 0.1;              // seconds per sim step
 export const WEEK_SECONDS = 30;     // one in-game week at 1x
@@ -116,7 +117,9 @@ export class Sim {
   upgradeCost(b) { return Math.round(defOf(b.type).cost * 0.8 * b.lv * (1 + this.charter('buildCost'))); }
   upgrade(b) {
     const c = this.upgradeCost(b); if (b.lv >= 5) return 'Max level'; if (this.s.gold < c) return 'Not enough gold';
-    this.s.gold -= c; b.lv++; this.recomputeTraits(); this.emit('sfx', 'levelup'); return null;
+    const oldHp = buildingMaxHp(b);
+    this.s.gold -= c; b.lv++; if (oldHp) b.hp += buildingMaxHp(b) - oldHp;
+    this.recomputeTraits(); this.emit('sfx', 'levelup'); return null;
   }
   invalidatePaths() { for (const group of ['advs', 'mons', 'monsters', 'folk', 'animals', 'npcs']) for (const a of this.s[group]) a.path = null; }
 
@@ -297,7 +300,7 @@ export class Sim {
     const c = at || this.randomCellInZone(z); if (!c) return null;
     const M = MONSTERS[type], lv = ZONE_LV[z] + R.int(0, 2) + (extra.lvBonus || 0), k = 1 + (lv - 1) * 0.12;
     const m = { id: s.nextId++, type, zone: z, lv, x: c[0], y: c[1], hx: c[0], hy: c[1], hp: Math.round(M.hp * k), mhp: Math.round(M.hp * k),
-      atk: Math.round(M.atk * k), def: Math.round(M.def * k), dir: 0, tx: c[0], ty: c[1], cd: 0, target: null, deadT: 0, hitT: 0, anim: 0, ...extra };
+      atk: Math.round(M.atk * k), def: Math.round(M.def * k), dir: 0, tx: c[0], ty: c[1], cd: 0, target: null, towerTarget: null, deadT: 0, hitT: 0, anim: 0, ...extra };
     if (wild && !M.human && R.chance(ELITE_CHANCE)) {             // Elite: recoloured, tougher, richer (see killMonster)
       m.elite = true; m.hp = m.mhp = Math.round(m.mhp * 1.8); m.atk = Math.round(m.atk * 1.4); m.def = Math.round(m.def * 1.3);
     }
@@ -306,7 +309,7 @@ export class Sim {
   spawnBoss(id, at, extra = {}) {
     const s = this.s, B = BOSSES[id];
     const m = { id: s.nextId++, boss: id, type: id, zone: 9, lv: 20, x: at[0], y: at[1], hx: at[0], hy: at[1], hp: B.hp, mhp: B.hp, atk: B.atk, def: B.def,
-      dir: 0, tx: at[0], ty: at[1], cd: 0, target: null, deadT: 0, hitT: 0, anim: 0, ...extra };
+      dir: 0, tx: at[0], ty: at[1], cd: 0, target: null, towerTarget: null, deadT: 0, hitT: 0, anim: 0, ...extra };
     s.mons.push(m); return m;
   }
   raidStrength(kind = 'bandits') {
@@ -971,7 +974,7 @@ export class Sim {
   }
   hitMonster(m, dmg, a, crit) {
     const s = this.s; if (m.hp <= 0 || a.dead) return;
-    m.hp -= dmg; m.hitT = 0.2; m.target = a.id;
+    m.hp -= dmg; m.hitT = 0.2; m.target = a.id; m.towerTarget = null;
     s.fx.push({ k: 'num', x: m.x, y: m.y - 0.7, t: 0, life: 0.8, text: String(dmg), c: crit ? '#ffd23f' : '#fff', big: crit });
     this.emit('sfx', crit ? 'crit' : 'hit');
     if (m.hp <= 0) this.killMonster(m, a);
@@ -1166,6 +1169,9 @@ export class Sim {
       }
     }
     const attack = m.job ? this.attackProfile(m) : null;
+    let tower = s.buildings.find(b => b.id === m.towerTarget && b.type === 'tower' && b.hp > 0 && this.towerDistance(m, b) <= 12 && (!guard || Math.hypot(b.x - guard.x, b.y - guard.y) <= 5));
+    if (!tower) m.towerTarget = null;
+    if (tower && this.attackTower(m, tower, spd, attack, guard)) return;
     let tgt = m.target && s.advs.find(a => a.id === m.target && !a.ko && !a.inside && !a.dungeon);
     if (tgt && guard && Math.hypot(tgt.x - guard.x, tgt.y - guard.y) > 5) { tgt = null; m.target = null; }
     if (tgt && Math.hypot(tgt.x - m.x, tgt.y - m.y) > 9) { tgt = null; m.target = null; }
@@ -1186,6 +1192,9 @@ export class Sim {
       }
       return;
     }
+    tower = s.buildings.filter(b => b.type === 'tower' && b.hp > 0 && this.towerDistance(m, b) <= 4 && (!guard || Math.hypot(b.x - guard.x, b.y - guard.y) <= 5))
+      .sort((a, b) => this.towerDistance(m, a) - this.towerDistance(m, b))[0];
+    if (tower && this.attackTower(m, tower, spd, attack, guard)) return;
     if (m.raidGoal) { this.walkTo(m, ...m.raidGoal, spd); return; }
     if (m.charge) return this.chargeStep(m, spd);
     if (guard) {
@@ -1459,16 +1468,55 @@ export class Sim {
     n.anim += DT;
     if (n.kind === 'bard' && (!n.dest || this.walkTo(n, n.dest[0], n.dest[1]))) n.dest = this.randomTownCell();
   }
+  towerDistance(m, b) { return Math.hypot(m.x - Math.max(b.x, Math.min(b.x + 1, m.x)), m.y - b.y); }
+  attackTower(m, b, spd, attack, guard) {
+    const s = this.s, reach = m.boss ? 1.6 : attack ? attack.range : m.range || 1;
+    m.towerTarget = b.id;
+    if (this.towerDistance(m, b) > reach + 0.2) {
+      const key = `${b.id}:${this.grid.version}`;
+      if (m.towerRoute !== key || (!m.towerGoal && s.tick >= m.towerRetry)) {
+        m.towerRoute = key; m.towerGoal = null; m.towerRetry = s.tick + 20; m.path = null;
+        const allowed = guard ? (x, y) => Math.hypot(x - guard.x, y - guard.y) <= 5 : null;
+        const cells = [];
+        for (let y = b.y - 1; y <= b.y + 1; y++) for (let x = b.x - 1; x <= b.x + 2; x++) if (this.grid.walkable(x, y) && this.towerDistance({ x, y }, b) <= reach + 0.2 && (!allowed || allowed(x, y))) cells.push([x, y]);
+        cells.sort((a, c) => Math.hypot(a[0] - m.x, a[1] - m.y) - Math.hypot(c[0] - m.x, c[1] - m.y));
+        m.towerGoal = cells.find(([x, y]) => this.grid.find(Math.round(m.x), Math.round(m.y), x, y, undefined, allowed)) || null;
+      }
+      if (!m.towerGoal) return false;
+      if (!m.job) m.cd -= DT;
+      this.walkTo(m, ...m.towerGoal, spd); return true;
+    }
+    if (!m.job) m.cd -= DT;
+    m.path = null;
+    if (m.cd > 0) return true;
+    m.dir = Math.abs(b.x - m.x) > Math.abs(b.y - m.y) ? (b.x < m.x ? 2 : 3) : (b.y < m.y ? 1 : 0);
+    m.cd = m.boss ? 1.3 : m.job ? 1.5 / m.moveSpeed : 1.5; m.atkT = 0.3;
+    const damage = Math.max(1, Math.round((attack?.magic ? m.mag * 1.2 : m.atk) * this.R.range(0.8, 1.15)));
+    b.hp = Math.max(0, b.hp - damage);
+    if (attack?.projectile) s.fx.push({ k: 'proj', x: m.x, y: m.y, tx: b.x + 0.5, ty: b.y, t: 0, life: 0.25, p: attack.projectile });
+    else s.fx.push({ k: 'claw', x: b.x + 0.5, y: b.y, t: 0, life: 0.3 });
+    s.fx.push({ k: 'num', x: b.x + 0.5, y: b.y - 1, t: 0, life: 0.8, text: String(damage), c: '#ff8a72' });
+    if (!b.hp) {
+      s.buildings = s.buildings.filter(o => o !== b);
+      for (const enemy of s.mons) if (enemy.towerTarget === b.id) { enemy.towerTarget = null; enemy.towerGoal = null; enemy.towerRoute = null; }
+      this.rebuildGrid(); this.recomputeTraits(); this.invalidatePaths();
+      s.fx.push({ k: 'poof', x: b.x + 0.5, y: b.y, t: 0, life: 0.7 });
+      log(s, 'A Watchtower was destroyed by enemies!', 'bad'); this.emit('sfx', 'hit');
+    }
+    return true;
+  }
   towerStep() {
     const s = this.s; if (s.tick % 12) return;
     for (const b of s.buildings) {
-      if (b.type !== 'tower') continue;
+      if (b.type !== 'tower' || b.hp <= 0) continue;
       const cx = b.x + 1, cy = b.y;
       const m = s.mons.find(m => m.hp > 0 && Math.hypot(m.x - cx, m.y - cy) < FAC.tower.range + b.lv);
       if (m) { s.fx.push({ k: 'proj', x: cx, y: cy - 1.5, tx: m.x, ty: m.y, t: 0, life: 0.3, p: 'arrow' });
         const dmg = Math.round((FAC.tower.dmg + b.lv * 4) * (1 + this.bonus('defense')));
         const shooter = s.advs[0] || { id: -1, gold: 0, kills: 0, x: cx, y: cy, persona: [] };
-        this.hitMonster(m, dmg, shooter); }
+        this.hitMonster(m, dmg, shooter);
+        if (m.hp > 0) { m.target = null; m.towerTarget = b.id; }
+      }
     }
   }
 

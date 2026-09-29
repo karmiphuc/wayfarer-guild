@@ -267,9 +267,11 @@ export function buildingAt(s, x, y) {
 }
 
 // Place without cost/validation (world gen and loading). Returns the building.
+export function buildingMaxHp(b) { const d = defOf(b.type); return d.hp ? d.hp + (b.lv - 1) * (d.hpPerLevel || 0) : 0; }
 export function place(s, type, x, y, R) {
   const d = defOf(type);
   const b = { id: s.nextId++, type, x, y, lv: 1, sales: 0, visits: 0, occ: [] };
+  if (d.hp) b.hp = buildingMaxHp(b);
   if (d.spr && Array.isArray(d.spr)) b.v = (x * 7 + y * 13) % d.spr.length;
   s.buildings.push(b);
   return b;
@@ -383,6 +385,8 @@ export function migrate(s) {
   s.flags.pioneer ??= null; s.flags.pioneerPet ??= null;
   s.fx = []; s.folk = s.folk || []; s.animals = s.animals || [];
   s.weaponDrops ??= []; s.weaponStash ??= {}; s.bounty ??= null;
+  for (const b of s.buildings) if (defOf(b.type)?.hp) b.hp ??= buildingMaxHp(b);
+  for (const m of s.mons) m.towerTarget ??= null;
   for (const m of s.monsters || []) m.alpha = m.alpha === true;
   s.flags.alphaUpgrades ??= (s.monsters || []).filter(m => m.alpha).length;
   if (!Array.isArray(s.activeQuests)) s.activeQuests = [];

@@ -59,6 +59,10 @@ try {
 { const r = run('node', ['tests/happenings.mjs']);
   r.status ? fail('happenings + charters (tests/happenings.mjs)', r.stdout + (r.stderr || '')) : ok('happenings + charters', r.stdout.trim().split('\n').pop()); }
 
+// Enemy attacks on watchtowers and their save lifecycle.
+{ const r = run('node', ['tests/towers.mjs']);
+  r.status ? fail('destructible towers', r.stdout + (r.stderr || '')) : ok('towers', r.stdout.trim()); }
+
 // Player-directed bounty patrols and camp sentries.
 { const r = run('node', ['tests/bounty.mjs']);
   r.status ? fail('bounty patrol checks', r.stdout + (r.stderr || '')) : ok('bounty patrols', r.stdout.trim()); }
