@@ -106,8 +106,8 @@ export const FAC = {
             desc: 'Blessings restore HP and mood.' },
   smith:  { name: 'Blacksmith', spr: 'smith', fp: [3, 2], cat: 'special', cost: 700, kind: 'craft', rank: 1, unique: true, appeal: 2,
             desc: 'Develop new weapons and armor from materials.' },
-  tower:  { name: 'Watchtower', spr: 'tower', fp: [2, 1], cat: 'defense', cost: 450, kind: 'defense', rank: 3, appeal: 1, dmg: 8, range: 6,
-            desc: 'Archers shoot at raiding monsters.' },
+  tower:  { name: 'Watchtower', spr: 'tower', fp: [2, 1], cat: 'defense', cost: 450, kind: 'defense', rank: 3, appeal: 1, dmg: 8, range: 6, hp: 120, hpPerLevel: 60,
+            desc: 'Archers shoot enemies. Enemies can attack and destroy this tower; upgrades add 60 HP.' },
   stable: { name: 'Monster Stable', spr: 'stableHut', fp: [2, 1], cat: 'special', cost: 800, kind: 'stable', rank: 3, unique: true, cap: 4, appeal: 3,
             desc: 'Befriended monsters live here.' },
 };

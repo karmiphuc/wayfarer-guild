@@ -1,7 +1,7 @@
 // Canvas renderer. Reads state, never mutates it. Integer world zoom; nearest-neighbor actor enlargement.
 import { T, MAP_W, MAP_H, SPR, TILE, ROAD_TILES, FAC, DECOR, MONSTERS, BOSSES, MATS, JOBS, ITEMS } from './data.js';
 import { IMG, EMOTE, HANDS, tinted, goldified } from './assets.js';
-import { roadAt, defOf, maxHp, buildAreas, townDist, pawnSprite } from './state.js';
+import { roadAt, defOf, maxHp, buildAreas, townDist, pawnSprite, buildingMaxHp } from './state.js';
 import { WEEK_SECONDS } from './sim.js';
 import { getFrontiers, regionAt } from './world.js';
 import { campProfile } from './camps.js';
@@ -185,6 +185,11 @@ export class Renderer {
     }
     const bx = b.x * T + (w * T - sp.w) / 2, by = (b.y + h) * T - sp.h;
     const busy = b.occ && b.occ.length > 0 && FAC[b.type];
+    if (d.hp && b.hp < buildingMaxHp(b)) {
+      this.g.fillStyle = '#241b22'; this.g.fillRect(bx, by - 5, sp.w, 4);
+      this.g.fillStyle = b.hp < buildingMaxHp(b) * 0.3 ? '#ee584c' : '#7ccc68';
+      this.g.fillRect(bx + 1, by - 4, Math.round((sp.w - 2) * b.hp / buildingMaxHp(b)), 2);
+    }
     const bob = busy ? Math.round(Math.sin(this.time * 8 + b.id) * 0.6) : 0;
     this.spr(key, bx, by + bob);
     if (b.type === 'dojo') this.spr('dojoSign', b.x * T + 8, (b.y + h) * T - 14);

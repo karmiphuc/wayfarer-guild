@@ -472,6 +472,17 @@ Measured with `node v2/tests/bot.mjs 30 1`: ≈100–130 µs per sim step with ~
 Rules: no allocation-heavy work per step (cache grids/paths), no per-frame DOM rebuilds, cull off-screen drawing,
 keep visitors capped, keep `s.log` bounded (60).
 
+### Destructible watchtowers
+
+Watchtowers have 120 HP at level 1 and gain 60 maximum/current HP per upgrade (existing damage remains).
+Old saves initialize missing tower health at their current level; damaged health persists across loads.
+Enemies without a pawn target acquire towers within four tiles. Tower shots explicitly draw retaliation,
+instead of assigning aggro to the pawn credited with the kill. A pawn hitting the enemy can draw it back.
+Melee enemies path to reachable attack cells outside the blocked tower footprint; ranged and magic enemies
+use their existing weapon profiles. Camp sentries retain their five-tile leash. At zero HP the tower is removed
+without refund, stops firing, clears enemy references, and updates paths and village traits. Other buildings
+and palisades remain unchanged. Damaged towers show a map health bar; the inspector always lists tower HP.
+
 ### Bounty flags and camp sentries
 
 Double-click/tap the map outside build mode to call `placeBounty(x,y)`: 500 town gold, one active flag,

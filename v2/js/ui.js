@@ -7,6 +7,7 @@ import { getFrontiers } from './world.js';
 import { campProfile } from './camps.js';
 import { relicItem, relicRollText } from './relics.js';
 import { DT, WEEK_SECONDS } from './sim.js';
+import { buildingMaxHp } from './state.js';
 
 const $ = sel => document.querySelector(sel);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -618,6 +619,7 @@ export class UI {
     let h = `<div class="head"><i data-spr="${spr}" data-w="70" data-h="60"></i><div><h3>${d.name}${F ? ` Lv${b.lv}` : ''}</h3><div class="muted">${esc(d.desc || '')}</div></div></div>`;
     if (F) {
       const occ = b.occ.map(id => s.advs.find(a => a.id === id)).filter(Boolean);
+      if (F.hp) h += `<p><b>Tower health: ${Math.ceil(b.hp)} / ${buildingMaxHp(b)} HP</b></p>`;
       h += `<table class="t"><tr><td>Appeal</td><td>${this.sim.appeal(b)}</td></tr>${F.price ? `<tr><td>Price</td><td>${this.sim.price(b)}G</td></tr>` : ''}
         ${F.kind === 'home' ? `<tr><td>Residents</td><td>${s.advs.filter(a => a.home === b.id).map(a => esc(a.name)).join(', ') || 'Vacant'} (${this.sim.capOf(b)} max)</td></tr>` : ''}
         <tr><td>Visits</td><td>${b.visits}</td></tr><tr><td>Total sales</td><td>${b.sales}G</td></tr><tr><td>Inside now</td><td>${occ.map(a => esc(a.name)).join(', ') || '—'}</td></tr></table>`;
