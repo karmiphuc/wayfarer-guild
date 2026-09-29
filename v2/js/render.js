@@ -1,7 +1,7 @@
 // Canvas renderer. Reads state, never mutates it. Integer world zoom; nearest-neighbor actor enlargement.
 import { T, MAP_W, MAP_H, SPR, TILE, ROAD_TILES, FAC, DECOR, MONSTERS, BOSSES, MATS, JOBS, ITEMS } from './data.js';
 import { IMG, EMOTE, HANDS, tinted, goldified } from './assets.js';
-import { roadAt, defOf, maxHp, buildAreas, townDist } from './state.js';
+import { roadAt, defOf, maxHp, buildAreas, townDist, pawnSprite } from './state.js';
 import { WEEK_SECONDS } from './sim.js';
 import { getFrontiers, regionAt } from './world.js';
 import { campProfile } from './camps.js';
@@ -127,6 +127,12 @@ export class Renderer {
       else this.drawNpc(s, o);
       if (actor) g.restore();
     }
+    for (const d of s.weaponDrops || []) if (vis(d.x, d.y)) {
+      this.spr('crate', d.x * T, d.y * T);
+      g.fillStyle = '#ffdf70'; g.strokeStyle = '#241b22'; g.lineWidth = 2;
+      g.font = 'bold 8px monospace'; g.textAlign = 'center';
+      g.strokeText('WEAPON', d.x * T + 8, d.y * T - 3); g.fillText('WEAPON', d.x * T + 8, d.y * T - 3);
+    }
     if (this.ghost) this.drawGhost(s, ui);
     this.drawFx(s);
     let caveIndex = 0;
@@ -208,6 +214,7 @@ export class Renderer {
   }
   drawShadow(x, y, w = 12) { const im = IMG.shadow; if (im) this.g.drawImage(im, Math.round(x * T + (16 - w) / 2), Math.round(y * T + 9), w, 7); }
   drawAdv(s, a) {
+    a = { ...a, spr: pawnSprite(a) };
     const moving = !!a.path || (a.task && ['hunt', 'stroll', 'leave', 'return'].includes(a.task.type) && a.path);
     let row = 0, frame = moving ? Math.floor(a.anim * 7) % 4 : 0;
     if (a.atkT > 0) { row = 4; frame = 0; }
