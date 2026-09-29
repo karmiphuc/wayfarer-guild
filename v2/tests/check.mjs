@@ -59,6 +59,10 @@ try {
 { const r = run('node', ['tests/happenings.mjs']);
   r.status ? fail('happenings + charters (tests/happenings.mjs)', r.stdout + (r.stderr || '')) : ok('happenings + charters', r.stdout.trim().split('\n').pop()); }
 
+// Player-directed bounty patrols and camp sentries.
+{ const r = run('node', ['tests/bounty.mjs']);
+  r.status ? fail('bounty patrol checks', r.stdout + (r.stderr || '')) : ok('bounty patrols', r.stdout.trim()); }
+
 // Quest parties, parallel lifecycle and legacy-save migration.
 { const r = run('node', ['tests/quests.mjs']);
   r.status ? fail('quest regression checks', r.stdout + (r.stderr || '')) : ok('quests', r.stdout.trim()); }

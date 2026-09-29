@@ -472,6 +472,22 @@ Measured with `node v2/tests/bot.mjs 30 1`: ≈100–130 µs per sim step with ~
 Rules: no allocation-heavy work per step (cache grids/paths), no per-frame DOM rebuilds, cull off-screen drawing,
 keep visitors capped, keep `s.log` bounded (60).
 
+### Bounty flags and camp sentries
+
+Double-click/tap the map outside build mode to call `placeBounty(x,y)`: 500 town gold, one active flag,
+five-tile radius, two weeks from placement (60 simulation seconds; pause freezes it and speed advances it).
+Seeded selection takes 2-4 reachable pawns at >=75% HP, >=30 energy and <80 hunger; quests, rescues,
+retreats, sleep, indoor visits and departures are unavailable. Failed placement spends nothing.
+Saved `bounty` defaults to null and stores the circle, reachable arrival tile, member IDs and expiry tick.
+Travel is included in the duration. After arrival paths stay inside the circle and target only non-quest enemies.
+Low HP, exhaustion or starvation releases the pawn to return home; KO/death removes its reservation.
+Quests lists the patrol, remaining time, Watch and Recall (no refund). No boss challenge starts automatically.
+
+Each live bandit camp maintains two town-level-scaled human `campGuard` sentries, separate from attack waves.
+They wander and fight within five tiles and never rally the whole village. Clearing or challenging the camp
+removes them; a fallen sentry is replaced after one week (`guardAt`, migration default 0). The camp's existing
+8-20 week clear cooldown and outgoing attack schedules are unchanged. At most 32 living sentries exist.
+
 ### Mortality and weapon recovery
 
 `fall()` handles field and cave defeats: innate revival, then Phoenix Sigil, then one seeded 25% death roll.

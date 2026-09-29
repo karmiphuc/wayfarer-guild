@@ -6,6 +6,7 @@ import { CAMP_PATROLS, VISITOR_CAP } from './data.js';
 import { getFrontiers } from './world.js';
 import { campProfile } from './camps.js';
 import { relicItem, relicRollText } from './relics.js';
+import { DT, WEEK_SECONDS } from './sim.js';
 
 const $ = sel => document.querySelector(sel);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -204,6 +205,7 @@ export class UI {
     const t = a.task; if (!t) return 'Thinking…';
     if (t.type === 'rescue') { const fallen = this.s.advs.find(o => o.id === t.target); return `${t.carrying ? 'Carrying' : 'Rescuing'} ${fallen ? fallen.name : 'a fallen adventurer'}`; }
     if (t.type === 'hunt' && t.defend) return 'Defending village territory';
+    if (t.type === 'bounty') return t.arrived ? 'Patrolling the bounty flag' : 'Heading to the bounty flag';
     if (a.dungeon) return 'Exploring the Old Cave'; return { visit: 'Heading into town', hunt: 'Hunting monsters', return: 'Returning to town', stroll: 'Strolling', camp: 'Napping outside', leave: 'Leaving the village', quest: 'On a quest!' }[t.type] || t.type;
   }
   panel_stash() {
@@ -248,6 +250,9 @@ export class UI {
   }
   panel_quests() {
     const s = this.s; let h = '';
+    const bounty = s.bounty;
+    h += '<p class="muted">Double-click the map to post a 500G bounty: 2-4 random healthy pawns patrol a five-tile circle for two weeks from placement (1 minute at 1x). One flag at a time; wounded pawns retreat.</p>';
+    if (bounty) h += `<div class="card"><div class="meta"><b>Bounty patrol · ${Math.max(0, (bounty.expiresAt - s.tick) * DT / WEEK_SECONDS).toFixed(1)} weeks left</b><div class="sub">${bounty.members.map(id => esc(s.advs.find(a => a.id === id)?.name || '')).join(', ')}</div><button class="btn sm" data-act="watchBounty">Watch flag</button> <button class="btn sm" data-act="endBounty">Recall patrol (no refund)</button></div></div>`;
     const captured = getFrontiers(this.s).filter(f => s.frontier?.completed?.[f.id]).length;
     const camps = s.banditCamps || [], campReady = camps.filter(c => !this.sim.campBlock(c.id)).length;
     h += `<div class="row spread"><span class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random healthy adventurers. Suggested levels are advice, not a selection limit.</span><span class="row"><button class="btn" data-act="open" data-k="frontiers">Frontiers ${captured}/${getFrontiers(this.s).length}</button><button class="btn" data-act="open" data-k="camps">Bandit Camps ${campReady}/${camps.length}</button></span></div>`;
@@ -359,7 +364,7 @@ export class UI {
   }
   panel_camps() {
     const s = this.s, camps = s.banditCamps || [];
-    let h = `<div class="row spread"><span class="muted">Strike the outlaw camps beyond the village. A cleared camp regroups after a random 8–20 weeks.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
+    let h = `<div class="row spread"><span class="muted">Strike the outlaw camps beyond the village. Live camps keep two nearby wandering guards, replacing fallen guards after one week. A cleared camp regroups after a random 8–20 weeks.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
       <p class="muted camp-note">${s.stars ? `At ${s.stars} stars, camp patrols send ${CAMP_PATROLS[s.stars].count[0] === CAMP_PATROLS[s.stars].count[1] ? CAMP_PATROLS[s.stars].count[0] : CAMP_PATROLS[s.stars].count.join('–')} guard${CAMP_PATROLS[s.stars].count[1] === 1 ? '' : 's'} of level ${CAMP_PATROLS[s.stars].level.join('–')} every ${CAMP_PATROLS[s.stars].weeks.join('–')} weeks across all camps.` : 'Camp patrols begin at one star.'} Attacked pawns defend themselves in town without rallying the village. Clearing a camp recalls its patrols and stops its attacks for 8–20 weeks. Larger village raids can also come from live camps.</p>`;
     const picked = camps.find(c => c.id === this.campPick);
     if (picked) h += this.campDetail(picked);
@@ -705,6 +710,8 @@ export class UI {
       case 'selAdv': { const adv = s.advs.find(o => o.id === +d.id); if (adv) { this.select({ kind: 'adv', id: adv.id }); this.game.centerOn(adv.x, adv.y); } break; }
       case 'recoverWeapon': err(sim.recoverWeapon(+d.id)); this.renderPanel(); break;
       case 'mapWeapon': { const drop = s.weaponDrops.find(o => o.id === +d.id); if (drop) { this.close(); this.game.centerOn(drop.x, drop.y); } break; }
+      case 'watchBounty': { const b = s.bounty; if (b) { this.close(); this.game.centerOn(b.x, b.y); } break; }
+      case 'endBounty': sim.endBounty(); this.renderPanel(); break;
       case 'pickStash': this.stashPick = d.id; this.renderPanel(); break;
       case 'equipStash': err(sim.equipRecoveredWeapon(d.id, +d.pawn)); this.renderPanel(); this.lastHtml.insp = null; break;
       case 'clearMastered': this.masteryChoices = {}; this.renderPanel(); break;

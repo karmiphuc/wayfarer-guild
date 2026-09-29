@@ -12,6 +12,8 @@ import { relicItem, seedRelicRolls } from './relics.js';
 
 export const DT = 0.1;              // seconds per sim step
 export const WEEK_SECONDS = 30;     // one in-game week at 1x
+export const BOUNTY_COST = 500;
+export const BOUNTY_RADIUS = 5;
 export const ALPHA_PET_COST = Object.freeze({ gold: 10000, wood: 100, hide: 100, herb: 100, ore: 100, crystal: 100 });
 
 const RESCUE_DELAY = 4;
@@ -141,6 +143,7 @@ export class Sim {
     const s = this.s; s.tick++;
     this.calendar();
     if (s.tick % 5 === 0) this.spawner();
+    this.updateBounty();
     for (const a of s.advs) this.advStep(a);
     for (const m of s.mons) this.monStep(m);
     for (const m of s.monsters) this.petStep(m);
@@ -237,7 +240,21 @@ export class Sim {
       const n = s.mons.filter(m => m.zone === z && m.hp > 0 && !m.quest).length;
       if (n < Math.round(ZONE_POP[z] * (1 + this.charter('monsterPop'))) && R.chance(0.08)) this.spawnMonster(z);
     }
-    if (s.tick % 10 === 0) this.campPatrols();
+    if (s.tick % 10 === 0) { this.campPatrols(); this.campGuards(); }
+  }
+  campGuards() {
+    const s = this.s, live = this.raidCamps(), ids = new Set(live.map(c => c.id));
+    for (const m of s.mons) if (m.raid === 'campGuard' && !ids.has(m.sourceCamp)) { m.hp = 0; m.deadT = 0; m.path = null; }
+    for (const c of live) {
+      if (s.tick < c.guardAt) continue;
+      const count = s.mons.filter(m => m.raid === 'campGuard' && m.sourceCamp === c.id && m.hp > 0).length;
+      for (let i = count; i < 2; i++) {
+        const spot = this.grid.nearestWalkable(c.x + this.R.int(-2, 2), c.y + this.R.int(-2, 2), 2);
+        if (!spot || Math.hypot(spot[0] - c.x, spot[1] - c.y) > 5) continue;
+        const level = this.R.int(...CAMP_PATROLS[s.stars].level);
+        this.spawnRaider(spot, level, { ...campMember(c, level, i, 2, this.R, 'patrol'), zone: 9, raid: 'campGuard', sourceCamp: c.id, hx: c.x, hy: c.y });
+      }
+    }
   }
   campPatrols() {
     const s = this.s, R = this.R;
@@ -416,7 +433,7 @@ export class Sim {
   potion() { return this.s.unlocked.medipack ? ITEMS.medipack : ITEMS.potion; }
   itemPrice(id) { return Math.round(ITEMS[id].price * (1 + this.bonus('shopSales') * 0) ); }
 
-  villageThreat(m) { return m.hp > 0 && m.raid && m.raid !== 'patrol'; }
+  villageThreat(m) { return m.hp > 0 && m.raid && m.raid !== 'patrol' && m.raid !== 'campGuard'; }
   nightRest(a, reserve) {
     const s = this.s;
     // Start heading home at dusk, before the brief visible night. Emergencies still take priority.
@@ -573,6 +590,67 @@ export class Sim {
     return z;
   }
 
+  bountyForPawn(id) { return this.s.bounty?.members.includes(id) ? this.s.bounty : null; }
+  placeBounty(x, y) {
+    const s = this.s;
+    if (s.bounty) return 'Only one bounty flag at a time';
+    if (s.gold < BOUNTY_COST) return '500 gold needed';
+    x = Math.floor(x); y = Math.floor(y);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return 'Outside the map';
+    const dest = this.grid.nearestWalkable(x, y, 3);
+    if (!dest) return 'No walkable ground near this flag';
+    const candidates = this.questCandidates().filter(a => !a.inside && !a.dead && !['return', 'leave', 'camp'].includes(a.task?.type) && !a.task?.sleep && a.hp >= maxHp(a, s) * 0.75 && a.energy >= 30 && a.hunger < 80 &&
+      this.grid.find(Math.round(a.x), Math.round(a.y), ...dest));
+    if (candidates.length < 2) return 'Need at least 2 healthy, available pawns who can reach the flag';
+    const members = shuffle(this.R, candidates).slice(0, this.R.int(2, Math.min(4, candidates.length)));
+    s.gold -= BOUNTY_COST;
+    s.bounty = { x, y, radius: BOUNTY_RADIUS, dest, members: members.map(a => a.id), expiresAt: s.tick + 2 * WEEK_SECONDS / DT };
+    for (const a of members) { a.task = { type: 'bounty', arrived: false }; a.taskT = 0; a.path = null; }
+    log(s, `Bounty flag posted: ${members.map(a => a.name).join(', ')} patrol for two weeks (500G).`);
+    return null;
+  }
+  releaseBountyPawn(a) {
+    if (this.s.bounty) this.s.bounty.members = this.s.bounty.members.filter(id => id !== a.id);
+    if (a.task?.type === 'bounty') { a.task = a.ko || a.dead ? null : { type: 'return', dur: 0 }; a.taskT = 0; a.path = null; }
+  }
+  endBounty() {
+    for (const a of this.s.advs) if (this.bountyForPawn(a.id)) this.releaseBountyPawn(a);
+    this.s.bounty = null;
+  }
+  updateBounty() {
+    const b = this.s.bounty; if (!b) return;
+    b.members = b.members.filter(id => this.s.advs.some(a => a.id === id && !a.dead && !a.ko && a.hp > 0 && a.task?.type === 'bounty'));
+    if (this.s.tick >= b.expiresAt || !b.members.length) this.endBounty();
+  }
+  bountyStep(a) {
+    const b = this.bountyForPawn(a.id), t = a.task;
+    if (!b) { this.releaseBountyPawn(a); return; }
+    const wounded = a.hp < maxHp(a, this.s) * (0.35 * this.pmul(a, 'retreat') + 0.05);
+    if (wounded && a.potions > 0) {
+      a.potions--; a.hp = Math.min(maxHp(a, this.s), Math.round(a.hp + this.potion().heal * (1 + this.bonus('heal') + perkSum(a, 'healPct'))));
+      this.emote(a, 'heart'); this.emit('sfx', 'heal'); return;
+    }
+    if (wounded || a.energy < 12 || a.hunger >= 100) {
+      this.releaseBountyPawn(a); return;
+    }
+    a.taskT += DT;
+    if (!t.arrived) {
+      if (!this.walkTo(a, ...b.dest)) return;
+      t.arrived = true; a.path = null;
+    }
+    let target = null, distance = Infinity;
+    for (const m of this.s.mons) if (m.hp > 0 && !m.quest && Math.hypot(m.x - b.x, m.y - b.y) <= b.radius) {
+      const d = Math.hypot(m.x - a.x, m.y - a.y);
+      if (d < distance) { target = m; distance = d; }
+    }
+    if (target) { this.fight(a, target); return; }
+    if (t.dest && !this.walkTo(a, ...t.dest) && a.path?.length) return;
+    t.dest = null;
+    for (let i = 0; i < 12; i++) {
+      const x = b.x + this.R.int(-b.radius, b.radius), y = b.y + this.R.int(-b.radius, b.radius);
+      if (Math.hypot(x - b.x, y - b.y) <= b.radius && this.grid.walkable(x, y)) { t.dest = [x, y]; break; }
+    }
+  }
   advStep(a) {
     if (a.dead) return;
     const s = this.s;
@@ -584,6 +662,7 @@ export class Sim {
     a.energy = Math.max(0, a.energy - DT * (a.task && a.task.type === 'hunt' ? 0.45 : 0.22));
     a.fun = Math.max(0, a.fun - DT * 0.18);
     if (a.ko) return this.koStep(a);
+    if (a.task?.type === 'bounty') return this.bountyStep(a);
     // Retaliate only when targeted; let existing retreat, potion and carrying behavior run first.
     const task = a.task, hpR = a.hp / maxHp(a, s);
     const recovering = task?.type === 'return' || (task?.type === 'hunt' && (task.done || a.energy < 12 || hpR < 0.35 * this.pmul(a, 'retreat') + 0.05)) ||
@@ -756,12 +835,14 @@ export class Sim {
   walkTo(a, gx, gy, step = this.speed(a) * DT, holdTerritory = false) {
     if (Math.abs(a.x - gx) < 0.15 && Math.abs(a.y - gy) < 0.15) { a.path = null; return true; }
     const defend = (holdTerritory || !!a.task?.defend) && townDist(this.s, Math.round(a.x), Math.round(a.y)) === 0;
+    const patrol = a.task?.type === 'bounty' && a.task.arrived ? this.bountyForPawn(a.id) : a.raid === 'campGuard' ? this.s.banditCamps.find(c => c.id === a.sourceCamp) : null;
+    const allowed = patrol ? (x, y) => Math.hypot(x - patrol.x, y - patrol.y) <= (patrol.radius || 5) : defend ? (x, y) => townDist(this.s, x, y) === 0 : null;
     if (!a.path || a.pathDefend !== defend || a.pathGoal !== gx + ',' + gy || a.pathV !== this.grid.version || (!a.path.length && this.s.tick >= a.pathRetry)) {
       const sx = Math.round(a.x), sy = Math.round(a.y);
       const start = this.grid.walkable(sx, sy) ? [sx, sy] : (this.grid.nearestWalkable(sx, sy) || [sx, sy]);
       const goal = this.grid.walkable(gx, gy) ? [gx, gy] : this.grid.nearestWalkable(gx, gy);
       if (!goal) return false;
-      a.path = this.grid.find(start[0], start[1], goal[0], goal[1], undefined, defend ? (x, y) => townDist(this.s, x, y) === 0 : null) || []; a.pathGoal = gx + ',' + gy; a.pathV = this.grid.version; a.pathDefend = defend; a.pi = 0;
+      a.path = this.grid.find(start[0], start[1], goal[0], goal[1], undefined, allowed) || []; a.pathGoal = gx + ',' + gy; a.pathV = this.grid.version; a.pathDefend = defend; a.pi = 0;
       a.pathEnd = goal; a.pathRetry = this.s.tick + 10;
     }
     const node = a.path[a.pi]; if (!node) return !!a.pathEnd && Math.hypot(a.x - a.pathEnd[0], a.y - a.pathEnd[1]) < 0.5;
@@ -898,6 +979,10 @@ export class Sim {
   killMonster(m, a) {
     const s = this.s, R = this.R;
     m.hp = 0; m.deadT = 0.6;
+    if (m.raid === 'campGuard') {
+      const camp = s.banditCamps.find(c => c.id === m.sourceCamp);
+      if (camp) camp.guardAt = s.tick + WEEK_SECONDS / DT;
+    }
     s.fx.push({ k: 'poof', x: m.x, y: m.y, t: 0, life: 0.5 });
     this.emit('sfx', 'kill');
     const M = m.boss ? BOSSES[m.boss] : MONSTERS[m.type];
@@ -1060,6 +1145,8 @@ export class Sim {
   monStep(m) {
     if (m.hp <= 0) return;
     const s = this.s, R = this.R; m.anim += DT; if (m.hitT > 0) m.hitT -= DT; if (m.atkT > 0) m.atkT -= DT;
+    const guard = m.raid === 'campGuard' && s.banditCamps.find(c => c.id === m.sourceCamp);
+    if (m.raid === 'campGuard' && (!guard || guard.readyAt > s.tick || s.activeQuests.some(q => q.camp === guard.id))) { m.hp = 0; m.deadT = 0; return; }
     if (m.raid === 'patrol') {
       if (s.tick >= m.expiresAt) { m.hp = 0; m.deadT = 0.3; m.path = null; return; }
     }
@@ -1068,6 +1155,7 @@ export class Sim {
     }
     const M = m.boss ? BOSSES[m.boss] : MONSTERS[m.type];
     const spd = (m.boss ? 0.7 : m.moveSpeed || M.spd) * 1.2 * DT;
+    if (guard && Math.hypot(m.x - guard.x, m.y - guard.y) > 5) { m.target = null; this.walkTo(m, guard.x, guard.y, spd); return; }
     if (m.flee) return this.fleeStep(m, spd);
     if (m.delay > 0) { m.delay -= DT; return; }
     if (m.job) {
@@ -1079,13 +1167,14 @@ export class Sim {
     }
     const attack = m.job ? this.attackProfile(m) : null;
     let tgt = m.target && s.advs.find(a => a.id === m.target && !a.ko && !a.inside && !a.dungeon);
+    if (tgt && guard && Math.hypot(tgt.x - guard.x, tgt.y - guard.y) > 5) { tgt = null; m.target = null; }
     if (tgt && Math.hypot(tgt.x - m.x, tgt.y - m.y) > 9) { tgt = null; m.target = null; }
     if (!tgt) { // aggro: attack adventurers that wander close
-      for (const a of s.advs) if (!a.ko && !a.inside && !a.dungeon && Math.hypot(a.x - m.x, a.y - m.y) < (m.boss ? 4 : attack ? Math.max(4, attack.range + 1) : 2.2)) { tgt = a; m.target = a.id; break; }
+      for (const a of s.advs) if (!a.ko && !a.inside && !a.dungeon && (!guard || Math.hypot(a.x - guard.x, a.y - guard.y) <= 5) && Math.hypot(a.x - m.x, a.y - m.y) < (m.boss ? 4 : attack ? Math.max(4, attack.range + 1) : 2.2)) { tgt = a; m.target = a.id; break; }
     }
     if (tgt) {
       const d = Math.hypot(tgt.x - m.x, tgt.y - m.y), reach = m.boss ? 1.6 : attack ? attack.range : m.range || 1.0;
-      if (d > reach) { if (townDist(s, Math.round(m.x), Math.round(m.y)) > 0 || m.boss || m.raid || m.camp) this.stepToward(m, tgt.x, tgt.y, spd); else { m.target = null; } }
+      if (d > reach) { if (guard) this.walkTo(m, Math.round(tgt.x), Math.round(tgt.y), spd); else if (townDist(s, Math.round(m.x), Math.round(m.y)) > 0 || m.boss || m.raid || m.camp) this.stepToward(m, tgt.x, tgt.y, spd); else { m.target = null; } }
       if (!m.job) m.cd -= DT;
       if (d <= reach + 0.2 && m.cd <= 0) {
         const magic = attack?.magic;
@@ -1099,6 +1188,12 @@ export class Sim {
     }
     if (m.raidGoal) { this.walkTo(m, ...m.raidGoal, spd); return; }
     if (m.charge) return this.chargeStep(m, spd);
+    if (guard) {
+      if (Math.hypot(m.tx - m.x, m.ty - m.y) < 0.2 || Math.hypot(m.tx - guard.x, m.ty - guard.y) > 5) {
+        if (R.chance(0.02)) { const x = guard.x + R.int(-4, 4), y = guard.y + R.int(-4, 4); if (Math.hypot(x - guard.x, y - guard.y) <= 5 && this.grid.walkable(x, y)) { m.tx = x; m.ty = y; } }
+      } else this.walkTo(m, m.tx, m.ty, spd * 0.5);
+      return;
+    }
     // wander around home point, never into town
     if (Math.hypot(m.tx - m.x, m.ty - m.y) < 0.1 || R.chance(0.005)) {
       if (R.chance(0.02)) { const nx = m.hx + R.int(-4, 4), ny = m.hy + R.int(-4, 4); if (this.grid.walkable(nx, ny) && townDist(s, nx, ny) > 1) { m.tx = nx; m.ty = ny; } }
@@ -1494,7 +1589,7 @@ export class Sim {
   questForPawn(id) { return this.s.activeQuests.find(q => q.members.includes(id)); }
   questCandidates() {
     const s = this.s;
-    return s.advs.filter(a => !a.ko && a.hp > 0 && !a.dungeon && a.task?.type !== 'quest' && a.task?.type !== 'rescue' && !a.task?.carrying && !this.questForPawn(a.id));
+    return s.advs.filter(a => !a.ko && a.hp > 0 && !a.dungeon && a.task?.type !== 'quest' && a.task?.type !== 'rescue' && !a.task?.carrying && !this.questForPawn(a.id) && !this.bountyForPawn(a.id));
   }
   questReady(q) { return this.questCandidates().filter(a => a.hp >= maxHp(a, this.s) * 0.5); }
   autoQuestParty(qid) {
@@ -1572,7 +1667,7 @@ export class Sim {
         const c = s.banditCamps.find(c => c.id === q.camp);
         c.clears++; c.cooldownWeeks = this.R.int(8, 20); c.readyAt = s.tick + Math.round(c.cooldownWeeks * WEEK_SECONDS / DT);
         c.patrolAt = c.readyAt + this.R.int(...CAMP_PATROLS[s.stars].weeks) * WEEK_SECONDS / DT;
-        for (const m of s.mons) if (m.raid === 'patrol' && m.sourceCamp === c.id) { m.hp = 0; m.deadT = 0.3; m.path = null; }
+        for (const m of s.mons) if (['patrol', 'campGuard'].includes(m.raid) && m.sourceCamp === c.id) { m.hp = 0; m.deadT = 0.3; m.path = null; }
         for (const [k, n] of Object.entries(q.reward.materials)) s.mats[k] = (s.mats[k] || 0) + n;
         if (party.length) this.treasure({ lv: q.rec, x: c.x, y: c.y }, party[0]);
       }
@@ -1658,6 +1753,7 @@ export class Sim {
   }
   canChangeJob(a, jobId) {
     if (!a || a.dead || !JOBS[jobId]) return 'Adventurer or class unavailable';
+    if (this.bountyForPawn(a.id)) return 'Wait until this adventurer returns from bounty patrol';
     if (a.ko || a.dungeon || this.questForPawn(a.id)) return 'Wait until this adventurer is conscious and back from their quest';
     const j = JOBS[jobId]; if (jobId === a.job) return 'Current job';
     if (!a.jobLv[jobId] && (a.jobLv[a.job] || 1) < MASTERY) return `Master ${JOBS[a.job].name} first (Lv${a.jobLv[a.job] || 1}/${MASTERY})`;

@@ -60,7 +60,7 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     frontier: { completed: {}, relics: {}, petRewards: {}, rolls: {} },
     ground: [], roads: '', props: [],
     buildings: [], advs: [], mons: [], monsters: [], fx: [], folk: [], animals: [],
-    weaponDrops: [], weaponStash: {},
+    weaponDrops: [], weaponStash: {}, bounty: null,
     unlocked: { woodSword: true, cloth: true, ironCap: true, potion: true },
     quests: [], activeQuests: [], cleared: 0, bossesBeaten: {},
     titles: {}, events: [], log: [],
@@ -175,6 +175,7 @@ export function seedBanditCamps(s) {
       }
       c.cooldownWeeks ??= 0;
       c.patrolAt ??= Math.max(s.tick, c.readyAt) + patrolRng.int(...rules.weeks) * 300;
+      c.guardAt ??= 0;
     }
     return;
   }
@@ -196,7 +197,7 @@ export function seedBanditCamps(s) {
   for (const [x, y] of choices) {
     if (s.banditCamps.some(c => Math.hypot(c.x - x, c.y - y) < 9)) continue;
     const i = s.banditCamps.length;
-    s.banditCamps.push({ id: 'bandit' + (i + 1), name: names[i] + ' Camp', x, y, tier: 1 + Math.floor(i / 4), clears: 0, readyAt: 0, cooldownWeeks: 0, patrolAt: s.tick + patrolRng.int(...rules.weeks) * 300 });
+    s.banditCamps.push({ id: 'bandit' + (i + 1), name: names[i] + ' Camp', x, y, tier: 1 + Math.floor(i / 4), clears: 0, readyAt: 0, cooldownWeeks: 0, guardAt: 0, patrolAt: s.tick + patrolRng.int(...rules.weeks) * 300 });
     if (s.banditCamps.length === 16) break;
   }
   s.props = s.props.filter(p => p.k === 'cave' || !s.banditCamps.some(c => Math.abs(c.x - p.x) <= 4 + p.w && Math.abs(c.y - p.y) <= 4));
@@ -381,7 +382,7 @@ export function migrate(s) {
   s.flags ??= {}; s.flags.nextCampPatrol ??= 0; s.flags.bossRematches ??= 0;
   s.flags.pioneer ??= null; s.flags.pioneerPet ??= null;
   s.fx = []; s.folk = s.folk || []; s.animals = s.animals || [];
-  s.weaponDrops ??= []; s.weaponStash ??= {};
+  s.weaponDrops ??= []; s.weaponStash ??= {}; s.bounty ??= null;
   for (const m of s.monsters || []) m.alpha = m.alpha === true;
   s.flags.alphaUpgrades ??= (s.monsters || []).filter(m => m.alpha).length;
   if (!Array.isArray(s.activeQuests)) s.activeQuests = [];

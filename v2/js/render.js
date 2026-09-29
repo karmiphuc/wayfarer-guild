@@ -100,6 +100,11 @@ export class Renderer {
     if (ui.buildMode) this.drawBuildGrid(s);
     this.drawFrontiers(s, vis);
     this.drawCamps(s, vis);
+    if (s.bounty && vis(s.bounty.x, s.bounty.y, s.bounty.radius)) {
+      const b = s.bounty;
+      g.save(); g.beginPath(); g.arc((b.x + 0.5) * T, (b.y + 0.5) * T, b.radius * T, 0, Math.PI * 2);
+      g.fillStyle = '#ffd75a22'; g.fill(); g.strokeStyle = '#ffdc68'; g.lineWidth = 1; g.setLineDash([4, 3]); g.stroke(); g.restore();
+    }
 
     // collect y-sorted drawables
     const list = [];
@@ -132,6 +137,15 @@ export class Renderer {
       g.fillStyle = '#ffdf70'; g.strokeStyle = '#241b22'; g.lineWidth = 2;
       g.font = 'bold 8px monospace'; g.textAlign = 'center';
       g.strokeText('WEAPON', d.x * T + 8, d.y * T - 3); g.fillText('WEAPON', d.x * T + 8, d.y * T - 3);
+    }
+    if (s.bounty && vis(s.bounty.x, s.bounty.y)) {
+      const x = s.bounty.x * T + 8, y = s.bounty.y * T + 8;
+      g.save(); g.fillStyle = '#241b22'; g.fillRect(x - 2, y - 29, 3, 30);
+      g.fillStyle = '#ffdc68'; g.fillRect(x - 1, y - 28, 1, 28);
+      g.fillStyle = '#a72d31'; g.fillRect(x + 1, y - 28, 15, 11);
+      g.fillStyle = '#ffdc68'; g.fillRect(x + 6, y - 25, 4, 5);
+      g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.strokeStyle = '#241b22'; g.lineWidth = 2;
+      g.strokeText('BOUNTY', x, y - 33); g.fillText('BOUNTY', x, y - 33); g.restore();
     }
     if (this.ghost) this.drawGhost(s, ui);
     this.drawFx(s);
