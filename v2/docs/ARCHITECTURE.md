@@ -474,7 +474,7 @@ keep visitors capped, keep `s.log` bounded (60).
 
 ### Destructible watchtowers
 
-Watchtowers have 120 HP at level 1 and gain 60 maximum/current HP per upgrade (existing damage remains).
+Watchtowers have 50 HP at level 1 and gain 25 maximum/current HP per upgrade (existing damage remains).
 Old saves initialize missing tower health at their current level; damaged health persists across loads.
 Enemies without a pawn target acquire towers within four tiles. Tower shots explicitly draw retaliation,
 instead of assigning aggro to the pawn credited with the kill. A pawn hitting the enemy can draw it back.

@@ -385,7 +385,7 @@ export function migrate(s) {
   s.flags.pioneer ??= null; s.flags.pioneerPet ??= null;
   s.fx = []; s.folk = s.folk || []; s.animals = s.animals || [];
   s.weaponDrops ??= []; s.weaponStash ??= {}; s.bounty ??= null;
-  for (const b of s.buildings) if (defOf(b.type)?.hp) b.hp ??= buildingMaxHp(b);
+  for (const b of s.buildings) if (defOf(b.type)?.hp) b.hp = Math.min(b.hp ?? buildingMaxHp(b), buildingMaxHp(b));
   for (const m of s.mons) m.towerTarget ??= null;
   for (const m of s.monsters || []) m.alpha = m.alpha === true;
   s.flags.alphaUpgrades ??= (s.monsters || []).filter(m => m.alpha).length;
