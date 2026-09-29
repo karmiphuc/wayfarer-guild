@@ -2,12 +2,12 @@ import { ITEMS } from './items.js';
 import { makeRng } from './rng.js';
 
 export const RELIC_AFFIXES = {
-  vital: { name: 'Vital', key: 'hpPct', label: 'HP', min: 12, max: 30, pctMin: 20, pctMax: 35 },
-  fierce: { name: 'Fierce', key: 'atkPct', label: 'ATK', min: 2, max: 6, pctMin: 15, pctMax: 25 },
-  warded: { name: 'Warded', key: 'defPct', label: 'DEF', min: 2, max: 6, pctMin: 15, pctMax: 25 },
-  mystic: { name: 'Mystic', key: 'magPct', label: 'MAG', min: 2, max: 6, pctMin: 15, pctMax: 25 },
-  fleet: { name: 'Fleet', key: 'spd', label: 'movement speed', min: 3, max: 8, percent: true, pctMin: 8, pctMax: 15 },
-  keen: { name: 'Keen', key: 'crit', label: 'critical chance', min: 1, max: 3, percent: true, pctMin: 4, pctMax: 8 },
+  vital: { name: 'Vital', key: 'hpPct', label: 'HP', min: 12, max: 30, pctMin: 8, pctMax: 12 },
+  fierce: { name: 'Fierce', key: 'atkPct', label: 'ATK', min: 2, max: 6, pctMin: 5, pctMax: 8 },
+  warded: { name: 'Warded', key: 'defPct', label: 'DEF', min: 2, max: 6, pctMin: 5, pctMax: 8 },
+  mystic: { name: 'Mystic', key: 'magPct', label: 'MAG', min: 2, max: 6, pctMin: 5, pctMax: 8 },
+  fleet: { name: 'Fleet', key: 'spd', label: 'movement speed', min: 3, max: 8, percent: true, pctMin: 4, pctMax: 7 },
+  keen: { name: 'Keen', key: 'crit', label: 'critical chance', min: 1, max: 3, percent: true, pctMin: 2, pctMax: 4 },
 };
 
 const affixBonus = (A, value) => {

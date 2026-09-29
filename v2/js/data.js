@@ -265,7 +265,7 @@ export const MONSTERS = {
   ronin:    { name: 'Ronin',     spr: 'SamuraiRed',   human: true, weapon: 'Katana',   hp: 95, atk: 26, def: 11, spd: 1.05, xp: 56, gold: 70, drops: { ore: 0.5, crystal: 0.25 } },
   chief:    { name: 'Bandit Chief', spr: 'CaveLion2', human: true, weapon: 'BigSword', raidOnly: true, hp: 150, atk: 28, def: 13, spd: 0.95, xp: 90, gold: 160, drops: { ore: 0.8, crystal: 0.5 } },
 };
-// Visitor cap per village rank (index = stars 0..5): at most this many non-resident adventurers at once.
+// Total adventurer cap per village rank (index = stars 0..5): residents and travelers combined.
 export const VISITOR_CAP = [5, 5, 10, 15, 20, 30];
 // Chance that a wild spawn is an Elite (recoloured, tougher, double-plus rewards).
 export const ELITE_CHANCE = 0.06;

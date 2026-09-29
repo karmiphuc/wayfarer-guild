@@ -1,5 +1,5 @@
 // Game state creation, world generation, save/load. State is plain JSON (no class instances).
-import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, TOWN0, FAC, DECOR, JOBS, NAMES, PERSONA, ITEMS, PERKS, VISITOR_JOBS, TITLES, ZONE_MONS, CHARTERS, ROSTER_SIZE, MONSTERS, HAPPENINGS } from './data.js';
+import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, TOWN0, FAC, DECOR, JOBS, NAMES, PERSONA, ITEMS, PERKS, VISITOR_JOBS, VISITOR_CAP, TITLES, ZONE_MONS, CHARTERS, ROSTER_SIZE, MONSTERS, HAPPENINGS } from './data.js';
 import { makeRng } from './rng.js';
 import { CAMP_PATROLS } from './data.js';
 import { getFrontiers, generateWorld, finishWorldPaths } from './world.js';
@@ -307,6 +307,7 @@ export function teachJob(a, jobId, R) {
 }
 
 export function spawnAdventurer(s, R, at) {
+  if (s.advs.length >= (VISITOR_CAP[s.stars] ?? 30)) return null;
   const pool = VISITOR_JOBS[Math.min(VISITOR_JOBS.length - 1, Math.floor(s.stars / 1.5))];
   const a = makeAdventurer(s, R, R.pick(pool));
   teachJob(a, a.job, R);
