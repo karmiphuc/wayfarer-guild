@@ -339,6 +339,7 @@ export function stat(a, k, s) {
   v *= 1 + (a.work - 100) / 400;
   v += bondedPetBonus(a, k, s);
   if (s) v *= 1 + titleBonus(s, k) + frontierBonus(s, k);
+  v *= 1 + gearSum(a, `${k}Pct`, s);
   return Math.max(1, Math.round(v));
 }
 export const maxHp = (a, s) => stat(a, 'hp', s);

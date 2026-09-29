@@ -17,6 +17,7 @@ Legend:
   routes while retaining early home hunting terrain. Existing villages retain their geography. Camps gain three factions,
   named captains, bounded challenge modifiers and themed stores without changing patrol/raid schedules or level caps.
   The eight guaranteed unique relics each gain two saved random bonus traits; existing rewards receive their roll once.
+  Relic base and trait HP/ATK/DEF/MAG bonuses now scale developed pawn stats by percentages, retaining saved roll quality.
 
 - New Game optionally carries one chosen level-1 Villager with up to five random masteries, their bonded pet and
   one extra legendary camp pet. Pet bond/Alpha status survive, village progress resets, and charter world rerolls

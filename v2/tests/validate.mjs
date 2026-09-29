@@ -67,7 +67,7 @@ for (const [i, pool] of VISITOR_JOBS.entries()) for (const j of pool) if (!JOBS[
 for (const [id, j] of Object.entries(JOBS)) if (j.tier === 3 && !Object.values(JOBS).some(next => next.tier === 4 && next.req?.includes(id))) err(`JOBS.${id}: tier-3 job has no tier-4 successor`);
 
 // ---------------- items ----------------
-const KNOWN_ITEM_KEYS = ['name', 'slot', 'type', 'hand', 'icon', 'tint', 'price', 'dev', 'bow', 'atk', 'def', 'mag', 'hp', 'crit', 'spd', 'heal', 'legendary', 'revive', 'star', 'researchOnly'];
+const KNOWN_ITEM_KEYS = ['name', 'slot', 'type', 'hand', 'icon', 'tint', 'price', 'dev', 'bow', 'atk', 'def', 'mag', 'hp', 'atkPct', 'defPct', 'magPct', 'hpPct', 'crit', 'spd', 'heal', 'legendary', 'revive', 'star', 'researchOnly'];
 for (const [id, it] of Object.entries(ITEMS)) {
   const where = `ITEMS.${id}`;
   if (!['weapon', 'armor', 'offhand', 'acc', 'item', 'blessing'].includes(it.slot)) err(`${where}: bad slot "${it.slot}"`);

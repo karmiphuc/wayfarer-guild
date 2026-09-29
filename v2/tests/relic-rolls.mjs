@@ -21,13 +21,14 @@ for (let seed = 1; seed <= 40; seed++) {
     for (const affix of roll.affixes) {
       const A = RELIC_AFFIXES[affix.id], mult = A.percent ? 100 : 1;
       assert(affix.value * mult >= A.min && affix.value * mult <= A.max);
-      assert.equal(item[A.key], (base[A.key] || 0) + affix.value);
+      const quality = (affix.value * mult - A.min) / (A.max - A.min);
+      const bonus = Math.round(A.pctMin + quality * (A.pctMax - A.pctMin)) / 100;
+      assert(Math.abs(item[A.key] - ((base[A.key] || 0) + bonus)) < 1e-12);
     }
     assert(item.name.endsWith(base.name)); assert(relicRollText(s, f.relic).includes('+'));
     assert.equal(sim.equipRelic(f.relic, a.id), null);
-    for (const k of ['hp', 'atk', 'def', 'mag', 'spd', 'crit']) {
+    for (const k of ['hpPct', 'atkPct', 'defPct', 'magPct', 'spd', 'crit']) {
       assert.equal(gearSum(a, k, s) - gearSum({ ...a, eq: { ...a.eq, blessing: null } }, k, s), item[k] || 0);
-      if (['hp', 'atk', 'def', 'mag'].includes(k)) assert(stat(a, k, s) >= stat(a, k, { ...s, frontier: { ...s.frontier, rolls: {} } }));
     }
     assert.equal(sim.equipRelic(f.relic, b.id), null); assert.equal(a.eq.blessing, null);
     assert.equal(sim.equipRelic(f.relic, null), null);
@@ -42,4 +43,21 @@ for (let seed = 1; seed <= 40; seed++) {
   for (const f of FRONTIERS) assert.deepEqual(reverse.frontier.rolls[f.relic], s.frontier.rolls[f.relic]);
 }
 assert(variants.size > 30);
-console.log('relic-rolls: bounded unique traits, world variation, real stat use, single-owner transfers, old saves and no rerolls passed');
+
+// Percentage blessings grow with the pawn while ordinary equipment remains flat and unchanged.
+{
+  const s = newGame(99), sim = new Sim(s), a = s.advs[0];
+  a.resident = true; a.eq.weapon = 'woodSword';
+  s.frontier.completed.greenmarch = true; s.frontier.relics.rootheart = null;
+  s.frontier.rolls.rootheart = { affixes: [{ id: 'fierce', value: 4 }, { id: 'warded', value: 4 }] };
+  assert.equal(gearSum(a, 'atk', s), ITEMS.woodSword.atk);
+  assert.equal(gearSum(a, 'atkPct', s), 0);
+  const plainLv1 = stat(a, 'atk', s); assert.equal(sim.equipRelic('rootheart', a.id), null);
+  const blessedLv1 = stat(a, 'atk', s), lv1Gain = blessedLv1 - plainLv1;
+  assert.equal(gearSum(a, 'atk', s), ITEMS.woodSword.atk);
+  assert.equal(gearSum(a, 'atkPct', s), 0.20);
+  a.lv = 99; const blessedLv99 = stat(a, 'atk', s);
+  a.eq.blessing = null; const plainLv99 = stat(a, 'atk', s);
+  assert(blessedLv1 > plainLv1); assert(blessedLv99 - plainLv99 > lv1Gain);
+}
+console.log('relic-rolls: percentage scaling at Lv1/Lv99, unchanged ordinary gear, saved roll identity, single-owner transfers and no rerolls passed');

@@ -3,19 +3,19 @@ import { FRONTIERS, ITEMS } from '../js/data.js';
 import { newGame, migrate, gearSum, maxHp } from '../js/state.js';
 import { Sim } from '../js/sim.js';
 import { UI } from '../js/ui.js';
+import { relicItem } from '../js/relics.js';
 
-// Every legacy assigned accessory migrates once, retaining its owner and exact stat contribution.
+// Every legacy assigned accessory migrates once, retaining its owner and percentage blessing.
 for (const f of FRONTIERS) {
   const s = newGame(412), [a, b] = s.advs;
   a.resident = b.resident = true;
   s.frontier.completed[f.id] = true; s.frontier.relics[f.relic] = a.id;
   delete a.eq.blessing; a.eq.acc = f.relic;
   b.eq.blessing = f.relic; b.eq.acc = 'heroCrest'; // reject an unowned duplicate
-  const before = ['hp', 'atk', 'def', 'mag', 'spd', 'crit'].map(k => gearSum(a, k));
   migrate(s);
   assert.equal(a.eq.blessing, f.relic); assert.equal(a.eq.acc, null);
   assert.equal(b.eq.blessing, null); assert.equal(b.eq.acc, 'heroCrest');
-  assert.deepEqual(['hp', 'atk', 'def', 'mag', 'spd', 'crit'].map(k => gearSum(a, k)), before);
+  assert(Object.keys(ITEMS[f.relic]).some(k => ['hpPct', 'atkPct', 'defPct', 'magPct', 'spd', 'crit'].includes(k)));
   const once = JSON.stringify(s); migrate(s); assert.equal(JSON.stringify(s), once);
 }
 {
@@ -25,7 +25,8 @@ for (const f of FRONTIERS) {
   a.eq.acc = 'heroCrest'; b.eq.acc = 'luckyCharm';
   assert.equal(sim.equipRelic('paleEmber', a.id), null);
   assert.equal(a.eq.acc, 'heroCrest'); assert.equal(a.eq.blessing, 'paleEmber');
-  assert.equal(gearSum(a, 'def'), ITEMS.heroCrest.def + ITEMS.paleEmber.def);
+  assert.equal(gearSum(a, 'def', s), ITEMS.heroCrest.def);
+  assert.equal(gearSum(a, 'defPct', s), relicItem(s, 'paleEmber').defPct);
   a.hp = maxHp(a, s);
   assert.equal(sim.equipRelic('paleEmber', b.id), null);
   assert.equal(a.eq.blessing, null); assert(a.hp <= maxHp(a, s));

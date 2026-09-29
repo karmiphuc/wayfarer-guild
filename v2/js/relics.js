@@ -2,12 +2,18 @@ import { ITEMS } from './items.js';
 import { makeRng } from './rng.js';
 
 export const RELIC_AFFIXES = {
-  vital: { name: 'Vital', key: 'hp', label: 'HP', min: 12, max: 30 },
-  fierce: { name: 'Fierce', key: 'atk', label: 'ATK', min: 2, max: 6 },
-  warded: { name: 'Warded', key: 'def', label: 'DEF', min: 2, max: 6 },
-  mystic: { name: 'Mystic', key: 'mag', label: 'MAG', min: 2, max: 6 },
-  fleet: { name: 'Fleet', key: 'spd', label: 'movement speed', min: 3, max: 8, percent: true },
-  keen: { name: 'Keen', key: 'crit', label: 'critical chance', min: 1, max: 3, percent: true },
+  vital: { name: 'Vital', key: 'hpPct', label: 'HP', min: 12, max: 30, pctMin: 20, pctMax: 35 },
+  fierce: { name: 'Fierce', key: 'atkPct', label: 'ATK', min: 2, max: 6, pctMin: 15, pctMax: 25 },
+  warded: { name: 'Warded', key: 'defPct', label: 'DEF', min: 2, max: 6, pctMin: 15, pctMax: 25 },
+  mystic: { name: 'Mystic', key: 'magPct', label: 'MAG', min: 2, max: 6, pctMin: 15, pctMax: 25 },
+  fleet: { name: 'Fleet', key: 'spd', label: 'movement speed', min: 3, max: 8, percent: true, pctMin: 8, pctMax: 15 },
+  keen: { name: 'Keen', key: 'crit', label: 'critical chance', min: 1, max: 3, percent: true, pctMin: 4, pctMax: 8 },
+};
+
+const affixBonus = (A, value) => {
+  // Saved values keep their original ranges as quality inputs, preserving old rolls and RNG draws.
+  const raw = value * (A.percent ? 100 : 1);
+  return Math.round(A.pctMin + (raw - A.min) / (A.max - A.min) * (A.pctMax - A.pctMin)) / 100;
 };
 
 // World code + unique item identity, independent of combat RNG and capture order.
@@ -34,7 +40,7 @@ export function relicItem(s, id) {
   for (const a of s.frontier.rolls[id].affixes) {
     const A = RELIC_AFFIXES[a.id];
     if (!A) continue;
-    item[A.key] = (item[A.key] || 0) + a.value; names.push(A.name);
+    item[A.key] = (item[A.key] || 0) + affixBonus(A, a.value); names.push(A.name);
   }
   item.name = `${names.join(' ')} ${base.name}`;
   return item;
@@ -45,6 +51,6 @@ export function relicRollText(s, id) {
   if (!roll) return 'Two random bonus traits revealed on capture';
   return roll.affixes.map(a => {
     const A = RELIC_AFFIXES[a.id];
-    return `${A.name}: +${A.percent ? Math.round(a.value * 100) + '%' : a.value} ${A.label}`;
+    return `${A.name}: +${Math.round(affixBonus(A, a.value) * 100)}% ${A.label}`;
   }).join(' / ');
 }
