@@ -63,6 +63,10 @@ try {
 { const r = run('node', ['tests/towers.mjs']);
   r.status ? fail('destructible towers', r.stdout + (r.stderr || '')) : ok('towers', r.stdout.trim()); }
 
+// Camp guards detect and retaliate without unlimited pursuit.
+{ const r = run('node', ['tests/camp-guards.mjs']);
+  r.status ? fail('camp guard defense', r.stdout + (r.stderr || '')) : ok('camp guard defense', r.stdout.trim()); }
+
 // Player-directed bounty patrols and camp sentries.
 { const r = run('node', ['tests/bounty.mjs']);
   r.status ? fail('bounty patrol checks', r.stdout + (r.stderr || '')) : ok('bounty patrols', r.stdout.trim()); }
