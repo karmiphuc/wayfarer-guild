@@ -1,3 +1,4 @@
+import { getFrontiers } from '../js/world.js';
 import assert from 'node:assert/strict';
 import { FRONTIERS, JOBS, MAP_W, MAP_H, MONSTERS } from '../js/data.js';
 import { makeAdventurer, maxHp, migrate, newGame, place, seedBanditCamps } from '../js/state.js';
@@ -11,7 +12,7 @@ for (const seed of [1, 17, 4242, 81299]) {
   assert(!s.mons.some(m => m.camp));
   for (const c of s.banditCamps) {
     assert(c.x > 2 && c.y > 2 && c.x < MAP_W - 3 && c.y < MAP_H - 3);
-    assert(FRONTIERS.every(f => Math.hypot(c.x - f.x, c.y - f.y) >= 10));
+    assert(getFrontiers(s).every(f => Math.hypot(c.x - f.x, c.y - f.y) >= 10));
     assert(sim.grid.find(38, 28, c.x, c.y)?.length, `${c.name} unreachable in world ${seed}`);
   }
 }
@@ -40,7 +41,7 @@ assert.notDeepEqual(newGame(1).banditCamps, newGame(17).banditCamps);
 {
   const s = newGame(91);
   delete s.banditCamps;
-  for (const f of FRONTIERS) s.frontier.completed[f.id] = true;
+  for (const f of getFrontiers(s)) s.frontier.completed[f.id] = true;
   place(s, 'house', 90, 60);
   const seed = s.seed, buildings = JSON.stringify(s.buildings), roads = s.roads;
   seedBanditCamps(s);
@@ -102,7 +103,7 @@ for (let retry = 0; retry < 40; retry++) {
 assert.equal(s.banditCamps.length, 16);
 
 // Camp footprint remains clear even when its surrounding territory is captured.
-for (const f of FRONTIERS) s.frontier.completed[f.id] = true;
-const inLand = s.banditCamps.find(c => FRONTIERS.some(f => c.x >= f.land.x0 && c.x < f.land.x1 && c.y >= f.land.y0 && c.y < f.land.y1));
+for (const f of getFrontiers(s)) s.frontier.completed[f.id] = true;
+const inLand = s.banditCamps.find(c => getFrontiers(s).some(f => c.x >= f.land.x0 && c.x < f.land.x1 && c.y >= f.land.y0 && c.y < f.land.y1));
 if (inLand) assert.match(sim.canPlace('road', inLand.x, inLand.y), /camp entrance/);
 console.log('camps: 16 seeded dormant sites, human classes, parallel battles, loot/cooldown, migration and bounded retries passed');

@@ -6,7 +6,8 @@ import { Sim, DT, WEEK_SECONDS } from './sim.js';
 import { Renderer } from './render.js';
 import { UI } from './ui.js';
 import { Audio } from './audio.js';
-import { MAP_W, MAP_H, FAC, FRONTIERS } from './data.js';
+import { MAP_W, MAP_H, FAC } from './data.js';
+import { getFrontiers } from './world.js';
 
 const MAX_STEPS_PER_FRAME = 40;   // tick budget: never spiral on slow frames or tab resume
 
@@ -192,9 +193,9 @@ function bindInput() {
     }
     // Camps and frontier landmarks rise above their reserved ground tiles; their whole visible marker is clickable.
     if (!best) { const c = (s.banditCamps || []).find(c => tx >= c.x - 3 && tx <= c.x + 3 && ty >= c.y - 3 && ty <= c.y + 2); if (c) { game.ui.showCamp(c.id); return; } }
-    if (!best) { const f = FRONTIERS.find(f => !s.frontier?.completed?.[f.id] && tx >= f.x - 6 && tx <= f.x + 6 && ty >= f.y - 6.5 && ty <= f.y + 2.5); if (f) { game.ui.showFrontier(f.id); return; } }
+    if (!best) { const f = getFrontiers(s).find(f => !s.frontier?.completed?.[f.id] && tx >= f.x - 6 && tx <= f.x + 6 && ty >= f.y - 6.5 && ty <= f.y + 2.5); if (f) { game.ui.showFrontier(f.id); return; } }
     if (!best) { const b = buildingAt(s, Math.floor(tx), Math.floor(ty)) || buildingAt(s, Math.floor(tx), Math.floor(ty + 1)); if (b && !defOf(b.type).road) best = { kind: 'b', id: b.id }; }
-    if (!best) { const f = FRONTIERS.find(f => s.frontier?.completed?.[f.id] && tx >= f.x - 3.5 && tx <= f.x + 3.5 && ty >= f.y - 3.5 && ty <= f.y + 1.5); if (f) { game.ui.showFrontier(f.id); return; } }
+    if (!best) { const f = getFrontiers(s).find(f => s.frontier?.completed?.[f.id] && tx >= f.x - 3.5 && tx <= f.x + 3.5 && ty >= f.y - 3.5 && ty <= f.y + 1.5); if (f) { game.ui.showFrontier(f.id); return; } }
     if (best) game.ui.select(best); else game.ui.deselect();
   }
 }

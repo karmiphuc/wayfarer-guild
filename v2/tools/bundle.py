@@ -8,7 +8,7 @@
 # GitHub Pages serves ES modules fine. ADD NEW MODULES TO `ORDER` (dependencies first) or they will be missing.
 import re, os, shutil, json, sys
 
-ORDER = ['rng', 'path', 'jobs', 'items', 'happenings', 'data', 'state', 'sim', 'assets', 'render', 'audio', 'ui', 'main']
+ORDER = ['rng', 'path', 'jobs', 'items', 'happenings', 'data', 'world', 'camps', 'relics', 'state', 'sim', 'assets', 'render', 'audio', 'ui', 'main']
 V2 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else os.path.join(os.path.dirname(V2), 'dist', 'v2')
 

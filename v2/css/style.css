@@ -113,6 +113,7 @@ button, input { word-spacing: inherit; }   /* UA styles reset it; the pixel font
 .relic-transfer { margin: 8px 0; padding: 8px; background: rgba(255, 231, 196, 0.7); border: 2px solid #c98a5a; border-radius: 3px; }
 button.relic-choice { -webkit-appearance: none; appearance: none; width: 100%; min-height: 62px; font: inherit; color: inherit; text-align: left; }
 .relic-choice .name, .relic-choice .sub { display: block; }
+.relic-grid .card .name { white-space: normal; overflow-wrap: anywhere; }
 .relic-choice .relic-ready { color: #7a4c00; font-weight: bold; }
 .relic-choice .check { color: var(--good); font-weight: bold; }
 .relic-choice:focus-visible { z-index: 1; outline: 4px solid #0b4f8a; outline-offset: 3px; }

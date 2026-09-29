@@ -37,7 +37,7 @@ function fixture() {
   assert.equal(pawn.perks.length, 5); assert.equal(Object.values(pawn.jobLv).filter(l => l >= MASTERY).length, 5);
   assert(Object.values(pawn.jobLv).every(l => l === 1 || l === MASTERY));
   assert.equal(next.stars, 0); assert.equal(next.gold, 3000); assert.equal(next.cleared, 0);
-  assert.deepEqual(next.frontier, { completed: {}, relics: {}, petRewards: {} });
+  assert.deepEqual(next.frontier, { completed: {}, relics: {}, petRewards: {}, rolls: {} });
   assert.deepEqual(next.bossesBeaten, {});
   assert.equal(next.monsters.length, 2);
   assert.equal(next.monsters.find(p => p.id === pawn.partner).name, 'Old Friend');

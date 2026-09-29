@@ -1,10 +1,13 @@
 // Canvas renderer. Reads state, never mutates it. Integer world zoom; nearest-neighbor actor enlargement.
-import { T, MAP_W, MAP_H, FRONTIERS, SPR, TILE, ROAD_TILES, FAC, DECOR, MONSTERS, BOSSES, MATS, JOBS, ITEMS } from './data.js';
+import { T, MAP_W, MAP_H, SPR, TILE, ROAD_TILES, FAC, DECOR, MONSTERS, BOSSES, MATS, JOBS, ITEMS } from './data.js';
 import { IMG, EMOTE, HANDS, tinted, goldified } from './assets.js';
 import { roadAt, defOf, maxHp, buildAreas, townDist } from './state.js';
 import { WEEK_SECONDS } from './sim.js';
+import { getFrontiers, regionAt } from './world.js';
+import { campProfile } from './camps.js';
 
 const ACTOR_SCALE = 1.3;
+const REGION_TINT = { meadow: 'rgba(195,177,81,0.07)', forest: 'rgba(25,73,58,0.15)', hills: 'rgba(159,126,89,0.18)', ashen: 'rgba(112,74,74,0.22)', snow: 'rgba(224,241,249,0.42)' };
 
 export function palisadeConnections(x, y, barriers) {
   const at = (xx, yy) => !!(barriers && xx >= 0 && yy >= 0 && xx < MAP_W && yy < MAP_H && barriers[yy * MAP_W + xx]);
@@ -49,9 +52,9 @@ export class Renderer {
 
   // ---------- static ground layer ----------
   buildStatic(s) {
-    const key = JSON.stringify(s.town) + FRONTIERS.map(f => s.frontier?.completed[f.id] ? '1' : '0').join('');
-    if (key === this.staticKey && s.roads === this.staticRoads) return;
-    this.staticKey = key; this.staticRoads = s.roads;
+    const key = JSON.stringify(s.town) + getFrontiers(s).map(f => s.frontier?.completed[f.id] ? '1' : '0').join('');
+    if (key === this.staticKey && s.roads === this.staticRoads && s.world === this.staticWorld) return;
+    this.staticKey = key; this.staticRoads = s.roads; this.staticWorld = s.world;
     const c = this.static;
     if (c.width !== MAP_W * T || c.height !== MAP_H * T) { c.width = MAP_W * T; c.height = MAP_H * T; }
     const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
@@ -60,6 +63,11 @@ export class Renderer {
       const v = +s.ground[y * MAP_W + x];
       const [tc, tr] = v ? TILE.grassV[v - 1] : TILE.grass;
       g.drawImage(fl, tc * T, tr * T, T, T, x * T, y * T, T, T);
+      const region = regionAt(s, x, y);
+      if (region && REGION_TINT[region.biome]) {
+        g.fillStyle = REGION_TINT[region.biome]; g.fillRect(x * T, y * T, T, T);
+        if (region.pattern === 'ruins') { g.fillStyle = 'rgba(96,88,79,0.06)'; g.fillRect(x * T, y * T, T, T); }
+      }
     }
     for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) {
       if (!roadAt(s, x, y)) continue;
@@ -351,7 +359,7 @@ export class Renderer {
   }
   drawFrontiers(s, vis) {
     const g = this.g;
-    for (const f of FRONTIERS) {
+    for (const f of getFrontiers(s)) {
       const done = s.frontier?.completed[f.id], active = s.activeQuests.some(q => q.frontier === f.id);
       const ready = s.stars >= f.star && f.requires.every(id => s.frontier?.completed[id]);
       if (this.frontierFocus === f.id) {
@@ -411,6 +419,11 @@ export class Renderer {
       this.spr(tier >= 2 ? 'barrel' : 'crate', x - 29, y - 14);
       if (tier >= 3) this.spr('cart', x + 18, y - 24);
       if (tier >= 4) { this.spr('palisadeV', x - 36, y - 28); this.spr('palisadeV', x + 35, y - 28); }
+      const profile = campProfile(c);
+      g.fillStyle = '#241b22'; g.fillRect(x - 14, y - 49, 14, 12);
+      g.fillStyle = profile.color; g.fillRect(x - 13, y - 48, 12, 10);
+      g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillStyle = '#241b22';
+      g.fillText(profile.label[0], x - 7, y - 40);
       g.fillStyle = active ? '#ff8057' : cooling ? '#8b929c' : '#ffd65b'; g.fillRect(x + 3, y - 48, 10, 10);
       g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillStyle = '#241b22'; g.fillText(active ? '!' : cooling ? '…' : '?', x + 8, y - 40);
     }

@@ -51,11 +51,11 @@ playthrough. Never hard-code them as targets: our numbers come from the bot soak
 
 | System | What it does | Status | Issue |
 |---|---|---|---|
-| World codes | each village is founded from a seed (shown as a 6-letter code): monster species per zone, cave spot, charter offers | ✅ | #45 |
+| World codes | seeded species, cave and charters; new villages also generate terrain regions, varied frontier locations and two bonus traits per unique relic; old maps persist | ✅ | #45 |
 | Village charters | pick 1 of 3 at founding; each has an upside, a downside and a starting gift (9 charters) | ✅ | #45 |
 | Weekly happenings | 11 seeded random events: merchant, Golden Slime, rain, clear skies, bard, harvest, stampede, bandits, meteors, fog, legendary wanderer | ✅ | #45 |
 | Raids defend the town | rank-scaled stampedes and class-based bandit companies attack; ranged, magic and healing raiders; free healthy non-rescuers rally | 🟡 | #45, #25 |
-| Bandit camps | 16 seeded sites; tier/rank gates, repeatable party fights, material stores and random 8–20 week cooldowns; available camps launch village raids | ✅ | #45, #25 |
+| Bandit camps | 16 seeded sites; three factions, named captains, bounded challenge modifiers and themed stores; tier/rank gates and 8–20 week cooldowns; available camps launch village raids | ✅ | #45, #25 |
 | Outlaws | 6 roaming human enemy types plus job-class raiders with visible weapons and class labels | ✅ | #45 |
 | Elite monsters | 6% of wild spawns: recoloured with a crown, tougher, ×2.5 EXP/gold, ×2 drops | ✅ | #45 |
 

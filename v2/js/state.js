@@ -2,6 +2,9 @@
 import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, TOWN0, FAC, DECOR, JOBS, NAMES, PERSONA, ITEMS, PERKS, VISITOR_JOBS, TITLES, ZONE_MONS, CHARTERS, ROSTER_SIZE, MONSTERS, HAPPENINGS } from './data.js';
 import { makeRng } from './rng.js';
 import { CAMP_PATROLS } from './data.js';
+import { getFrontiers, generateWorld, finishWorldPaths } from './world.js';
+import { seedCampFactions } from './camps.js';
+import { relicItem, seedRelicRolls } from './relics.js';
 
 export const SCHEMA = 1;
 const SAVE_KEYS = ['wayfarerV2_a', 'wayfarerV2_b'];
@@ -16,7 +19,7 @@ export function townDist(s, x, y) {
   }
   return d;
 }
-export function buildAreas(s) { return [s.town, ...FRONTIERS.filter(f => s.frontier?.completed[f.id]).map(f => f.land)]; }
+export function buildAreas(s) { return [s.town, ...getFrontiers(s).filter(f => s.frontier?.completed[f.id]).map(f => f.land)]; }
 // Two three-tile openings per side. The free perimeter sits outside the buildable home rectangle.
 export function villageBoundary(s) {
   const t = s.town, walls = [], gates = [], approaches = [];
@@ -54,7 +57,7 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
     gold: 3000, tp: 10, pop: 40, stars: 0,
     mats: { wood: 6, hide: 2, herb: 4, ore: 0, crystal: 0 },
     town: { ...TOWN0 }, mapWidth: HOME_W, mapHeight: HOME_H,
-    frontier: { completed: {}, relics: {}, petRewards: {} },
+    frontier: { completed: {}, relics: {}, petRewards: {}, rolls: {} },
     ground: [], roads: '', props: [],
     buildings: [], advs: [], mons: [], monsters: [], fx: [], folk: [], animals: [],
     unlocked: { woodSword: true, cloth: true, ironCap: true, potion: true },
@@ -118,8 +121,11 @@ export function newGame(seed = (Date.now() & 0x7fffffff)) {
   for (const k of ['Chicken', 'Chicken', 'Dog', 'Cat']) s.animals.push({ k, x: R.int(28, 46), y: R.int(20, 36), tx: 0, ty: 0, t: 0, flip: false });
   log(s, 'Welcome, Chief! Build shops, attract adventurers, and grow your village.', 'good');
   expandWorld(s);
+  generateWorld(s);
   clearFrontierScenery(s);
   seedBanditCamps(s);
+  seedCampFactions(s);
+  finishWorldPaths(s);
   return s;
 }
 
@@ -150,7 +156,7 @@ export function legacyGame(previous, pawnId, petId = null, seed) {
 }
 
 function clearFrontierScenery(s) {
-  s.props = s.props.filter(p => p.k === 'cave' || !FRONTIERS.some(f => !s.frontier?.completed[f.id]
+  s.props = s.props.filter(p => p.k === 'cave' || !getFrontiers(s).some(f => !s.frontier?.completed[f.id]
     && Math.abs(p.x - f.x) <= 7 + p.w && Math.abs(p.y - f.y) <= 7));
 }
 
@@ -177,7 +183,7 @@ export function seedBanditCamps(s) {
   for (let y = 6; y < MAP_H - 6; y += 8) for (let x = 6; x < MAP_W - 6; x += 8) {
     const xx = x + R.int(-2, 2), yy = y + R.int(-2, 2);
     if (xx < HOME_W && yy < HOME_H) continue;
-    if (FRONTIERS.some(f => Math.hypot(xx - f.x, yy - f.y) < 10)) continue;
+    if (getFrontiers(s).some(f => Math.hypot(xx - f.x, yy - f.y) < 10)) continue;
     if (s.buildings.some(b => { const [w, h] = defOf(b.type).fp; return xx >= b.x - 5 && xx <= b.x + w + 5 && yy >= b.y - 5 && yy <= b.y + h + 5; })) continue;
     if ([-2, -1, 0, 1, 2].some(dy => [-2, -1, 0, 1, 2].some(dx => roadAt(s, xx + dx, yy + dy)))) continue;
     candidates.push([xx, yy]);
@@ -315,7 +321,7 @@ export const LV_CAP = 99, JOB_CAP = 99, MASTERY = 10;
 // Sum of a bonus key over the town titles earned so far (TITLES[].bonus). Sim uses the same data via Sim.bonus().
 export function titleBonus(s, key) { let v = 0; for (const t of TITLES) if (s.titles && s.titles[t.id] && t.bonus[key]) v += t.bonus[key]; return v; }
 export function perkSum(a, key) { let v = 0; for (const p of a.perks || []) { const P = PERKS[p]; if (P && P[key]) v += P[key]; } return v; }
-export function gearSum(a, key) { let v = 0; for (const slot of ['weapon', 'armor', 'offhand', 'acc', 'blessing']) { const it = a.eq[slot] && ITEMS[a.eq[slot]]; if (it && it[key]) v += it[key]; } return v; }
+export function gearSum(a, key, s) { let v = 0; for (const slot of ['weapon', 'armor', 'offhand', 'acc', 'blessing']) { const it = a.eq[slot] && relicItem(s, a.eq[slot]); if (it && it[key]) v += it[key]; } return v; }
 export function bondedPetBonus(a, k, s) {
   if (!a.partner || !s) return 0;
   const m = s.monsters.find(m => m.id === a.partner);
@@ -326,7 +332,7 @@ export function bondedPetBonus(a, k, s) {
 export function stat(a, k, s) {
   const job = JOBS[a.job], v0 = JOBS.villager;
   let v = a.base[k] + (job[k] - v0[k]) + (a.lv - 1) * GROW[k] * (1 + job[k] / 25);
-  v += gearSum(a, k);
+  v += gearSum(a, k, s);
   // permanent growth from every job level ever earned (DV2: training many jobs makes you stronger)
   const jl = Object.values(a.jobLv).reduce((n, l) => n + l, 0);
   v *= 1 + Math.min(0.6, jl * 0.004) + perkSum(a, 'allPct') + perkSum(a, PCT[k]);
@@ -376,9 +382,12 @@ export function migrate(s) {
   s.frontier = s.frontier || { completed: {}, relics: {} };
   s.frontier.completed = s.frontier.completed || {}; s.frontier.relics = s.frontier.relics || {};
   s.frontier.petRewards ??= {};
+  s.world.frontierSites ??= null; s.world.regions ??= null; s.world.generation ??= 0;
+  const needsExpansion = s.mapWidth !== MAP_W || s.mapHeight !== MAP_H;
   expandWorld(s);
-  clearFrontierScenery(s);
+  if (needsExpansion) clearFrontierScenery(s);
   seedBanditCamps(s);
+  seedCampFactions(s);
   if (!s.flags.patrolScaling) {
     const rules = CAMP_PATROLS[s.stars], R = makeRng({ seed: (s.world?.code || 4242) ^ 0x50415453 });
     s.flags.nextCampPatrol = s.tick + R.int(...rules.weeks) * 300;
@@ -444,5 +453,6 @@ export function migrate(s) {
     }
     if (owner && owner.eq.blessing !== f.relic) s.frontier.relics[f.relic] = null;
   }
+  seedRelicRolls(s);
   return s;
 }

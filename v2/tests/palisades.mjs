@@ -1,3 +1,4 @@
+import { getFrontiers } from '../js/world.js';
 import assert from 'node:assert/strict';
 import { DECOR, FRONTIERS, MAP_W, MONSTERS } from '../js/data.js';
 import { makeAdventurer, maxHp, migrate, newGame, place, villageBoundary } from '../js/state.js';
@@ -163,7 +164,7 @@ assert.deepEqual(DECOR.palisade.fp, [1, 1]);
   assert.notDeepEqual(s.town, oldTown); assert.equal(groups(sim.gates).length, 8);
   assert(sim.boundary.every(c => !oldBoundary.has(key(c.x, c.y))));
   sim.captureFrontier(FRONTIERS[0].id);
-  const goal = sim.grid.nearestWalkable(FRONTIERS[0].x, FRONTIERS[0].y);
+  const goal = sim.grid.nearestWalkable(getFrontiers(s)[0].x, getFrontiers(s)[0].y);
   assert(goal); assert(sim.grid.find(38, 28, goal[0], goal[1])?.length, 'captured frontier was unreachable after expansion');
 }
 

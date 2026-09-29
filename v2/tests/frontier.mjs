@@ -1,3 +1,4 @@
+import { getFrontiers } from '../js/world.js';
 import assert from 'node:assert/strict';
 import { FRONTIERS, HOME_H, HOME_W, MAP_H, MAP_W, BOSSES, ITEMS } from '../js/data.js';
 import { buildAreas, frontierBonus, makeAdventurer, maxHp, migrate, newGame, roadAt, townDist } from '../js/state.js';
@@ -53,7 +54,7 @@ function timeoutChallenge(s, sim, f, party) {
   assert(sim.frontierBlock('ironvale'));
   assert.equal(sim.frontierQuest('missing'), null);
 
-  const first = FRONTIERS[0];
+  const first = getFrontiers(s)[0];
   const firstBuild = [first.land.x0 + 2, first.land.y0 + 2];
   assert(sim.build('road', ...firstBuild), 'uncaptured frontier tile was buildable');
   assert(!roadAt(s, ...firstBuild));
@@ -75,7 +76,7 @@ function timeoutChallenge(s, sim, f, party) {
   s.advs.forEach(a => { a.ko = false; a.hp = maxHp(a, s); a.task = null; });
   timeoutChallenge(s, sim, first, party);
 
-  for (const f of FRONTIERS) {
+  for (const f of getFrontiers(s)) {
     const qid = `frontier:${f.id}`;
     assert.equal(sim.frontierBlock(f.id), null, `unexpected block for ${f.id}`);
     assert(townDist(s, f.x, f.y) > 0, `${f.id} was buildable before capture`);
@@ -197,7 +198,7 @@ function timeoutChallenge(s, sim, f, party) {
   assert(roadAt(s, 75, 55));
   assert.deepEqual({ x: s.advs[0].x, y: s.advs[0].y, task: s.advs[0].task }, expectedAdv);
   assert.deepEqual(s.activeQuests[0], expectedQuest);
-  assert.deepEqual(s.frontier, { completed: {}, relics: {}, petRewards: {} });
+  assert.deepEqual(s.frontier, { completed: {}, relics: {}, petRewards: {}, rolls: {} });
   assert.equal(s.seed, expectedSeed, 'migration consumed simulation RNG state');
   const once = JSON.stringify(s); migrate(s);
   assert.equal(s.seed, expectedSeed, 'idempotent migration consumed simulation RNG state');
@@ -207,7 +208,7 @@ function timeoutChallenge(s, sim, f, party) {
 // The old 6,000-expansion ceiling cannot reject a route across the expanded map.
 {
   const { s, sim } = setup(555);
-  const far = FRONTIERS.at(-1), target = sim.grid.nearestWalkable(far.x, far.y) || [far.x, far.y];
+  const far = getFrontiers(s).at(-1), target = sim.grid.nearestWalkable(far.x, far.y) || [far.x, far.y];
   const path = sim.grid.find(38, 28, target[0], target[1]);
   assert(path?.length, 'no path to the farthest frontier');
   assert.deepEqual(path.at(-1), target);
@@ -217,7 +218,7 @@ function timeoutChallenge(s, sim, f, party) {
 
 if (SOAK) {
   assert(global.gc, 'run frontier soak with node --expose-gc');
-  const { s, sim, party } = setup(991), f = FRONTIERS[0];
+  const { s, sim, party } = setup(991), f = getFrontiers(s)[0];
   const retrySamples = [];
   // Ambient visitors can acquire burn/double-hit perks while challenges are retried.
   // Verify every pending callback expires on schedule rather than requiring combat to stop.
