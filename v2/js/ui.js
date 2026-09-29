@@ -1,8 +1,11 @@
 // DOM UI: top bar, ticker, bottom menu panels, inspector, fanfares. Uses event delegation via data-act.
-import { FAC, DECOR, SPR, JOBS, ITEMS, SHOP_SLOTS, MATS, MONSTERS, BOSSES, FRONTIERS, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
+import { FAC, DECOR, SPR, JOBS, ITEMS, SHOP_SLOTS, MATS, MONSTERS, BOSSES, TITLES, TRAIT_NAMES, EVENTS, PERSONA, RANKS, PERKS, TIER_TP, HAPPENINGS, CHARTERS } from './data.js';
 import { IMG, iconCanvas, itemIcon, keyIcon, goldified, tinted } from './assets.js';
 import { defOf, maxHp, stat, save, valid, migrate, newGame, legacyGame, seedCode, parseSeed, MASTERY } from './state.js';
 import { CAMP_PATROLS } from './data.js';
+import { getFrontiers } from './world.js';
+import { campProfile } from './camps.js';
+import { relicItem, relicRollText } from './relics.js';
 
 const $ = sel => document.querySelector(sel);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -204,9 +207,9 @@ export class UI {
   }
   panel_quests() {
     const s = this.s; let h = '';
-    const captured = FRONTIERS.filter(f => s.frontier?.completed?.[f.id]).length;
+    const captured = getFrontiers(this.s).filter(f => s.frontier?.completed?.[f.id]).length;
     const camps = s.banditCamps || [], campReady = camps.filter(c => !this.sim.campBlock(c.id)).length;
-    h += `<div class="row spread"><span class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random healthy adventurers. Suggested levels are advice, not a selection limit.</span><span class="row"><button class="btn" data-act="open" data-k="frontiers">Frontiers ${captured}/${FRONTIERS.length}</button><button class="btn" data-act="open" data-k="camps">Bandit Camps ${campReady}/${camps.length}</button></span></div>`;
+    h += `<div class="row spread"><span class="muted">Run as many quests as you have available pawns for. Tap a quest to adjust its party, or instantly send up to 4 random healthy adventurers. Suggested levels are advice, not a selection limit.</span><span class="row"><button class="btn" data-act="open" data-k="frontiers">Frontiers ${captured}/${getFrontiers(this.s).length}</button><button class="btn" data-act="open" data-k="camps">Bandit Camps ${campReady}/${camps.length}</button></span></div>`;
     for (const q of s.activeQuests) {
       const alive = s.mons.filter(m => m.quest === q.id && m.hp > 0);
       h += `<div class="section">Underway: ${esc(q.name)}</div><div class="row spread"><span class="muted">${q.kind === 'dungeon' ? `Floor ${q.floor}/${q.floors}` : alive.length + ' foes remain'}</span><button class="btn sm" data-act="watchQuest" data-id="${q.id}">Watch</button></div><div class="grid">`;
@@ -240,29 +243,29 @@ export class UI {
     let h = `<div class="row spread"><span class="muted">Conquer each den once to claim its land, permanent village bonus and unique legendary relic.</span><button class="btn sm" data-act="open" data-k="quests">Quest board</button></div>
       <p class="frontier-note"><b>Legendary rewards go to the Guild Relic Vault below, not a pawn inventory.</b> Select an earned relic, then choose a resident to receive its blessing. Each camp also has a one-time 30% chance to grant a rare companion, with a bonus Stable space. Previously captured camps receive this chance too.</p>`;
     h += this.frontierRelics();
-    const picked = FRONTIERS.find(f => f.id === this.frontierPick);
+    const picked = getFrontiers(this.s).find(f => f.id === this.frontierPick);
     if (picked) h += this.frontierDetail(picked);
     h += '<div class="section">Territories</div><div class="grid frontier-grid">';
-    for (const f of FRONTIERS) {
+    for (const f of getFrontiers(this.s)) {
       const active = s.activeQuests.find(q => q.frontier === f.id), captured = !!completed[f.id], block = this.sim.frontierBlock(f.id);
-      const req = f.requires.length ? f.requires.map(id => FRONTIERS.find(x => x.id === id)?.name || id).join(', ') : 'None';
+      const req = f.requires.length ? f.requires.map(id => getFrontiers(this.s).find(x => x.id === id)?.name || id).join(', ') : 'None';
       const status = captured ? '<span class="tag res">Captured</span>' : active ? '<span class="tag gold">Underway</span>'
         : block ? `<span class="tag ko">${esc(block)}</span>` : '<span class="tag vis">Ready</span>';
-      const relic = ITEMS[f.relic], q = this.sim.frontierQuest(f.id), owner = s.advs.find(a => a.id === relics[f.relic]);
+      const relic = relicItem(s, f.relic), q = this.sim.frontierQuest(f.id), owner = s.advs.find(a => a.id === relics[f.relic]);
       const relicStatus = captured ? owner ? `Blessing assigned to ${esc(owner.name)}` : 'In Guild Relic Vault · ready to assign' : esc(statLine(relic));
       const petType = s.frontier.petRewards?.[f.id];
       const petStatus = captured ? petType ? `${MONSTERS[petType].name} joined · assign in Adventurers` : 'No rare companion found' : '30% chance of a rare companion';
       h += `<div class="card frontier-card ${this.frontierPick === f.id ? 'sel' : ''}" data-act="pickFrontier" data-id="${f.id}"><div class="thumb"><i data-face="bf_${f.boss}"></i></div><div class="meta">
         <div class="name">${esc(f.name)}</div><div>${status}</div><div class="sub">${esc(f.bossName)} · Suggested Lv${f.rec}+ · (${f.x}, ${f.y})</div>
         <div class="sub">Fee ${q.fee}G · Victory ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop</div>
-        <div class="sub">Land bonus: ${esc(f.benefit)}</div><div class="sub">Legendary: ${esc(relic.name)} · ${relicStatus}</div><div class="sub">${esc(petStatus)}</div><div class="sub">Requires: ${esc(req)}</div>
+        <div class="sub">Land bonus: ${esc(f.benefit)}</div><div class="sub">Legendary: ${esc(relic.name)} · ${relicStatus}</div><div class="sub">${esc(relicRollText(s, f.relic))}</div><div class="sub">${esc(petStatus)}</div><div class="sub">Requires: ${esc(req)}</div>
         <button class="btn sm" data-act="mapFrontier" data-id="${f.id}">${active ? 'Watch' : 'Show on map'}</button>${captured ? `<button class="btn sm" data-act="pickRelic" data-id="${f.relic}">Manage relic</button>` : ''}</div></div>`;
     }
     return h + '</div>';
   }
   frontierDetail(f) {
     const s = this.s, q = this.sim.frontierQuest(f.id), active = s.activeQuests.find(x => x.frontier === f.id), captured = !!s.frontier?.completed?.[f.id];
-    let h = `<div class="section">${esc(f.name)}</div><div class="row spread"><span class="muted">${esc(f.bossName)} · ${esc(f.benefit)} · ${esc(ITEMS[f.relic].name)}</span><button class="btn sm" data-act="mapFrontier" data-id="${f.id}">${active ? 'Watch fight' : 'Show on map'}</button></div>`;
+    let h = `<div class="section">${esc(f.name)}</div><div class="row spread"><span class="muted">${esc(f.bossName)} · ${esc(f.benefit)} · ${esc(relicItem(s, f.relic).name)}</span><button class="btn sm" data-act="mapFrontier" data-id="${f.id}">${active ? 'Watch fight' : 'Show on map'}</button></div><p class="muted">${esc(relicRollText(s, f.relic))}</p>`;
     if (active) {
       const alive = s.mons.filter(m => m.quest === active.id && m.hp > 0).length;
       h += `<p class="muted">Conquest underway · ${alive} foe${alive === 1 ? '' : 's'} remain.</p><div class="grid">`;
@@ -272,7 +275,7 @@ export class UI {
     }
     if (captured) {
       const owner = s.advs.find(a => a.id === s.frontier?.relics?.[f.relic]);
-      return h + `<p class="check">Captured permanently. This land bonus is active and the one-of-a-kind ${esc(ITEMS[f.relic].name)} ${owner ? `blesses ${esc(owner.name)}` : 'is stored in the Guild Relic Vault'}.</p><button class="btn sm" data-act="pickRelic" data-id="${f.relic}">Manage relic</button>`;
+      return h + `<p class="check">Captured permanently. This land bonus is active and the one-of-a-kind ${esc(relicItem(s, f.relic).name)} ${owner ? `blesses ${esc(owner.name)}` : 'is stored in the Guild Relic Vault'}.</p><button class="btn sm" data-act="pickRelic" data-id="${f.relic}">Manage relic</button>`;
     }
     const block = this.sim.frontierBlock(f.id);
     if (block) return h + `<p class="cross">${esc(block)}</p>`;
@@ -289,20 +292,20 @@ export class UI {
     return h + `</div>${cands.length ? '' : '<p class="muted">No adventurers are available right now.</p>'}`;
   }
   frontierRelics() {
-    const s = this.s, relics = s.frontier?.relics || {}, earned = FRONTIERS.filter(f => Object.prototype.hasOwnProperty.call(relics, f.relic));
+    const s = this.s, relics = s.frontier?.relics || {}, earned = getFrontiers(this.s).filter(f => Object.prototype.hasOwnProperty.call(relics, f.relic));
     const inVault = earned.filter(f => relics[f.relic] == null).length;
-    let h = `<div class="section relic-summary">Guild Relic Vault <span class="tag gold">${earned.length}/${FRONTIERS.length} earned</span>${inVault ? `<span class="tag vis">${inVault} ready to assign</span>` : ''}</div>`;
+    let h = `<div class="section relic-summary">Guild Relic Vault <span class="tag gold">${earned.length}/${getFrontiers(this.s).length} earned</span>${inVault ? `<span class="tag vis">${inVault} ready to assign</span>` : ''}</div>`;
     if (!earned.length) return h + '<p class="muted relic-note">Win a frontier conquest to earn its one-of-a-kind permanent blessing.</p>';
     const itemId = earned.some(f => f.relic === this.relicPick) ? this.relicPick : null;
     h += '<p class="muted relic-note">Each relic grants a permanent blessing to one assigned resident. One blessing per pawn, on top of all four equipment slots: their accessory stays free. Blessings never expire; select one to assign or transfer it.</p><div class="grid relic-grid">';
     for (const f of earned) {
-      const it = ITEMS[f.relic], owner = s.advs.find(a => a.id === relics[f.relic]);
+      const it = relicItem(s, f.relic), owner = s.advs.find(a => a.id === relics[f.relic]);
       const selected = this.relicPick === f.relic;
-      h += `<button type="button" class="card relic-choice ${selected ? 'sel' : ''}" data-act="pickRelic" data-id="${f.relic}" data-focus-key="relic:${f.relic}" aria-pressed="${selected}" aria-label="${esc(`${it.name}, ${owner ? 'blessing assigned to ' + owner.name : 'in Guild Relic Vault, ready to assign'}`)}"><span class="thumb"><i data-item="${f.relic}" data-scale="3"></i></span><span class="meta"><span class="name">${esc(it.name)}</span><span class="sub">${esc(statLine(it))}</span><strong class="sub ${owner ? 'check' : 'relic-ready'}">${owner ? 'Blessing assigned to ' + esc(owner.name) : 'In vault · select to assign'}</strong></span></button>`;
+      h += `<button type="button" class="card relic-choice ${selected ? 'sel' : ''}" data-act="pickRelic" data-id="${f.relic}" data-focus-key="relic:${f.relic}" aria-pressed="${selected}" aria-label="${esc(`${it.name}, ${owner ? 'blessing assigned to ' + owner.name : 'in Guild Relic Vault, ready to assign'}`)}"><span class="thumb"><i data-item="${f.relic}" data-scale="3"></i></span><span class="meta"><span class="name">${esc(it.name)}</span><span class="sub">${esc(statLine(it))}</span><span class="sub">${esc(relicRollText(s, f.relic))}</span><strong class="sub ${owner ? 'check' : 'relic-ready'}">${owner ? 'Blessing assigned to ' + esc(owner.name) : 'In vault · select to assign'}</strong></span></button>`;
     }
     h += '</div>';
     if (itemId) {
-      const item = ITEMS[itemId], ownerId = relics[itemId], owner = s.advs.find(a => a.id === ownerId), ownerAway = owner && (owner.ko || this.sim.questForPawn(owner.id));
+      const item = relicItem(s, itemId), ownerId = relics[itemId], owner = s.advs.find(a => a.id === ownerId), ownerAway = owner && (owner.ko || this.sim.questForPawn(owner.id));
       h += `<div class="relic-transfer"><div class="row spread"><b>Assign ${esc(item.name)}</b><button class="btn sm" data-act="equipRelic" data-id="${itemId}" data-pawn="none" ${ownerId == null || ownerAway ? 'disabled' : ''}>Return to vault</button></div><p class="muted">Choose a resident to bless. Their previous blessing returns to the vault; ordinary equipment is kept.${ownerAway ? ' Its owner must return and recover first.' : ''}</p><div class="grid relic-owner-grid">`;
       for (const a of s.advs.filter(a => a.resident).sort((a, b) => b.lv - a.lv)) {
         const unavailable = ownerAway || a.ko || a.task?.type === 'quest' || !!this.sim.questForPawn(a.id), current = ownerId === a.id;
@@ -322,11 +325,13 @@ export class UI {
     h += '<div class="section">Known camps</div><div class="grid camp-grid">';
     for (const c of camps) {
       const q = this.sim.campQuest(c.id), active = s.activeQuests.find(x => x.camp === c.id), block = this.sim.campBlock(c.id), wait = this.campWait(c);
+      const profile = campProfile(c);
       const loot = q ? Object.entries(q.reward.materials || {}).map(([k, n]) => `${MATS[k].name}×${n}`).join(', ') : '';
       const status = active ? '<span class="tag gold">Underway</span>' : wait ? `<span class="tag">${esc(wait)}</span>`
         : block ? `<span class="tag ko">${esc(block)}</span>` : '<span class="tag vis">Ready</span>';
       h += `<div class="card camp-card ${this.campPick === c.id ? 'sel' : ''}" data-act="pickCamp" data-id="${c.id}"><div class="thumb"><i data-spr="${c.tier >= 3 ? 'hutB' : 'hutA'}"></i></div><div class="meta">
         <div class="name">${esc(c.name)}</div><div>${status}</div><div class="sub">Tier ${c.tier} · Suggested Lv${q?.rec || this.sim.questLevel(q)}+ · (${c.x}, ${c.y})</div>
+        <div class="sub"><span style="color:${profile.color}">${esc(profile.label)}</span> · ${esc(profile.captainName)}</div><div class="sub">${esc(profile.description)}</div><div class="sub" title="${esc(profile.modifierDescription)}">${esc(profile.modifierLabel)}</div>
         <div class="sub">${q ? `Fee ${q.fee}G · Bounty ${q.reward.gold}G, ${q.reward.tp}TP, +${q.reward.pop} pop · ${q.n} raiders` : 'No bounty posted'}</div>${loot ? `<div class="sub">Stores: ${esc(loot)}</div>` : ''}
         <div class="sub">Cleared ${c.clears || 0} time${c.clears === 1 ? '' : 's'}</div><button class="btn sm" data-act="mapCamp" data-id="${c.id}">${active ? 'Watch' : 'Show on map'}</button></div></div>`;
     }
@@ -340,8 +345,10 @@ export class UI {
   }
   campDetail(c) {
     const s = this.s, q = this.sim.campQuest(c.id), active = s.activeQuests.find(x => x.camp === c.id), wait = this.campWait(c);
+    const profile = campProfile(c);
     const loot = q ? Object.entries(q.reward.materials || {}).map(([k, n]) => `${MATS[k].name}×${n}`).join(', ') : '';
-    let h = `<div class="section">${esc(c.name)}</div><div class="row spread"><span class="muted">Tier ${c.tier} · cleared ${c.clears || 0} time${c.clears === 1 ? '' : 's'}${q ? ` · ${q.n} raiders` : ''}${loot ? ` · stores ${esc(loot)}` : ''}</span><button class="btn sm" data-act="mapCamp" data-id="${c.id}">${active ? 'Watch fight' : 'Show on map'}</button></div>`;
+    let h = `<div class="section">${esc(c.name)}</div><div class="row spread"><span class="muted">Tier ${c.tier} · cleared ${c.clears || 0} time${c.clears === 1 ? '' : 's'}${q ? ` · ${q.n} raiders` : ''}${loot ? ` · stores ${esc(loot)}` : ''}</span><button class="btn sm" data-act="mapCamp" data-id="${c.id}">${active ? 'Watch fight' : 'Show on map'}</button></div>
+      <p><b style="color:${profile.color}">${esc(profile.label)}</b> · ${esc(profile.captainName)}<br><span class="muted">${esc(profile.description)}</span></p><p class="muted"><b>${esc(profile.modifierLabel)}</b> · ${esc(profile.modifierDescription)}</p>`;
     if (active) {
       const alive = s.mons.filter(m => m.quest === active.id && m.hp > 0).length;
       h += `<p class="muted">Raid underway · ${alive} foe${alive === 1 ? '' : 's'} remain.</p><div class="grid">`;
@@ -466,7 +473,7 @@ export class UI {
       <div class="section">World</div>
       <div class="row"><span>World code <b class="code">${s.world && s.world.code != null ? seedCode(s.world.code) : '— (older save)'}</b></span>${C ? `<span class="muted">Charter: ${esc(C.name)}</span>` : ''}</div>
       <div class="row" style="margin-top:4px"><input id="seed-in" class="seed-in" maxlength="6" placeholder="code" autocomplete="off" spellcheck="false"><button class="btn sm" data-act="seedGame">Found a village with this code</button></div>
-      <p class="muted">Share a world code with a friend: the same code gives the same land, monsters, cave and charter choices.</p>
+      <p class="muted">Share a world code with a friend: newly founded villages with the same code share region layouts, frontier sites, camp factions, monsters, cave and charter choices. Existing saves keep their original geography. Relic bonus traits are revealed on capture.</p>
       <p class="muted">The game autosaves every in-game week. Controls: drag or WASD/arrows to pan · wheel/pinch or +/- to zoom · tap adventurers or buildings to inspect · Space pauses · 1/2/3 set speed.</p>
       <div class="section">Credits</div>
       <p class="muted">Art, music and sound: <b>Ninja Adventure</b> asset pack by Pixel-boy &amp; AAA (CC0) — pixel-boy.itch.io. Armor and accessory icons: <b>16x16 RPG Item Pack</b> by Alex's Assets (CC0). Masterwork equipment: <b>16x16 RPG Items (DB32)</b> by ARoachIFoundOnMyPillow (CC0) — OpenGameArt.org. Fountain, statue and castle: <b>Medieval Fantasy</b> by Pixel-boy (CC0). Game design inspired by the adventurer-village genre (Kairosoft's Dungeon Village); no Kairosoft assets are used. Code: original.</p>`;
@@ -541,7 +548,7 @@ export class UI {
       <div class="row" style="margin:6px 0">${['weapon', 'armor', 'offhand', 'acc'].map(sl => { const it = a.eq[sl] && ITEMS[a.eq[sl]], label = { weapon: 'Weapon', armor: 'Body armor', offhand: 'Helm / shield', acc: 'Accessory' }[sl]; return `<span class="chip">${label}: ${it ? `<i data-item="${a.eq[sl]}" data-scale="1"></i>${it.name}` : 'None'}</span>`; }).join('')}</div>
       ${a.eq.weapon ? `<div class="${this.sim.weaponMatch(a) ? 'check' : 'muted'}">${this.sim.weaponMatch(a) ? 'Class match: +10% damage · +1 combat speed' : 'Weapon usable · normal stats, no class bonus'}</div>` : ''}
       <div class="muted">Attack: ${{ arrow: 'Arrows', fire: 'Innate magic', shuriken: 'Innate throwing' }[this.sim.attackProfile(a).projectile] || 'Melee'} · Reach ${this.sim.attackProfile(a).range} tiles${job.attack === 'bow' ? ' · Prioritizes bows' : ''}</div>
-      ${a.eq.blessing && ITEMS[a.eq.blessing] ? `<div class="relic-summary"><strong class="tag gold">★ Permanent blessing</strong><div><i data-item="${a.eq.blessing}" data-scale="1"></i> ${esc(ITEMS[a.eq.blessing].name)}</div><div class="muted">${esc(statLine(ITEMS[a.eq.blessing]))} · Accessory slot stays free</div></div>` : ''}
+      ${a.eq.blessing && ITEMS[a.eq.blessing] ? `<div class="relic-summary"><strong class="tag gold">★ Permanent blessing</strong><div><i data-item="${a.eq.blessing}" data-scale="1"></i> ${esc(relicItem(s, a.eq.blessing).name)}</div><div class="muted">${esc(statLine(relicItem(s, a.eq.blessing)))} · Accessory slot stays free</div><div class="muted">${esc(relicRollText(s, a.eq.blessing))}</div></div>` : ''}
       ${a.perks.length ? `<div class="muted">Mastered perks:</div><div class="row">${a.perks.map(p => `<span class="tag gold" title="${esc(PERKS[p].desc)}">★ ${PERKS[p].name}</span>`).join('')}</div>` : ''}
       <div class="muted">Job Lv${a.jobLv[a.job] || 1}/99 · ${(a.jobLv[a.job] || 1) >= MASTERY ? 'mastered' : `${MASTERY - (a.jobLv[a.job] || 1)} to mastery`} · Lv${a.lv}/99</div>`;
     const pet = a.partner && s.monsters.find(m => m.id === a.partner);
@@ -581,13 +588,13 @@ export class UI {
   inspMon(m) {
     if (!m || m.hp <= 0) return '';
     const base = m.boss ? BOSSES[m.boss] : MONSTERS[m.type], M = m.job ? { ...base, spr: m.spr || base.spr, weapon: m.weapon || base.weapon, human: true } : base;
-    const frontier = m.frontier && FRONTIERS.find(f => f.id === m.frontier);
+    const frontier = m.frontier && getFrontiers(this.s).find(f => f.id === m.frontier);
     const camp = m.camp || (typeof m.quest === 'string' && m.quest.startsWith('camp:') ? m.quest.slice(5) : null);
     const face = m.boss ? `bf_${m.boss}` : M.human ? `f_${M.spr}` : `mf_${M.spr}`;
     const tag = frontier ? `<span class="tag gold">Guardian of ${esc(frontier.name)}</span>` : camp ? '<span class="tag ko">Bandit camp raider</span>' : m.golden ? '<span class="tag gold">Golden — catch it for a fortune!</span>' : m.raid ? `<span class="tag ko">${m.raid === 'bandits' ? 'Bandit' : 'Stampede'} raider</span>`
       : m.elite ? '<span class="tag gold">Elite — ×2.5 EXP & gold, ×2 drops</span>' : M.human ? '<span class="tag ko">Outlaw</span>' : '';
-    const name = frontier ? frontier.bossName : m.className || (m.golden ? 'Golden Slime' : (m.elite ? 'Elite ' : '') + M.name);
-    return `<div class="head"><i data-face="${face}" class="face" ${m.golden ? 'data-gold="1"' : m.elite ? 'data-tint="150"' : ''}></i><div><h3>${esc(name)}</h3><div class="muted">Lv${m.lv}${m.quest ? ' · Quest target' : ''}</div>${tag}</div></div>
+    const name = frontier ? frontier.bossName : m.name || m.className || (m.golden ? 'Golden Slime' : (m.elite ? 'Elite ' : '') + M.name);
+    return `<div class="head"><i data-face="${face}" class="face" ${m.golden ? 'data-gold="1"' : m.elite ? 'data-tint="150"' : ''}></i><div><h3>${esc(name)}</h3><div class="muted">Lv${m.lv}${m.captain ? ' · Captain · ' + esc(m.className) : ''}${m.quest ? ' · Quest target' : ''}</div>${tag}</div></div>
       <div class="row"><span style="width:34px">HP</span><div class="bar hp" style="flex:1"><i style="width:${m.hp / m.mhp * 100}%"></i></div><span class="muted">${m.hp}/${m.mhp}</span></div>
       <div class="stats"><div><b>ATK</b> ${m.atk}</div><div><b>DEF</b> ${m.def}</div></div>
       <div class="muted">Drops: ${Object.keys(M.drops || {}).map(k => MATS[k].name).join(', ')}</div>`;
@@ -620,7 +627,7 @@ export class UI {
     this.game.rnd.selected = sel; this.game.rnd.frontierFocus = null; this.game.rnd.campFocus = null; this.partnerPick = false; this.lastHtml.insp = null; this.renderInspector(); this.game.audio.sfx('click');
   }
   showFrontier(id) {
-    const f = FRONTIERS.find(x => x.id === id); if (!f) return;
+    const f = getFrontiers(this.s).find(x => x.id === id); if (!f) return;
     if (this.panel !== 'frontiers') this.open('frontiers');
     this.game.rnd.frontierFocus = id; this.frontierPick = id; this.relicPick = null;
     const q = this.sim.frontierQuest(id), blocked = this.sim.frontierBlock(id);
@@ -676,7 +683,7 @@ export class UI {
       case 'open': this.open(d.k); break;
       case 'classes': this.jobFor = null; this.open('jobs'); break;
       case 'pickFrontier': this.showFrontier(d.id); audio.sfx('click'); break;
-      case 'mapFrontier': { const f = FRONTIERS.find(x => x.id === d.id); if (f) { this.game.rnd.frontierFocus = f.id; this.close(); this.game.centerOn(f.x, f.y); } break; }
+      case 'mapFrontier': { const f = getFrontiers(this.s).find(x => x.id === d.id); if (f) { this.game.rnd.frontierFocus = f.id; this.close(); this.game.centerOn(f.x, f.y); } break; }
       case 'togFrontierParty': { const id = +d.id; if (this.frontierParty.includes(id)) this.frontierParty = this.frontierParty.filter(x => x !== id); else if (this.frontierParty.length < 8 && sim.questCandidates().some(x => x.id === id)) this.frontierParty.push(id); else this.toast('A party can have at most 8 available adventurers'); this.renderPanel(); audio.sfx('click'); break; }
       case 'startFrontier': if (err(sim.startQuest(d.id, this.frontierParty || []))) { this.frontierParty = []; audio.sfx('quest'); } this.renderPanel(); break;
       case 'instantFrontier': if (err(sim.instantQuest(d.id))) { this.frontierParty = []; audio.sfx('quest'); } this.renderPanel(); break;

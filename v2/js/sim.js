@@ -1,11 +1,14 @@
 // Simulation: calendar, adventurer AI, economy, field combat, monsters, quests, titles, stars.
 // Fixed step (DT). Everything reads/writes the plain state `s`; the renderer only reads it.
-import { MAP_W, MAP_H, HOME_W, HOME_H, FRONTIERS, FAC, DECOR, JOBS, ITEMS, MONSTERS, BOSSES, PERSONA, FAC_TRAITS, TITLES, RANKS, EVENTS, MATS, TRAIT_NAMES, PERKS, TIER_TP, SHOP_SLOTS,
+import { MAP_W, MAP_H, HOME_W, HOME_H, FAC, DECOR, JOBS, ITEMS, MONSTERS, BOSSES, PERSONA, FAC_TRAITS, TITLES, RANKS, EVENTS, MATS, TRAIT_NAMES, PERKS, TIER_TP, SHOP_SLOTS,
   ZONE_MONS, ZONE_POP, ZONE_LV, HAPPENINGS, HAPPEN_CHANCE, CHARTERS, VISITOR_CAP, ELITE_CHANCE } from './data.js';
 import { PathGrid } from './path.js';
 import { makeRng } from './rng.js';
 import { defOf, buildingAt, roadAt, setRoad, place, spawnAdventurer, stat, maxHp, log, zoneAt, townDist, buildAreas, frontierBonus, villageBoundary, ZONE_BIOME, CAVE, cavePos, shuffle, teachJob, perkSum, gearSum, LV_CAP, JOB_CAP, MASTERY } from './state.js';
 import { BIOMES, CAMP_PATROLS, FRONTIER_PETS } from './data.js';
+import { getFrontiers } from './world.js';
+import { campMember, campProfile } from './camps.js';
+import { relicItem, seedRelicRolls } from './relics.js';
 
 export const DT = 0.1;              // seconds per sim step
 export const WEEK_SECONDS = 30;     // one in-game week at 1x
@@ -27,7 +30,7 @@ export class Sim {
     this.barriers = new Uint8Array(MAP_W * MAP_H);
     this.rebuildGrid(); this.invalidatePaths(); this.recomputeTraits(true);
     this.refreshBossQuests();
-    for (const f of FRONTIERS) if (s.frontier.completed[f.id]) this.rewardFrontierPet(f.id, true);
+    for (const f of getFrontiers(this.s)) if (s.frontier.completed[f.id]) this.rewardFrontierPet(f.id, true);
   }
   emit(kind, ...a) { this.hooks[kind] && this.hooks[kind](...a); }
 
@@ -70,7 +73,7 @@ export class Sim {
       if (townDist(s, xx, yy) > 0) return 'Outside the village - capture this territory first';
       if (this.boundary.some(c => c.x === xx && c.y === yy)) return 'Village palisade - use an opening';
       if (!d.road && this.gateApproaches.some(([gx, gy]) => gx === xx && gy === yy)) return 'Keep the village opening clear';
-      if (FRONTIERS.some(f => Math.abs(xx - f.x) <= 1 && Math.abs(yy - f.y) <= 1)) return 'Keep the den entrance clear';
+      if (getFrontiers(this.s).some(f => Math.abs(xx - f.x) <= 1 && Math.abs(yy - f.y) <= 1)) return 'Keep the den entrance clear';
       if ((s.banditCamps || []).some(c => Math.abs(xx - c.x) <= 1 && Math.abs(yy - c.y) <= 1)) return 'Keep the bandit camp entrance clear';
       if (buildingAt(s, xx, yy)) return 'Occupied';
       if (!d.road && roadAt(s, xx, yy)) return 'Road in the way';
@@ -252,7 +255,7 @@ export class Sim {
     const n = Math.min(R.int(...rules.count), 12 - patrols.length), level = R.int(...rules.level);
     // Travel allowance plus two weeks at the village; blocked or abandoned patrols never accumulate.
     const expiresAt = s.tick + Math.ceil((route.length * 1.414 / 0.7 + WEEK_SECONDS * 2) / DT);
-    for (let i = 0; i < n; i++) this.spawnRaider(origin, level, { zone: 9, raid: 'patrol', sourceCamp: camp.id, raidGoal: goal, expiresAt });
+    for (let i = 0; i < n; i++) this.spawnRaider(origin, level, { ...campMember(camp, level, i, n, R, 'patrol'), zone: 9, raid: 'patrol', sourceCamp: camp.id, raidGoal: goal, expiresAt });
     s.flags.nextCampPatrol = camp.patrolAt;
     log(s, `${camp.name} sent ${n} guards toward the village. Clear the camp to stop its patrols.`, 'warn');
   }
@@ -295,14 +298,16 @@ export class Sim {
     return { rank, level, count: (kind === 'stampede' ? [4, 6, 8, 11, 14, 18] : [2, 3, 6, 9, 12, 16])[rank], rewardMult: 1 + Math.max(0, level - 3) * 0.05 };
   }
   spawnRaider(spot, level, extra = {}) {
-    const humanJobs = ['warrior', 'archer', 'mage', 'monk', 'brawler', 'merchant', 'scout', 'knight', 'gladiator', 'ninja', 'shaman', 'onmyoji', 'samurai', 'master', 'royal', 'sultan', 'assassin', 'bomber'];
+    const humanJobs = ['warrior', 'archer', 'mage', 'monk', 'brawler', 'merchant', 'scout', 'knight', 'gladiator', 'ninja', 'shaman', 'onmyoji', 'samurai', 'master', 'royal', 'sultan', 'assassin', 'bomber', 'ranger', 'tamer', 'sharpshooter'];
     const lv = Math.max(1, Math.min(LV_CAP, Math.round(level))), tier = lv >= 20 ? 3 : lv >= 8 ? 2 : 1;
-    const job = humanJobs.includes(extra.job) ? extra.job : this.R.pick(humanJobs.filter(id => JOBS[id].tier <= tier)), J = JOBS[job];
+    const job = humanJobs.includes(extra.job) && JOBS[extra.job].tier <= tier ? extra.job : this.R.pick(humanJobs.filter(id => JOBS[id].tier <= tier)), J = JOBS[job];
     const k = 0.95 + (lv - 1) * 0.14;
     const m = this.spawnMonster(Math.min(4, 1 + Math.floor(lv / 8)), 'cutthroat', spot, extra);
     if (!m) return null;
     Object.assign(m, { lv, job, spr: this.R.pick(J.sprites), weapon: J.weapon, className: J.name, range: J.range, healer: !!J.heal,
       moveSpeed: J.spd, mag: Math.round(J.mag * k), atk: Math.round(J.atk * k), def: Math.round(J.def * k), hp: Math.round(J.hp * k * 1.25), mhp: Math.round(J.hp * k * 1.25) });
+    m.hp = m.mhp = Math.max(1, Math.round(m.mhp * (extra.hpScale || 1)));
+    m.atk = Math.max(1, Math.round(m.atk * (extra.atkScale || 1))); m.mag = Math.max(0, Math.round(m.mag * (extra.atkScale || 1)));
     return m;
   }
 
@@ -764,7 +769,7 @@ export class Sim {
   }
   speed(a) {
     if (!a.job) return 1.5 * (roadAt(this.s, Math.round(a.x), Math.round(a.y)) ? 1.4 : 1);
-    let v = 2.1 * JOBS[a.job].spd * (roadAt(this.s, Math.round(a.x), Math.round(a.y)) ? 1.45 : 1) * (1 + perkSum(a, 'spdPct') + gearSum(a, 'spd'));
+    let v = 2.1 * JOBS[a.job].spd * (roadAt(this.s, Math.round(a.x), Math.round(a.y)) ? 1.45 : 1) * (1 + perkSum(a, 'spdPct') + gearSum(a, 'spd', this.s));
     if (a.partner) { const m = this.s.monsters.find(m => m.id === a.partner); if (m && m.bond >= 50) v *= 1.4; }
     if (a.ko) v *= 0.5;
     return v;
@@ -863,7 +868,7 @@ export class Sim {
     const pow = (magic ? stat(a, 'mag', s) * 1.25 : stat(a, 'atk', s)) * (1 + aura);
     let dmg = Math.max(1, Math.round(pow * this.R.range(0.85, 1.2) - m.def * 0.5));
     if (match) dmg = Math.round(dmg * 1.1);
-    const crit = this.R.chance(0.08 + P('crit') + gearSum(a, 'crit')); if (crit) dmg = Math.round(dmg * (1.8 + P('critMul')));
+    const crit = this.R.chance(0.08 + P('crit') + gearSum(a, 'crit', this.s)); if (crit) dmg = Math.round(dmg * (1.8 + P('critMul')));
     if (attack.projectile) s.fx.push({ k: 'proj', x: a.x, y: a.y, tx: m.x, ty: m.y, t: 0, life: 0.25, p: attack.projectile });
     else s.fx.push({ k: 'slash', x: m.x, y: m.y, t: 0, life: 0.3, dir: a.dir });
     if (!m.boss && P('execute') && m.hp < m.mhp * 0.3 && this.R.chance(P('execute'))) { s.fx.push({ k: 'num', x: m.x, y: m.y - 1.1, t: 0, life: 1, text: 'FINISH!', c: '#ff5ad1', big: true }); dmg = m.hp; }
@@ -1204,7 +1209,7 @@ export class Sim {
         for (let i = 0; i < strength.count; i++) {
           const c = this.grid.nearestWalkable(camp.x + R.int(-1, 1), camp.y + R.int(-1, 1), 2);
           if (!c) continue;
-          const m = this.spawnRaider(c, strength.level, { raid: 'bandits', sourceCamp: camp.id, raidGoal: goal });
+          const m = this.spawnRaider(c, strength.level, { ...campMember(camp, strength.level, i, strength.count, R, 'raid'), raid: 'bandits', sourceCamp: camp.id, raidGoal: goal });
           if (m) h.data.mobs.push(m.id);
         }
         this.rally();
@@ -1370,15 +1375,15 @@ export class Sim {
   }
   questLevel(q) { return q.rec || (q.boss ? BOSSES[q.boss].rec : [0, 1, 5, 10, 16][q.zone]); }
   frontierQuest(id) {
-    const f = FRONTIERS.find(f => f.id === id); if (!f) return null;
+    const f = getFrontiers(this.s).find(f => f.id === id); if (!f) return null;
     return { id: 'frontier:' + id, frontier: id, kind: 'boss', name: f.bossName, desc: `Capture ${f.name}`, boss: f.boss, zone: f.zone, fee: f.fee, rec: f.rec, spot: [f.x, f.y], reward: { gold: f.fee * 2, tp: 10 + f.star * 5, pop: 50 + f.star * 20 } };
   }
   campQuest(id) {
     const c = this.s.banditCamps?.find(c => c.id === id); if (!c) return null;
     const rec = Math.min(95, Math.max(4 + c.tier * 6, this.raidStrength().level + c.tier * 2));
-    return { id: 'camp:' + id, camp: id, kind: 'camp', name: c.name, desc: 'Defeat the bandit company and loot its stores.', zone: 9,
+    return { id: 'camp:' + id, camp: id, kind: 'camp', name: c.name, desc: campProfile(c).description, zone: 9,
       rec, n: 3 + c.tier * 2, fee: 100 + rec * 15, spot: [c.x, c.y],
-      reward: { gold: 400 + rec * 55, tp: 5 + c.tier * 3, pop: 10 + c.tier * 5, materials: { wood: 3 + c.tier, ore: c.tier * 2, crystal: c.tier } } };
+      reward: { gold: 400 + rec * 55, tp: 5 + c.tier * 3, pop: 10 + c.tier * 5, materials: campProfile(c).materials } };
   }
   campBlock(id) {
     const c = this.s.banditCamps?.find(c => c.id === id); if (!c) return 'Unknown bandit camp';
@@ -1389,27 +1394,28 @@ export class Sim {
   }
   questById(id) { return String(id).startsWith('camp:') ? this.campQuest(String(id).slice(5)) : String(id).startsWith('frontier:') ? this.frontierQuest(String(id).slice(9)) : this.s.quests.find(q => q.id === +id); }
   frontierBlock(id) {
-    const f = FRONTIERS.find(f => f.id === id), s = this.s;
+    const f = getFrontiers(this.s).find(f => f.id === id), s = this.s;
     if (!f) return 'Unknown territory';
     if (s.frontier.completed[id]) return 'Territory already captured';
     if (s.activeQuests.some(q => q.frontier === id)) return 'A party is already challenging this den';
     if (s.stars < f.star) return `Needs a ${f.star}-star village`;
     const missing = f.requires.filter(id => !s.frontier.completed[id]);
-    if (missing.length) return 'Capture first: ' + missing.map(id => FRONTIERS.find(f => f.id === id).name).join(', ');
+    if (missing.length) return 'Capture first: ' + missing.map(id => getFrontiers(this.s).find(f => f.id === id).name).join(', ');
     return null;
   }
   captureFrontier(id) {
-    const s = this.s, f = FRONTIERS.find(f => f.id === id);
+    const s = this.s, f = getFrontiers(this.s).find(f => f.id === id);
     if (!f || s.frontier.completed[id]) return;
     s.frontier.completed[id] = true; s.frontier.relics[f.relic] = null;
+    seedRelicRolls(s);
     s.props = s.props.filter(p => p.k === 'cave' || townDist(s, p.x, p.y) > 0 || p.soft);
     for (const m of s.mons) if (!m.quest && !m.raid && townDist(s, m.x, m.y) === 0) m.hp = 0;
     this.rebuildGrid(); this.invalidatePaths();
-    log(s, `${f.name} captured! Land is buildable. ${f.benefit}. ${ITEMS[f.relic].name} is in the guild vault; assign its permanent blessing from Frontiers.`, 'title');
+    log(s, `${f.name} captured! Land is buildable. ${f.benefit}. ${relicItem(s, f.relic).name} is in the guild vault; assign its permanent blessing from Frontiers.`, 'title');
     this.rewardFrontierPet(id);
   }
   rewardFrontierPet(id, silent = false) {
-    const s = this.s, index = FRONTIERS.findIndex(f => f.id === id);
+    const s = this.s, index = getFrontiers(this.s).findIndex(f => f.id === id);
     if (index < 0 || !s.frontier.completed[id] || Object.hasOwn(s.frontier.petRewards, id)) return;
     // Fixed per world/site: loading an older save cannot reroll a missed reward.
     const R = makeRng({ seed: (s.world?.code ?? 4242) ^ Math.imul(index + 1, 0x45d9f3b) ^ 0x50455453 });
@@ -1420,7 +1426,7 @@ export class Sim {
     const [x, y] = this.grid.nearestWalkable(...center) || center;
     s.monsters.push({ id: s.nextId++, type, name: MONSTERS[type].name, frontier: id, bond: 0, alpha: false, x, y, dir: 0, anim: 0, tx: x, ty: y, path: null });
     this.recomputeTraits(false, !silent);
-    log(s, `${FRONTIERS[index].name}: a rare ${MONSTERS[type].name} joined the village! Assign it in Adventurers.`, 'title');
+    log(s, `${getFrontiers(s)[index].name}: a rare ${MONSTERS[type].name} joined the village! Assign it in Adventurers.`, 'title');
     if (!silent) this.emit('fanfare', 'Rare companion!', MONSTERS[type].name);
   }
   equipRelic(id, pawnId) {
@@ -1477,7 +1483,8 @@ export class Sim {
     if (q.kind === 'dungeon') { /* no field mobs */ }
     else if (q.camp) for (let i = 0; i < q.n; i++) {
       const c = this.grid.nearestWalkable(spot[0] + this.R.int(-2, 2), spot[1] + this.R.int(-2, 2)) || spot;
-      const m = this.spawnRaider(c, q.rec, { quest: q.id, camp: q.camp }); q.mobs.push(m.id);
+      const camp = s.banditCamps.find(c => c.id === q.camp);
+      const m = this.spawnRaider(c, q.rec, { ...campMember(camp, q.rec, i, q.n, this.R), quest: q.id, camp: q.camp }); q.mobs.push(m.id);
     }
     else if (q.kind === 'outbreak') for (let i = 0; i < q.n; i++) { const c = this.grid.nearestWalkable(spot[0] + this.R.int(-2, 2), spot[1] + this.R.int(-2, 2)) || spot; const m = this.spawnMonster(q.zone, q.mon, c, { quest: q.id, lvBonus: 1 }); if (m) q.mobs.push(m.id); }
     else {

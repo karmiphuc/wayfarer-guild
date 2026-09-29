@@ -89,6 +89,7 @@ assert(setup(5, 99).sim.raidStrength().level <= 99);
 // They return from the wilderness and cannot detour through wilderness around a sealed route.
 {
   const { s, sim } = setup(); s.props = []; s.buildings = []; s.mons = [];
+  s.world.frontierSites = null; // Fixed legacy L-shape coordinates used by this routing fixture.
   s.frontier.completed.greenmarch = true; s.frontier.completed.ironvale = true;
   sim.rebuildGrid(); sim.grid.cost.fill(1);
   const a = s.advs[0]; s.advs = [a];

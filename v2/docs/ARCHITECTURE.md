@@ -71,7 +71,7 @@ not stored as extra perimeter buildings or timers; no new top-level save fields 
 | Field | Meaning |
 |---|---|
 | `schema, seed, tick, nextId` | save version · RNG running state (mutated by every `R` call — **not** the world code) · step counter · id allocator |
-| `world {code, zoneMons, cave}` | the seed the village was founded with (`seedCode()` shows it as base 36; `null` for older saves) · species per zone for this world (`{zone: [MONSTERS ids]}`, `ROSTER_SIZE` long) · Old Cave tile `{x, y}` (read it with `cavePos(s)`) |
+| `world {code, zoneMons, cave, generation, frontierSites, regions}` | founding code and species/cave; generation 1 stores new-world sites and region patterns, while legacy generation 0 retains null layout fields |
 | `charter, charterChoices[]` | signed charter id (`null` until chosen; older saves stay `null`) · the 3 ids offered at founding |
 | `happen[]`, `happenLog[]` | active happenings `{id, weeks, data}` (`data` is per-happening: merchant `offer[]`, raid `mobs[]`, `breaches`, …) · last 24 `{id, t}` |
 | `npcs[]` | happening NPCs `{kind: 'merchant'|'bard', spr, x, y, dir, anim, path?}` — removed by `endHappening` |
@@ -80,8 +80,8 @@ not stored as extra perimeter buildings or timers; no new top-level save fields 
 | `gold, tp, pop, stars` | money · Town Points · popularity (float) · village rank 0–5 |
 | `mats {wood, hide, herb, ore, crystal}` | village materials (monster drops) used to develop gear |
 | `town {x0,y0,x1,y1}` | buildable rectangle (grows with the Expand event) |
-| `mapWidth, mapHeight`, `frontier {completed, relics, petRewards}` | 152x112 map; completed site IDs grant land and bonuses; relic IDs map to one resident owner or `null`; pet rewards map each rolled site to its species or `null` |
-| `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt,cooldownWeeks,patrolAt}`; `readyAt` ends the persisted 8–20 week recovery; `patrolAt` schedules its next guard wave. `flags.nextCampPatrol` enforces the rank-based interval across all camps |
+| `mapWidth, mapHeight`, `frontier {completed, relics, petRewards, rolls}` | 152x112 map; completion grants land/bonuses; relic IDs map to one owner or `null`; pet rewards record species/null; rolls hold two saved `{id,value}` affixes per earned relic |
+| `banditCamps[]` | 16 world-seeded wilderness sites `{id,name,x,y,tier,clears,readyAt,cooldownWeeks,patrolAt,faction,captainName,modifier}`; persisted 8–20 week recovery and rank-based patrol timing, plus stable faction metadata |
 | `ground` (string), `roads` (string of '0'/'1'), `props[]` | terrain detail per cell · road flags · trees/rocks/cave `{k,x,y,w,block,soft?}` |
 | `buildings[]` | `{id, type, x, y, lv, sales, visits, occ[], v?, free?}` — `type` is a key of `FAC` or `DECOR`; `free` = charter gift (refunds 0 G) |
 | `advs[]` | adventurers (below); a fallen pawn may carry `rescueBy` while another pawn owns its rescue task |
@@ -214,6 +214,12 @@ extends east and south, with sparse scenery and cleared den approaches. Ordinary
 retain the original home-region bounds and population caps. Bandit companies march from their camp sites.
 
 `FRONTIERS` defines eight connected one-time challenges, prerequisites, rank/level guidance, land, bonuses and relics.
+New villages use `world.js`: `world.frontierSites` stores same-star slot shuffles, jittered territory boundaries and den
+locations; `getFrontiers(s)` is the positional source everywhere. Established home hunting terrain outside frontier
+territories remains intact for early pacing. `world.regions` stores bounded forest, clearing, pass
+and ruin patterns with biome tints. Generation uses its own world-code RNG and carves routes to every den/camp/cave.
+Older villages default to the static sites and retain their terrain; loading never regenerates geography. Region tints
+are baked into the existing cached ground layer, and dormant sites still create no actors.
 Sites are data and map markers only; opening a site never spawns a monster. `frontierQuest()` returns a virtual quest
 with ID `frontier:<site>`. `startQuest()` validates rank, prerequisites, membership and cost before spawning its single
 guardian. It shares normal party selection and extra fees, but allows 600 seconds for the longer journey and fight.
@@ -242,6 +248,12 @@ Each relic has one owner; owners away on quests or KO must return first. Bonuses
 slots and have no timer. Migration moves ledger-owned legendary accessories into the blessing slot once, frees the
 accessory slot, preserves ordinary accessories and removes unowned duplicates against the eight-entry ledger.
 
+`relics.js` adds two distinct bonus traits to each of the eight unique rewards: HP, attack, defense, magic, movement
+speed or critical chance, with bounded rolled values. `frontier.rolls[relicId]` stores them once; world code plus item ID
+makes capture order, retries and reloads unable to reroll. Existing earned relics gain rolls on migration without losing
+base stats or ownership. `relicItem(s,id)` supplies the combined item to stat calculations and UI; shared `ITEMS` stays
+unchanged. `gearSum(a,key,s)` requires state to include the rolled bonuses. There are no additional relic copies/drops.
+
 Victory stores the relic in the guild vault, not a pawn inventory. The vault appears before the territory list in
 Frontiers, with unassigned rewards and their current owners shown explicitly. Armor and Item Shops both sell ordinary
 accessories through `SHOP_SLOTS`; their stock displays use the same mapping as autonomous shopping.
@@ -267,6 +279,13 @@ normal 1-8 pawn party rules and creates the raiders. Victory increments `clears`
 8–20 week cooldown. Migration extends a pending legacy four-week cooldown once while retaining its elapsed time; its
 isolated RNG does not advance the running simulation seed. Failure removes that attempt's raiders and permits another
 attempt without changing the ledger.
+
+`camps.js` seeds faction, captain name and at most one modifier per camp without moving old camps, resetting their
+timers or advancing simulation RNG. Iron Company favors melee/archers and ore; Moonfang Hunters favor ranged classes
+and hide/wood; Ash Covenant favors casters with at most one healer and herb/crystal. Class tiers stay level-gated.
+Challenge modifiers trade 4% attack for 4% HP, redistribute strength to a veteran captain, or add one store material.
+Patrols and raids use faction composition with no captain/modifier stat boost. Counts, levels, schedules and territorial
+defense are unchanged. The camp panel previews composition, modifier and actual material payout before departure.
 
 Live camps at or below village rank send seeded guard patrols using `CAMP_PATROLS`: stars 1/2/3/4/5 send 1/1/1/2/2–3
 guards at levels 1–3/3–5/5–8/8–12/12–20. Intervals are `(7 - stars)` to `(9 - stars)` weeks, globally across all camps.
